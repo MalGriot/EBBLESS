@@ -19,6 +19,8 @@ import { handleAdmin } from './admin.js';
 import { sanitizeLinkFix } from './linkfix.js';
 import { handleNowPlaying } from './nowplaying.js';
 import { handleWaves } from './waves.js';
+import { parseVibeExclusions, filterExcluded, matchHouseVibe } from './vibe-intent.js';
+import { HOUSE_VIBES, HOUSE_VIBES_VERSION } from './house-vibes.js';
 import { deepFindKey, ytPlaylistFromData, ytLockupVideos, ytRowsContinuation } from './yt-page.js';
 import { handleSession, isSessionToken, verifySession } from './session.js';
 import { handleProfileDelete } from './profile-delete.js';
@@ -4355,21 +4357,38 @@ async function handleVibeInterpret(url, env, ctx) {
   const cacheText = vibeCacheText(text);
   if (!cacheText) return json({ error: 'missing q' }, 400);
 
+  // What the sentence rules out ("no vocals", "nothing sad") and any house
+  // vibe it matches (house-vibes.js). Sentences with either get cache entries
+  // of their own, so answers cached before those existed aren't reused.
+  const intent = parseVibeExclusions(text);
+  const house = matchHouseVibe(text, HOUSE_VIBES);
+  const hasIntent = intent.exclude.length || intent.instrumental || intent.energyCap != null || intent.energyFloor != null;
+  const keyVersion = VIBE_CACHE_VERSION + (hasIntent ? 'x' : '') + (house ? 'h' + HOUSE_VIBES_VERSION : '');
+
   const cache = caches.default;
-  const cacheKey = new Request('https://cache.internal/' + VIBE_CACHE_VERSION + '/vibe-interpret/' + encodeURIComponent(cacheText));
+  const cacheKey = new Request('https://cache.internal/' + keyVersion + '/vibe-interpret/' + encodeURIComponent(cacheText));
   // ?ai=0 forces the no-AI path (testing the fallback) - uncached both ways.
   const forceHeuristic = url.searchParams.get('ai') === '0';
   const cached = forceHeuristic ? null : await cache.match(cacheKey);
-  if (cached) return applyCors(cached);
+  if (cached) {
+    let hit = null;
+    try { hit = await cached.json(); } catch (e) { /* rebuild below */ }
+    if (hit && Array.isArray(hit.tracks)) return json(await vibeFinish(hit, intent, env, ctx));
+  }
 
-  const heuristic = vibeHeuristic(text);
+  // The model and the heuristic read the sentence without its negations, so
+  // "nothing sad" never becomes a "sad" tag the list is built from.
+  const readText = intent.clean.length >= 3 ? intent.clean : text;
+  const heuristic = vibeHeuristic(readText);
   let interp = null, source = 'heuristic', why = null;
-  const ai = forceHeuristic ? { result: null, why: 'forced' } : await vibeAskAi(text, env);
+  const ai = forceHeuristic ? { result: null, why: 'forced' } : await vibeAskAi(readText, env);
   if (ai.result != null) {
     interp = vibeSanitizeAi(ai.result, heuristic);
     if (interp) source = 'ai'; else why = 'unparseable';
   } else why = ai.why;
   if (!interp) interp = heuristic;
+  if (house) interp = vibeApplyHouse(interp, house);
+  if (intent.instrumental && !interp.tags.includes('instrumental')) interp = Object.assign({}, interp, { tags: ['instrumental'].concat(interp.tags).slice(0, VIBE_MAX_TAGS) });
 
   const grounded = await vibeGroundTracks(interp, env, cacheText);
   // An AI answer whose tags all came back empty on Last.fm (too exotic) -
@@ -4393,19 +4412,91 @@ async function handleVibeInterpret(url, env, ctx) {
     energy: interp.energy,
     bpm: interp.bpm,
     seeds: { suggested: grounded.seedsSuggested, verified: grounded.seedsVerified },
+    house: !!house,
     tracks: grounded.tracks,
   };
-  const response = json(payload);
   // A real AI answer is stable for a given sentence - keep it a week. A
   // heuristic answer only an hour, so a transient AI outage doesn't pin the
   // dumber answer to that sentence. An empty list isn't cached at all.
+  // Metrics stay out of the cached entry: they're attached fresh on every
+  // answer, so a track that was still cold the first time fills in later.
   if (grounded.tracks.length && !forceHeuristic) {
-    const toCache = response.clone();
-    ctx.waitUntil(cache.put(cacheKey, new Response(toCache.body, {
+    ctx.waitUntil(cache.put(cacheKey, new Response(JSON.stringify(payload), {
       headers: { 'Content-Type': 'application/json', 'Cache-Control': source === 'ai' ? 'max-age=604800' : 'max-age=3600' },
     })));
   }
-  return response;
+  return json(await vibeFinish(payload, intent, env, ctx));
+}
+
+// A house vibe's seeds lead (still verified against the catalog like any
+// model seed), its tags come first, and its energy range replaces the model's.
+function vibeApplyHouse(interp, house) {
+  const seeds = (Array.isArray(house.seeds) ? house.seeds : [])
+    .filter(x => x && x.title && x.artist)
+    .map(x => ({ title: String(x.title).slice(0, 120), artist: String(x.artist).slice(0, 120) }));
+  const tags = [];
+  (Array.isArray(house.tags) ? house.tags : []).concat(interp.tags || []).forEach(t => { t = String(t || '').toLowerCase().slice(0, 30); if (t && !tags.includes(t)) tags.push(t); });
+  const e = Array.isArray(house.energy) && house.energy.length === 2 && house.energy.every(n => typeof n === 'number' && n >= 0 && n <= 1) ? house.energy.slice() : interp.energy;
+  return Object.assign({}, interp, { seeds: seeds.concat(interp.seeds || []).slice(0, VIBE_MAX_SEEDS + 4), tags: tags.slice(0, VIBE_MAX_TAGS), energy: e });
+}
+
+// Per-request finishing on a cached or fresh answer: drop excluded songs (one
+// Last.fm tag lookup per excluded term, max 3), narrow the energy range for
+// "nothing too fast" / "nothing slow", then attach metrics to what's left so
+// the two arrays stay aligned.
+async function vibeFinish(payload, intent, env, ctx) {
+  const out = Object.assign({}, payload);
+  if (intent.exclude.length) {
+    const lists = await Promise.all(intent.exclude.map(t => vibeExcludeList(t, env).catch(() => [])));
+    out.tracks = filterExcluded(out.tracks, intent.exclude, lists).tracks;
+  }
+  if (Array.isArray(out.energy) && out.energy.length === 2) {
+    let lo = out.energy[0], hi = out.energy[1];
+    if (intent.energyCap != null) { hi = Math.min(hi, intent.energyCap); lo = Math.min(lo, hi - 0.15); }
+    if (intent.energyFloor != null) { lo = Math.max(lo, intent.energyFloor); hi = Math.max(hi, lo + 0.15); }
+    out.energy = [Math.max(0, +lo.toFixed(2)), Math.min(1, +hi.toFixed(2))];
+  }
+  out.exclude = intent.exclude.concat(intent.instrumental ? ['vocals'] : []);
+  out.metrics = await vibeAttachMetrics(out.tracks, env, ctx);
+  return out;
+}
+// Cached a week per term: tag top lists barely move, and a popular exclusion
+// ("no sad", "no country") then costs a cache read instead of a Last.fm call.
+async function vibeExcludeList(term, env) {
+  const key = new Request('https://cache.internal/' + VIBE_CACHE_VERSION + '/vibe-exclude/' + encodeURIComponent(term));
+  const hit = await caches.default.match(key);
+  if (hit) { try { return await hit.json(); } catch (e) { /* refetch */ } }
+  const data = await lastfmCall('tag.getTopTracks', { tag: term, limit: '100' }, env);
+  const list = data && data.tracks && data.tracks.track;
+  if (!Array.isArray(list)) return [];
+  const out = list.filter(t => t && t.name && t.artist && t.artist.name).map(t => ({ title: t.name, artist: t.artist.name }));
+  await caches.default.put(key, new Response(JSON.stringify(out), { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'max-age=604800' } })).catch(() => {});
+  return out;
+}
+
+// BPM/energy/key for the grounded tracks, aligned with `tracks` (null where
+// not known yet), so the client can rank and shape the list without its own
+// /metrics round trips - on a slow connection those took longer than the
+// client's 1.8s timeout and the ranking quietly fell back to no metrics.
+// Same per-track cache and budget rules as /metrics, with a smaller budget:
+// this request already spent subrequests on the model and the grounding.
+// Lookups past the deadline keep running under waitUntil and warm the cache.
+const VIBE_METRICS_MAX = 25;
+const VIBE_METRICS_BUDGET = 15;
+const VIBE_METRICS_DEADLINE_MS = 2000;
+async function vibeAttachMetrics(tracks, env, ctx) {
+  const list = (tracks || []).slice(0, VIBE_METRICS_MAX);
+  const results = new Array(list.length).fill(null);
+  const req = { left: VIBE_METRICS_BUDGET, artists: new Map() };
+  const all = mapWithConcurrency(list, 4, async (t, i) => {
+    if (!t || !t.title || !t.artist) return;
+    try { results[i] = await metricsForTrack(String(t.title).slice(0, 200), String(t.artist).slice(0, 200), env, req, ctx); } catch (e) { /* stays null */ }
+  });
+  ctx.waitUntil(all);
+  let timer;
+  await Promise.race([all, new Promise(r => { timer = setTimeout(r, VIBE_METRICS_DEADLINE_MS); })]);
+  clearTimeout(timer);
+  return results.slice();
 }
 
 // Voice DJ (#553): maps a validated /voice/plan mood plan onto the interpretation

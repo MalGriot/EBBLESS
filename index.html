@@ -1385,6 +1385,8 @@ body:has(#musicMap:not([hidden])):has(#mini-bar:not([hidden])) .mm-foot{padding-
 #import-overlay:has(.pick-x) .close{display:none}
 .pick-x{position:absolute;top:8px;right:8px;width:32px;height:32px;border-radius:50%;border:0;background:none;color:var(--faint);display:flex;align-items:center;justify-content:center;z-index:2}
 .pick-x svg{width:18px;height:18px}
+.vibe-share{position:absolute;top:8px;left:8px;width:32px;height:32px;border-radius:50%;border:0;background:none;color:var(--faint);display:flex;align-items:center;justify-content:center;z-index:2}
+.vibe-share svg{width:17px;height:17px}
 .import-stage .step{font-size:15px;color:var(--faint);margin:0 0 20px;transition:color var(--dur-ui) var(--ease-out)}
 .import-stage .flow-line{margin-bottom:14px}
 .import-stage .counter{font-size:12px;color:var(--faint-2)}
@@ -15316,6 +15318,13 @@ function copyPlaylistLink(pl){
    real splash/install-invite first (see startApp), then the song/playlist,
    which matches "leads them to install/open EBBLESS and play it".
    ========================================================================= */
+// ?vibe=<sentence>: the sentence only, never the songs or who shared it.
+function buildVibeShareUrl(text){
+  return location.origin + location.pathname + '?' + new URLSearchParams({ vibe: String(text || '').slice(0, 300) }).toString();
+}
+function vibeNormalizeShared(v){
+  return String(v || '').replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 300);
+}
 function buildShareUrl(sourceLink, trackIndex){
   const params = new URLSearchParams({ import: sourceLink });
   if (trackIndex != null && trackIndex > 0) params.set('track', String(trackIndex));
@@ -18228,13 +18237,21 @@ function applySharedImportFromUrl(){
 // applySharedImportFromUrl from startApp(), so a cold start (splash or
 // onboarding still up) only gets here once the app is ready.
 function applyShareTargetFromUrl(){
-  let title, text, url;
+  let title, text, url, vibe;
   try{
     const params = new URLSearchParams(location.search);
+    vibe = vibeNormalizeShared(params.get('vibe'));
     title = params.get('share_title') || '';
     text = params.get('share_text') || '';
     url = params.get('share_url') || '';
   } catch(e){ return; }
+  if (vibe){
+    // A shared vibe (?vibe=, from the vibe results' share button) builds fresh
+    // for whoever opens it: same sentence, their own familiar songs mixed in.
+    try{ history.replaceState(null, '', location.pathname + location.hash); } catch(e){}
+    beginConversationalVibe(vibe);
+    return;
+  }
   if (!title && !text && !url) return;
   try{ history.replaceState(null, '', location.pathname + location.hash); } catch(e){}
   const m = (url + ' ' + text).match(/https?:\/\/\S+/i);
@@ -18523,6 +18540,9 @@ function renderSearchTab(){
   const seen = new Set(), tags = [];
   (mood ? mood.tags : []).forEach(t => { const k = t.replace(/[\s-]/g, ''); if (!seen.has(k) && tags.length < 6){ seen.add(k); tags.push(t); } });
   const prompts = [pasteHintCap(when) + ', ' + (PASTE_HINT_MOOD[ctx.block] || 'something that fits'), PERIOD_PROMPTS[letter]].filter(Boolean);
+  let usual = null;
+  try { usual = vibeRightNow(); } catch(e){}
+  if (usual && !prompts.some(p => p.toLowerCase() === usual.q.toLowerCase())) prompts.unshift(usual.q);   // what you tend to play around now leads
   $('stMoodTitle').textContent = 'Right now: ' + when;
   chips.innerHTML = prompts.map((t, i) => '<button type="button" class="st-chip is-prompt" data-q="p' + i + '">' + escapeHtml(t) + '</button>').join('') +
     tags.map((t, i) => '<button type="button" class="st-chip" data-q="t' + i + '">' + escapeHtml(t) + '</button>').join('');
@@ -18683,6 +18703,12 @@ async function fetchVibeInterpretation(text){
     const res = await fetch(BACKEND + '/vibe-interpret?' + new URLSearchParams({ q: text.slice(0, 300) }), { signal: ctrl.signal });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || ('backend returned ' + res.status));
+    // The worker sends each track's metrics along (aligned with tracks), so
+    // ranking and the energy arc read them from the memo instead of making
+    // their own /metrics calls, which time out on slow connections.
+    if (Array.isArray(data.metrics) && Array.isArray(data.tracks)){
+      data.metrics.forEach((m, i) => { const t = data.tracks[i]; if (m && typeof m === 'object' && t && t.title && t.artist) metricMemo.set(tagCacheKey(t), m); });
+    }
     return data;
   } finally { clearTimeout(timer); }
 }
@@ -18718,6 +18744,57 @@ function vibeMetricFit(m, interp){
   return w ? total / w : null;
 }
 
+// vibe-no-repeat: asking for the same vibe again brings new songs. Each
+// played vibe remembers its songs on this device for two weeks; a later
+// list for the same sentence ranks those lower (not out, so a thin pool
+// still fills). Songs the listener already knows are mixed in on purpose
+// and aren't affected.
+const LS_VIBE_PLAYED = 'ebbless:vibeplayed';
+const VIBE_PLAYED_DAYS = 14;
+const VIBE_PLAYED_MAX = 30;        // vibes remembered; the oldest drops off
+function vibeMemoryKey(text){
+  return String(text || '').toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, ' ').replace(/\s+/g, ' ').trim().slice(0, 300);
+}
+function vibeRecentlyPlayed(text){
+  const k = vibeMemoryKey(text), all = lsGet(LS_VIBE_PLAYED, {}) || {}, e = k && all[k];
+  if (!e || !Array.isArray(e.keys) || Date.now() - (e.ts || 0) > VIBE_PLAYED_DAYS * 864e5) return new Set();
+  return new Set(e.keys);
+}
+function vibeRememberPlayed(text, list, opts){
+  const k = vibeMemoryKey(text);
+  if (!k) return;
+  const all = lsGet(LS_VIBE_PLAYED, {}) || {};
+  const prev = all[k] && Date.now() - (all[k].ts || 0) <= VIBE_PLAYED_DAYS * 864e5 ? all[k].keys || [] : [];
+  const pastWhen = all[k] && Array.isArray(all[k].when) ? all[k].when : [];
+  const when = opts && opts.noWhen ? pastWhen : pastWhen.concat(Date.now()).slice(-12);   // continuations aren't a new play of the vibe
+  delete all[k];
+  all[k] = { ts: Date.now(), q: String(text).slice(0, 300), when, keys: Array.from(new Set(prev.concat(list.filter(t => !t.heard).map(tagCacheKey)))).slice(-120) };
+  const keys = Object.keys(all);
+  if (keys.length > VIBE_PLAYED_MAX) keys.slice(0, keys.length - VIBE_PLAYED_MAX).forEach(x => delete all[x]);
+  lsSet(LS_VIBE_PLAYED, all);
+}
+
+/* vibe-right-now: the Search page's "Right now" section leads with the vibe
+   this listener tends to play at this hour (and weekday vs weekend), read
+   from the same on-device vibe memory. Each past play counts by how close
+   its time of day was to now, faded by age (three-week half-life); a vibe
+   shows once two or more plays sit near this time and the total clears
+   VIBE_NOW_MIN, so one stray play doesn't. Nothing leaves the device. */
+const VIBE_NOW_MIN = 1.2;
+function vibeRightNow(now){
+  now = now || Date.now();
+  const all = lsGet(LS_VIBE_PLAYED, {}) || {};
+  let best = null;
+  Object.keys(all).forEach(k => {
+    const e = all[k];
+    if (!e || !e.q || !Array.isArray(e.when)) return;
+    const scores = e.when.map(ts => vibeTimeScore(ts, now));
+    const score = scores.reduce((n, x) => n + x, 0);
+    if (scores.filter(x => x > 0.4).length >= 2 && score >= VIBE_NOW_MIN && (!best || score > best.score)) best = { q: e.q, score };
+  });
+  return best;
+}
+
 // Orders the worker's grounded list into the playlist: model-picked seeds
 // get a head start, everything is nudged by metric fit (unknown = neutral),
 // at most two songs per artist, and no artist twice in a row.
@@ -18736,7 +18813,8 @@ async function rankVibeTracks(interp, onStep){
   const scored = pool.map((t, i) => {
     const fit = i < metrics.length ? vibeMetricFit(metrics[i], interp) : null;
     const base = t.from === 'seed' ? 0.75 : 0.5;
-    return { t, s: base + (fit == null ? 0 : (fit - 0.5) * 0.5) - i * 0.004 };
+    const played = interp.avoid && interp.avoid.has(tagCacheKey(t)) ? 0.4 : 0;
+    return { t, s: base + (fit == null ? 0 : (fit - 0.5) * 0.5) - i * 0.004 - played };
   }).sort((a, b) => b.s - a.s);
   const perArtist = new Map();
   const picked = [];
@@ -18746,13 +18824,119 @@ async function rankVibeTracks(interp, onStep){
     perArtist.set(a, (perArtist.get(a) || 0) + 1);
     picked.push(x.t);
   });
-  for (let i = 1; i < picked.length; i++){
-    if (String(picked[i].artist).toLowerCase() !== String(picked[i - 1].artist).toLowerCase()) continue;
-    const j = picked.findIndex((t, k) => k > i && String(t.artist).toLowerCase() !== String(picked[i].artist).toLowerCase());
-    if (j > i) picked.splice(i, 0, picked.splice(j, 1)[0]);
-  }
-  return picked;
+  return vibeSpreadArtists(picked);
 }
+/* VIBE-ARC:BEGIN (tools/vibe-arc.test.js loads this block) */
+// No artist twice in a row: pull the next different-artist song forward.
+function vibeSpreadArtists(list){
+  for (let i = 1; i < list.length; i++){
+    if (String(list[i].artist).toLowerCase() !== String(list[i - 1].artist).toLowerCase()) continue;
+    const j = list.findIndex((t, k) => k > i && String(t.artist).toLowerCase() !== String(list[i].artist).toLowerCase());
+    if (j > i) list.splice(i, 0, list.splice(j, 1)[0]);
+  }
+  return list;
+}
+
+/* vibe-energy-arc: the finished list plays as a set, not a ranking. Its
+   shape comes from what the vibe is for (vibeArcShape): most vibes ease in,
+   build to a peak about two thirds through and come back down; sleep winds
+   down; focus stays steady; workouts and parties build and hold. Songs with
+   a known /metrics energy trade places along that curve; songs without one
+   keep their spot. Ranking already kept every song inside the asked-for
+   range, so the arc is a shape within the vibe, not a detour out of it.
+   Then neighbours with nearly the same energy swap when that makes the
+   join smoother in key (Camelot) and tempo, the way a DJ would order them. */
+const VIBE_ARC_PEAK = 0.65;        // where the 'rise' peak sits, 0..1 through the list
+const VIBE_ARC_MIN_KNOWN = 6;      // fewer songs with a known energy than this: leave the order alone
+const VIBE_ARC_SWAP_GAP = 0.08;    // neighbours this close in energy may swap for a smoother join
+const VIBE_ARC_SHAPES = {
+  rise:     { label: 'builds, then eases out', at: p => p <= VIBE_ARC_PEAK ? 0.15 + 0.85 * (p / VIBE_ARC_PEAK) : 1 - 0.55 * ((p - VIBE_ARC_PEAK) / (1 - VIBE_ARC_PEAK)) },
+  winddown: { label: 'winds down',             at: p => 1 - 0.85 * p },
+  steady:   { label: 'stays steady',           at: p => 0.5 + 0.12 * Math.sin(p * Math.PI * 4) },
+  build:    { label: 'builds and holds',       at: p => 0.15 + 0.85 * Math.min(1, p / 0.4) },
+};
+const VIBE_ARC_INTENTS = [
+  { shape: 'winddown', re: /\b(sleep|sleeping|asleep|bed|bedtime|nap|wind(ing)? down|unwind|fall asleep|lullaby)\b/i },
+  { shape: 'steady',   re: /\b(study|studying|focus|focusing|concentrat\w*|work|working|coding|reading|homework|deep work)\b/i },
+  { shape: 'build',    re: /\b(workout|gym|run|running|lift|lifting|cardio|training|hype|pump|pumped|party|pregame|rave)\b/i },
+];
+function vibeArcShape(text){
+  const hit = VIBE_ARC_INTENTS.find(x => x.re.test(String(text || '')));
+  return hit ? hit.shape : 'rise';
+}
+function vibeArcTarget(p, shape){ return (VIBE_ARC_SHAPES[shape] || VIBE_ARC_SHAPES.rise).at(p); }
+// /metrics energy comes only from ReccoBeats and is missing for most songs;
+// getsongbpm still gives danceability and BPM, which stand in for it. Only
+// the order matters here, so the two scales don't need to agree exactly.
+function vibeArcEnergy(m){
+  if (!m) return null;
+  if (typeof m.energy === 'number') return m.energy;
+  if (typeof m.danceability === 'number' && m.bpm > 0) return 0.5 * m.danceability + 0.5 * Math.min(1, Math.max(0, (m.bpm - 60) / 100));
+  return null;
+}
+// 0..1 how smoothly song b follows song a: Camelot neighbours (same key, one
+// step round the wheel, or the relative major/minor) and close tempo, with
+// half/double time counting as close. Unknown on either side is neutral (0).
+function vibeJoinScore(a, b){
+  if (!a || !b) return 0;
+  let key = 0, bpm = 0;
+  const ca = /^(\d{1,2})([AB])$/.exec(a.camelot || ''), cb = /^(\d{1,2})([AB])$/.exec(b.camelot || '');
+  if (ca && cb){
+    const d = Math.abs(+ca[1] - +cb[1]), step = Math.min(d, 12 - d);
+    key = ca[2] === cb[2] ? (step === 0 ? 1 : step === 1 ? 0.9 : 0) : (step === 0 ? 0.8 : 0);
+  }
+  if (a.bpm > 0 && b.bpm > 0){
+    let r = Math.max(a.bpm, b.bpm) / Math.min(a.bpm, b.bpm);
+    if (r > 1.6) r /= 2;
+    bpm = Math.max(0, 1 - Math.abs(r - 1) / 0.08);
+  }
+  return 0.6 * key + 0.4 * bpm;
+}
+// Returns { tracks, shape } - shape is the VIBE_ARC_SHAPES key used, or null
+// when too little is known to shape the list. Metrics for the fresh songs are
+// already in the memo (sent with /vibe-interpret, or fetched by
+// rankVibeTracks), so this costs at most one /metrics call.
+async function vibeEnergyArc(tracks, text){
+  const n = tracks.length;
+  if (n < VIBE_ARC_MIN_KNOWN) return { tracks, shape: null };
+  const ms = await fetchTrackMetrics(tracks).catch(() => []);
+  const slots = [], songs = [], metricOf = new Map();
+  tracks.forEach((t, i) => { const e = vibeArcEnergy(ms[i]); if (e != null){ slots.push(i); songs.push({ t, e }); metricOf.set(t, { e, camelot: ms[i].camelot, bpm: ms[i].bpm }); } });
+  if (songs.length < VIBE_ARC_MIN_KNOWN) return { tracks, shape: null };
+  const shape = vibeArcShape(text);
+  songs.sort((a, b) => a.e - b.e);
+  slots.sort((a, b) => vibeArcTarget(a / (n - 1), shape) - vibeArcTarget(b / (n - 1), shape));
+  const out = tracks.slice();
+  slots.forEach((slot, k) => { out[slot] = songs[k].t; });
+  const join = (i, j) => (i < 0 || j >= n) ? 0 : vibeJoinScore(metricOf.get(out[i]), metricOf.get(out[j]));
+  for (let i = 0; i < n - 1; i++){
+    const a = metricOf.get(out[i]), b = metricOf.get(out[i + 1]);
+    if (!a || !b || Math.abs(a.e - b.e) > VIBE_ARC_SWAP_GAP) continue;
+    const before = join(i - 1, i) + join(i, i + 1) + join(i + 1, i + 2);
+    [out[i], out[i + 1]] = [out[i + 1], out[i]];
+    const after = join(i - 1, i) + join(i, i + 1) + join(i + 1, i + 2);
+    if (after <= before) [out[i], out[i + 1]] = [out[i + 1], out[i]];
+  }
+  return { tracks: vibeSpreadArtists(out), shape };
+}
+function vibeTimeScore(ts, now){
+  const a = new Date(ts), b = new Date(now);
+  const dh = Math.abs(a.getHours() + a.getMinutes() / 60 - (b.getHours() + b.getMinutes() / 60));
+  const d = Math.min(dh, 24 - dh);
+  if (d > 3) return 0;
+  const weekend = x => x.getDay() === 0 || x.getDay() === 6;
+  const age = (now - ts) / 864e5;
+  return (1 - d / 3 + (weekend(a) === weekend(b) ? 0.5 : 0)) * Math.pow(0.5, age / 21);
+}
+// Lyrics mostly about death and heartbreak: 6+ dark words making up 2%+ of the words.
+const VIBE_DARK_WORDS = new Set('death die dies died dying dead funeral grave graves cry crying cried tears alone lonely goodbye pain hurt hurts broken suicide kill killed killing bleed bleeding blood grief sorrow empty darkness heartbreak heartbroken misery mourning'.split(' '));
+function vibeLyricsDark(text){
+  const words = String(text || '').toLowerCase().match(/[\p{L}']+/gu) || [];
+  if (words.length < 40) return false;
+  const hits = words.filter(w => VIBE_DARK_WORDS.has(w)).length;
+  return hits >= 6 && hits / words.length >= 0.02;
+}
+/* VIBE-ARC:END */
 
 /* vibe-search-named-playlists: the compiled list mixes in songs the
    listener already knows (Liked Songs, saved playlists, play history) that
@@ -18896,6 +19080,7 @@ function vibeMoodWords(interp){
   const parts = (interp.tags || []).slice(0, 3);
   if (e != null) parts.push(e < 0.4 ? 'low energy' : e > 0.62 ? 'high energy' : 'mid energy');
   if (b) parts.push('~' + b + ' bpm');
+  (Array.isArray(interp.exclude) ? interp.exclude : []).slice(0, 4).forEach(x => parts.push('no ' + String(x).slice(0, 30)));
   return parts;
 }
 
@@ -18921,6 +19106,7 @@ async function beginConversationalVibe(text, preInterp){
   if (token !== vibeResultsToken || !importOverlay.classList.contains('is-open')) return;
   stageInterpreting(text, 'Finding real songs');
   let tracks = [];
+  interp = Object.assign({}, interp, { avoid: vibeRecentlyPlayed(text) });
   const known = vibeKnownTracks();
   const poolArtists = new Set((interp.tracks || []).map(t => primaryArtistKey(t && t.artist)));
   let heard = [];
@@ -18936,7 +19122,11 @@ async function beginConversationalVibe(text, preInterp){
     return;
   }
   tracks = blendVibeTracks(tracks, heard, known);
-  interp = Object.assign({}, interp, { title: vibePlaylistName(interp, text) });
+  stageInterpreting(text, 'Shaping the flow');
+  const arc = await vibeEnergyArc(tracks, text);
+  if (token !== vibeResultsToken || !importOverlay.classList.contains('is-open')) return;
+  tracks = arc.tracks;
+  interp = Object.assign({}, interp, { title: vibePlaylistName(interp, text), arc: arc.shape });
   stageVibeResults(text, interp, tracks);
 }
 
@@ -18944,10 +19134,12 @@ function stageVibeResults(text, interp, tracks){
   const rows = tracks.map((t, i) => searchPickRowHtml(i, t.image || '', t.title, escapeHtml(t.artist) + (t.heard ? ' &middot; <span class="vibe-known">you know this</span>' : ''), 'vibe-pick')).join('');
   const heardN = tracks.filter(t => t.heard).length;
   const mood = vibeMoodWords(interp);
+  if (interp.arc && VIBE_ARC_SHAPES[interp.arc]) mood.push(VIBE_ARC_SHAPES[interp.arc].label);
   if (heardN) mood.push(heardN + ' you know · ' + (tracks.length - heardN) + ' new');
   const chips = mood.map(w => '<span class="vibe-chip">' + escapeHtml(w) + '</span>').join('');
   importStage.innerHTML =
     '<button type="button" class="pick-x" aria-label="Close"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.4 5L5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6z"/></svg></button>' +
+    '<button type="button" class="vibe-share" id="vibeShareBtn" aria-label="Share this vibe" title="Share this vibe">' + SWIPE_ICON_SHARE + '</button>' +
     '<div class="step">' + escapeHtml(interp.title || 'Your vibe') + '</div>' +
     '<div class="vibe-heard">&ldquo;' + escapeHtml(text) + '&rdquo;</div>' +
     '<div class="vibe-chips">' + chips + '</div>' +
@@ -18979,6 +19171,7 @@ function stageVibeResults(text, interp, tracks){
   for (let w = 0; w < 4; w++) artWorker();
   $('vibePlayBtn').addEventListener('click', () => playVibePlaylist(interp, tracks, 0, false, text));
   $('vibeSaveBtn').addEventListener('click', () => playVibePlaylist(interp, tracks, 0, true, text));
+  $('vibeShareBtn').addEventListener('click', () => shareEbblessLink({ title: 'EBBLESS', text: 'A vibe on EBBLESS: "' + text + '"', url: buildVibeShareUrl(text) }));
   $('vibePlaylistsBtn').addEventListener('click', () => beginVibeSearch((interp.keywords && interp.keywords[0]) || text));
   $('searchBackBtn').addEventListener('click', closeImportOverlay);
 }
@@ -18996,6 +19189,7 @@ async function playVibePlaylist(interp, list, startIdx, save, text, opts){
   // resolving under that id so the two don't write over each other.
   const gen = save ? null : ++vibeSessionGen;
   const order = list.slice(startIdx).concat(list.slice(0, startIdx));
+  vibeRememberPlayed(text, list);
   const id = save ? 'custom-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6) : VIBE_SESSION_ID;
   const pl = { id, type: 'custom', name: interp.title || 'Your vibe', image: null, tracks: [], ts: Date.now(), rematchUnmatched: true, vibeQuery: String(text || '').slice(0, 300) };
   persistPlaylistObj(pl);
@@ -20838,6 +21032,14 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
+  { version: 490, date: '2026-11-04', items: [
+    'Describe a vibe and its songs now play as a set: they ease in, build, and come back down. Sleep vibes wind down, focus vibes stay steady, workouts build and hold.',
+    'Songs next to each other in a vibe are lined up so their keys and tempos flow into each other.',
+    'Say what you don\'t want: "no vocals", "nothing too fast", "nothing sad", or an artist\'s name.',
+    'Ask for the same vibe again and you get new songs. When a vibe runs out, it keeps going in the same vibe instead of drifting, and a couple of quick skips change what comes next.',
+    'Share a vibe from the button on its card: the link builds it fresh for whoever opens it.',
+    'Search\'s Right now section leads with the vibe you usually play around this time.',
+  ] },
   { version: 489, date: '2026-11-03', items: [
     'Player looks now go in the order default art, CD, cassette, LP (and Cymatics last in the mini player). The mini player brings back the big LP next to the big CD, and its CD and LP turn again.',
     'The CD and the LP spin slower (the LP game keeps its speed), the cassette\'s moving copies shrink with it in fullscreen, and the song title sits in the middle again.',
@@ -23162,6 +23364,7 @@ async function fetchDiscoverCandidates(seedTracks, excludeVideoIds, count, allow
     });
   }
   const steerKeys = steer ? await addRadioSteerPool(pool, steer, seedTagVec) : new Set();
+  const vibeAnchor = opts && opts.vibe ? await addVibeAnchorPool(pool, opts.vibe) : null;
   if (!pool.length) return [];
 
   // Tempo/key/energy lookup (see applyMetricPreference) runs alongside the
@@ -23186,6 +23389,7 @@ async function fetchDiscoverCandidates(seedTracks, excludeVideoIds, count, allow
   // Thumbs-downs and what the listener returns to (applyTastePreference).
   ranked = applyTastePreference(ranked);
   if (steer) ranked = await applyRadioSteer(ranked, steer, thisIsKeys, mood, steerKeys);
+  if (vibeAnchor) ranked = applyVibeAnchor(ranked, vibeAnchor, mood);
   const declinedV = tasteProfile().declined.v;
   // Random, score-weighted walk order (see discoverSampleOrder). `rank`
   // stays the true score rank, so the long-track strong-match rule is
@@ -23652,7 +23856,7 @@ function prefetchDiscover(originPlId){
   }
   const allowLong = discoverQueuedThisSession >= DISCOVER_LONG_AFTER;
   const steer = currentRadioSteer();
-  const promise = fetchDiscoverCandidates(seedTracks, libraryVideoIdSet(), DISCOVER_BATCH, allowLong, { steer, alive: () => steer === currentRadioSteer() }).catch(() => []);
+  const promise = fetchDiscoverCandidates(seedTracks, libraryVideoIdSet(), DISCOVER_BATCH, allowLong, { steer, vibe: discoverVibeFor(originPlId), alive: () => steer === currentRadioSteer() }).catch(() => []);
   discoverPrefetch = { key, promise };
 }
 function extendQueueWithDiscover(originPlId){
@@ -23672,7 +23876,7 @@ function extendQueueWithDiscover(originPlId){
       const pf = discoverPrefetch;
       discoverPrefetch = null;
       const found = (pf && pf.key === discoverPrefetchKey(originPlId, seedTracks[0])) ? await pf.promise
-        : await fetchDiscoverCandidates(seedTracks, libraryVideoIdSet(), DISCOVER_BATCH, allowLong, { steer, alive: () => steer === currentRadioSteer() });
+        : await fetchDiscoverCandidates(seedTracks, libraryVideoIdSet(), DISCOVER_BATCH, allowLong, { steer, vibe: discoverVibeFor(originPlId), alive: () => steer === currentRadioSteer() });
       // A steering chip was tapped mid-fetch: drop this batch, the chip refetches.
       if (steer !== currentRadioSteer()) return;
       // Discover may have been switched off (or the queue replaced) while
@@ -23683,6 +23887,8 @@ function extendQueueWithDiscover(originPlId){
       }
       discoverEmptyTs = 0;
       discoverQueuedThisSession += found.length;
+      const vibeText = discoverVibeFor(originPlId);
+      if (vibeText) vibeRememberPlayed(vibeText, found, { noWhen: true });
       const extId = discoverExtId(originPlId);
       const ext = getOrCreateDiscoverExt(originPlId);
       const startIdx = ext.tracks.length;
@@ -23711,6 +23917,141 @@ function extendQueueWithDiscover(originPlId){
   })();
   return discoverExtendPromise;
 }
+
+/* vibe-keep-going: when a queue a vibe built (pl.vibeQuery) runs on into
+   Discover, the vibe stays the anchor instead of drifting toward whatever is
+   similar to the last song. The vibe's own grounded songs (the same edge-
+   cached /vibe-interpret answer, metrics included) join the pool with a lift
+   bigger than a steering chip's, songs it already played are left out, and
+   any candidate whose energy sits outside the vibe's range is pulled down by
+   how far outside it is. Sets build their own arc and are left alone. */
+const VIBE_ANCHOR_WEIGHT = 0.45;
+const VIBE_ANCHOR_MS = 8000;
+const vibeAnchorMemo = new Map();   // sentence -> interp, this session only
+function discoverVibeFor(originPlId){
+  const pl = originPlId ? getCachedPlaylist(originPlId) : null;
+  return pl && pl.vibeQuery && !pl.isSet ? String(pl.vibeQuery) : '';
+}
+async function addVibeAnchorPool(pool, text){
+  let interp = vibeAnchorMemo.get(text);
+  if (!interp){
+    interp = await Promise.race([fetchVibeInterpretation(text).catch(() => null), sleep(VIBE_ANCHOR_MS).then(() => null)]);
+    if (interp && Array.isArray(interp.tracks)) vibeAnchorMemo.set(text, interp);
+  }
+  if (!interp || !Array.isArray(interp.tracks)) return null;
+  const played = vibeRecentlyPlayed(text);
+  state.queue.forEach((e, i) => { const t = trackAt(i); if (t) played.add(tagCacheKey(t)); });
+  const seen = new Set(pool.map(c => tagCacheKey(c))), keys = new Set();
+  interp.tracks.forEach(t => {
+    if (!t || !t.title || !t.artist) return;
+    const key = tagCacheKey(t);
+    if (played.has(key)) return;
+    keys.add(key);
+    if (!seen.has(key)){ seen.add(key); pool.push({ title: t.title, artist: t.artist, matchScore: 0.5, tags: [] }); }
+  });
+  return { keys, energy: Array.isArray(interp.energy) ? interp.energy : null };
+}
+function applyVibeAnchor(ranked, anchor, mood){
+  ranked.forEach(x => {
+    const key = tagCacheKey(x.c);
+    if (anchor.keys.has(key)) x.score += VIBE_ANCHOR_WEIGHT;
+    const m = (mood && mood.candMetrics && mood.candMetrics.get(key)) || metricMemo.get(key);
+    const e = vibeArcEnergy(m);
+    if (e != null && anchor.energy){
+      const d = e < anchor.energy[0] ? anchor.energy[0] - e : (e > anchor.energy[1] ? e - anchor.energy[1] : 0);
+      if (d) x.score -= Math.min(0.4, d * 1.5);
+    }
+  });
+  return ranked.slice().sort((a, b) => b.score - a.score).map((x, rank) => Object.assign(x, { rank }));
+}
+
+/* VIBE-LIVE:BEGIN (tools/vibe-arc.test.js loads this block) */
+/* vibe-live: a queue a vibe built keeps listening while it plays.
+   - An early skip (recordSkipIfEarly's rule) takes that artist out of the
+     next stretch, and two of the last three early skips on the same side of
+     the stretch's energy move the songs on that side later ("easing it
+     back" / "picking it up").
+   - Coming back after a long pause, a next song much stronger than the one
+     playing trades places with the calmest of the few after it.
+   - In a bright vibe (sunny, brunch, party, "nothing sad"), the next two
+     songs' lyrics are checked; one mostly about death and heartbreak leaves
+     the queue (it stays in the playlist). The lookups warm the lyrics view's
+     own cache. Only the queue order changes. */
+const VIBE_SKIP_WINDOW = 8;
+const VIBE_REENTRY_MS = 15 * 60000;
+const VIBE_BRIGHT_RE = /\b(happy|sunny|sunshine|upbeat|joy|joyful|feel[- ]good|celebrat\w*|summer|brunch|wedding|birthday|party|cheerful|uplifting|good vibes|positive|bright)\b|\b(no|nothing|without)\s+(too\s+)?sad\b/i;
+function currentVibeText(){ return discoverVibeFor(discoverOriginId()); }
+function queueEnergy(pos){ const t = trackAt(pos); return t ? vibeArcEnergy(metricMemo.get(tagCacheKey(t))) : null; }
+let vibeSkipLog = [];
+function vibeOnEarlySkip(t){
+  const text = currentVibeText();
+  if (!text || !t) return;
+  const start = state.queuePos + 2;   // the next song may already be buffering
+  const artist = primaryArtistKey(t.artist || '');
+  let changed = false;
+  for (let i = Math.min(state.queue.length, start + VIBE_SKIP_WINDOW) - 1; i >= start; i--){
+    const x = trackAt(i);
+    if (x && artist && primaryArtistKey(x.artist || '') === artist){ state.queue.splice(i, 1); changed = true; }
+  }
+  const e = vibeArcEnergy(metricMemo.get(tagCacheKey(t)));
+  vibeSkipLog = vibeSkipLog.filter(x => x.text === text).concat(e == null ? [] : [{ text, e }]).slice(-3);
+  const win = [];
+  for (let i = start; i < Math.min(state.queue.length, start + VIBE_SKIP_WINDOW); i++) win.push({ entry: state.queue[i], e: queueEnergy(i) });
+  const known = win.map(w => w.e).filter(x => x != null).sort((a, b) => a - b);
+  if (vibeSkipLog.length >= 2 && known.length >= 3){
+    const mid = known[Math.floor(known.length / 2)];
+    const above = vibeSkipLog.filter(x => x.e > mid + 0.05).length, below = vibeSkipLog.filter(x => x.e < mid - 0.05).length;
+    const dir = above >= 2 ? 1 : below >= 2 ? -1 : 0;
+    if (dir){
+      const off = w => w.e != null && (dir > 0 ? w.e > mid + 0.05 : w.e < mid - 0.05);
+      const reordered = win.filter(w => !off(w)).concat(win.filter(off)).map(w => w.entry);
+      state.queue.splice(start, reordered.length, ...reordered);
+      vibeSkipLog = [];
+      changed = true;
+      showToast(dir > 0 ? 'Easing it back' : 'Picking it up');
+    }
+  }
+  if (changed) renderQueuePanel();
+}
+let vibePausedAt = 0;
+function vibeNotePause(wasPlaying){
+  if (wasPlaying){ vibePausedAt = Date.now(); return; }
+  const gap = vibePausedAt ? Date.now() - vibePausedAt : 0;
+  vibePausedAt = 0;
+  if (gap < VIBE_REENTRY_MS || !currentVibeText()) return;
+  const cur = queueEnergy(state.queuePos), nextPos = state.queuePos + 1, ne = queueEnergy(nextPos);
+  if (cur == null || ne == null || ne <= cur + 0.15) return;
+  let best = -1, bestE = ne;
+  for (let i = nextPos + 1; i < Math.min(state.queue.length, nextPos + 5); i++){ const e = queueEnergy(i); if (e != null && e < bestE){ best = i; bestE = e; } }
+  if (best < 0) return;
+  const [x] = state.queue.splice(best, 1);
+  state.queue.splice(nextPos, 0, x);
+  renderQueuePanel();
+  schedulePreload(state.queuePos);
+}
+const vibeLyricsChecked = new Set();
+async function vibeCheckUpcomingLyrics(){
+  const text = currentVibeText();
+  if (!text || !VIBE_BRIGHT_RE.test(text)) return;
+  for (let k = 1; k <= 2; k++){
+    const t = trackAt(state.queuePos + k);
+    if (!t || !t.videoId || vibeLyricsChecked.has(t.videoId)) continue;
+    vibeLyricsChecked.add(t.videoId);
+    const data = await fetchLyrics(t).catch(() => null);
+    if (!data || !Array.isArray(data.lines) || !vibeLyricsDark(data.lines.map(l => l.text).join(' '))) continue;
+    let at = -1;
+    for (let i = state.queuePos + 1; i < state.queue.length; i++) if (trackAt(i) === t){ at = i; break; }
+    if (at < 0) continue;
+    state.queue.splice(at, 1);
+    renderQueuePanel();
+    if (at === state.queuePos + 1) schedulePreload(state.queuePos);
+  }
+}
+function vibeOnTrackLoad(){
+  if (!currentVibeText()) return;
+  setTimeout(() => vibeCheckUpcomingLyrics().catch(() => {}), 4000);   // off the load burst
+}
+/* VIBE-LIVE:END */
 
 function noteDiscoverEmpty(){
   discoverEmptyTs = Date.now();
@@ -31283,6 +31624,7 @@ function promoteDeckDirect(nd, pos, shouldPlay, keepOld){
   state.queuePos = pos;
   lastTrackStartTs = Date.now();
   crossfadeTriggered = false;
+  try { vibeOnTrackLoad(); } catch(e){}
   reflectCurrentTrackUI(pos);
   scPromoted(nd);
 
@@ -31420,6 +31762,7 @@ function startSkipCrossfade(pos, t){
   state.queuePos = pos;
   lastTrackStartTs = Date.now();
   crossfadeTriggered = false;
+  try { vibeOnTrackLoad(); } catch(e){}
   scPromoted(nd);
   if (nd.player && nd.player.setVolume) nd.player.setVolume(0);
   if (nd.player) rewindPromotedDeck(nd);
@@ -31537,6 +31880,7 @@ function loadIndex(pos, autoplay, opts){
   state.queuePos = pos;
   lastTrackStartTs = Date.now();
   crossfadeTriggered = false;
+  try { vibeOnTrackLoad(); } catch(e){}
   reflectCurrentTrackUI(pos);
 
   const ad = activeDeck();
@@ -31994,6 +32338,7 @@ function userTogglePlayback(){
   const ad = activeDeck();
   const s = ad.player && ad.player.getPlayerState ? ad.player.getPlayerState() : -1;
   if (s === 1) msPausedOnce = true; else if (msPausedOnce) awardMilestone('pause');
+  try { vibeNotePause(s === 1); } catch(e){}
   playLpNeedle(s === 1 && !isFadingOut(ad) ? 'lift' : 'drop');
   playIndex(state.queuePos);
 }
@@ -32011,6 +32356,7 @@ function recordSkipIfEarly(){
   const durMs = (t.duration || 0) * 1000;
   if (elapsed < 30000 && (!durMs || elapsed < durMs * 0.25)){
     recordListenSignal(t, -1);
+    try { vibeOnEarlySkip(t); } catch(e){}
     const entry = state.queue[state.queuePos];
     if (!(entry && isPodcastPlaylistId(entry.plId))) noteTaste(t, 'skip');
   }
