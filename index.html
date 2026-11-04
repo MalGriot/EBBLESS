@@ -9925,7 +9925,7 @@ function bringRender(){
   if (bringView === 'spotify'){
     $('bmTitle').textContent = 'Bring your Spotify';
     const nativeSp = !!(window.EbbNative && window.EbbNative.spotifyImport);
-    sc.innerHTML = (nativeSp ? '<div class="bm-lead">Sign in to Spotify and your whole library comes over: Liked Songs, albums and every playlist.</div><div class="bm-user" style="margin-bottom:14px"><button type="button" class="bm-btn bm-btn-go" data-bm="spapp">Sign in to Spotify</button></div><div class="bm-note">Your password goes to Spotify only, and nothing is read until you tap Bring my music. Signed up with Google or Facebook? Choose the one-time code option on Spotify\'s page: same account. EBBLESS signs you out of Spotify here when it is done.</div><div class="bm-h" style="margin-top:18px">Or another way</div>' : '') + '<div class="bm-lead">Paste your playlist links and they come over in seconds. Liked Songs and everything else come from a file Spotify sends you.</div>' +
+    sc.innerHTML = (nativeSp ? '<div class="bm-lead">Sign in to Spotify and your whole library comes over: Liked Songs, albums, followed artists, podcasts and every playlist.</div><div class="bm-user" style="margin-bottom:14px"><button type="button" class="bm-btn bm-btn-go" data-bm="spapp">Sign in to Spotify</button></div><div class="bm-note">Your password goes to Spotify only, and nothing is read until you tap Bring my music. Signed up with Google or Facebook? Choose the one-time code option on Spotify\'s page: same account. EBBLESS signs you out of Spotify here when it is done.</div><div class="bm-h" style="margin-top:18px">Or another way</div>' : '') + '<div class="bm-lead">Paste your playlist links and they come over in seconds. Liked Songs and everything else come from a file Spotify sends you.</div>' +
       '<div class="bm-steps">' +
       '<div class="bm-step" style="display:block"><div style="display:flex;gap:12px;align-items:center"><span class="bm-num">1</span><div><div class="bm-st">Paste your playlist links or library</div><div class="bm-sd">On a computer, select your playlists in Spotify (Ctrl or Cmd + click), copy them, and paste here. On a phone, Share, Copy link, one at a time.</div></div></div><textarea id="bmSpLinks" rows="4" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="open.spotify.com/playlist/... or your copied library" style="width:100%;margin-top:10px;box-sizing:border-box;border-radius:12px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);color:inherit;font:inherit;padding:10px 12px;resize:vertical"></textarea><div class="bm-user"><button type="button" class="bm-btn bm-btn-go" data-bm="spgo">Bring them in</button></div></div>' +
       (nativeSp ? '' : '<div class="bm-step" style="display:block"><div style="display:flex;gap:12px;align-items:center"><span class="bm-num">+</span><div><div class="bm-st">On a computer: everything, right now</div><div class="bm-sd">Liked Songs, albums and all playlists, from your own signed-in Spotify tab. Copy the snippet, open open.spotify.com, open the browser console (F12, or Cmd + Option + J), paste it and press Enter, click Liked Songs, press Copy my library, then paste into the box above. If the console says to type allow pasting, do that first.</div></div></div><div class="bm-user"><button type="button" class="bm-btn" data-bm="spsnip">Copy the snippet</button></div></div>') +
@@ -10046,6 +10046,11 @@ function spotifyExportRun(){
       const tr = (t) => ({ artist: (t.artists && t.artists[0] && t.artists[0].name) || '', album: (t.album && t.album.name) || '', track: t.name, uri: t.uri });
       const tracks = (await all(A + 'me/tracks?limit=50', 'Liked Songs')).map(x => x.track).filter(t => t && t.name).map(tr);
       const albums = (await all(A + 'me/albums?limit=50', 'albums')).map(x => x.album).filter(Boolean).map(a => ({ artist: (a.artists && a.artists[0] && a.artists[0].name) || '', album: a.name, uri: a.uri }));
+      let artists = [], shows = [];
+      try {
+        for (let u = A + 'me/following?type=artist&limit=50'; u;){ const d = await get(u), a = d.artists || {}; (a.items || []).forEach(x => { if (x && x.id) artists.push({ name: x.name, uri: x.uri }); }); say('Reading artists (' + artists.length + ')'); u = a.next; }
+      } catch(e){}
+      try { shows = (await all(A + 'me/shows?limit=50', 'podcasts')).map(x => x.show).filter(x => x && x.uri).map(x => ({ name: x.name, uri: x.uri })); } catch(e){}
       const pls = await all(A + 'me/playlists?limit=50', 'playlists'), playlists = [];
       for (let n = 0; n < pls.length; n++){
         const p = pls[n];
@@ -10057,10 +10062,10 @@ function spotifyExportRun(){
         const items = rows.map(x => x && (x.track || x.item)).filter(t => t && t.name && t.type !== 'episode').map(t => { const o = tr(t); return { track: { trackName: o.track, artistName: o.artist, albumName: o.album, trackUri: o.uri } }; });
         if (items.length) playlists.push({ name: p.name || 'Spotify playlist', items });
       }
-      const text = JSON.stringify({ tracks, albums, playlists });
+      const text = JSON.stringify({ tracks, albums, artists, shows, playlists });
       if (app){ window.EbbSpotify.done(text); return; }
       box.textContent = '';
-      const h = document.createElement('div'); h.textContent = tracks.length + ' liked songs, ' + albums.length + ' albums, ' + playlists.length + ' playlists ready.'; h.style.marginBottom = '10px';
+      const h = document.createElement('div'); h.textContent = tracks.length + ' liked songs, ' + albums.length + ' albums, ' + artists.length + ' artists, ' + shows.length + ' podcasts, ' + playlists.length + ' playlists ready.'; h.style.marginBottom = '10px';
       const b = document.createElement('button'); b.textContent = 'Copy my library'; b.style.cssText = 'font:inherit;padding:10px 16px;border:0;border-radius:999px;background:#1ed760;color:#000;cursor:pointer';
       const ta = document.createElement('textarea'); ta.value = text; ta.style.cssText = 'display:none;width:100%;height:80px;margin-top:10px';
       b.onclick = () => { (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).then(() => { h.textContent = 'Copied. Go back to EBBLESS and paste it.'; b.remove(); }, () => { ta.style.display = 'block'; ta.select(); h.textContent = 'Copy the text below (Ctrl or Cmd + C), then paste it in EBBLESS.'; }); };
@@ -10121,10 +10126,11 @@ async function spotifyFileImport(file){
 // the on-computer export snippet produces the same shape.
 function spotifyLibraryImport(entries){
   const lists = [];
-  const albumIds = [];
+  const links = [], linkSeen = new Set();   // saved albums, followed artists and podcasts: each only carries a Spotify link
+  const addLinks = (arr, kind) => (Array.isArray(arr) ? arr : []).forEach(a => { const m = a && new RegExp('^spotify:' + kind + ':([A-Za-z0-9]{22})$').exec(a.uri || ''); if (m && !linkSeen.has(kind + m[1])){ linkSeen.add(kind + m[1]); links.push({ kind, id: m[1] }); } });
   try {
     for (const { name: fname, j } of entries){
-      (Array.isArray(j.albums) ? j.albums : []).forEach(a => { const m = a && /^spotify:album:([A-Za-z0-9]{22})$/.exec(a.uri || ''); if (m && !albumIds.includes(m[1])) albumIds.push(m[1]); });
+      addLinks(j.albums, 'album'); addLinks(j.artists, 'artist'); addLinks(j.shows, 'show');
       if (/YourLibrary/i.test(fname) || Array.isArray(j.tracks)) lists.push({ name: 'Spotify Liked Songs', rows: (j.tracks || []).map(spotifyFileRow) });
       (j.playlists || []).forEach(pl => lists.push({ name: pl.name || 'Spotify playlist', rows: (pl.items || []).map(spotifyFileRow) }));
     }
@@ -10140,12 +10146,12 @@ function spotifyLibraryImport(entries){
   }
   closeBring();
   renderLibrary();
-  if (!ids.length && !albumIds.length){ showToast('No songs found in that file'); return; }
+  if (!ids.length && !links.length){ showToast('No songs found in that file'); return; }
   bringStoreSet('ebbless:spFileDone', '1');
-  const albums = albumIds;
-  showToast('Added ' + ids.length + (ids.length === 1 ? ' playlist' : ' playlists') + (albums.length ? ' and ' + albums.length + (albums.length === 1 ? ' album' : ' albums') : '') + ' from your Spotify file. Matching songs in the background.');
-  // Saved albums only carry a Spotify link, so each goes through the normal album import, one at a time.
-  albums.forEach((aid, i) => setTimeout(() => { try { beginImportFromParsedLink({ source: 'spotify', type: 'album', id: aid }); } catch(e){} }, 2500 + i * 1500));
+  const nA = links.filter(l => l.kind === 'album').length, nR = links.filter(l => l.kind === 'artist').length, nS = links.filter(l => l.kind === 'show').length;
+  showToast('Added ' + ids.length + (ids.length === 1 ? ' playlist' : ' playlists') + (nA ? ', ' + nA + (nA === 1 ? ' album' : ' albums') : '') + (nR ? ', ' + nR + (nR === 1 ? ' artist' : ' artists') : '') + (nS ? ', ' + nS + (nS === 1 ? ' podcast' : ' podcasts') : '') + ' from Spotify. Matching songs in the background.');
+  // Each goes through the normal link import (queued), so albums, artists and shows file themselves as they would from a pasted link.
+  links.forEach((l, i) => setTimeout(() => { try { const parsed = parseImportLink('https://open.spotify.com/' + l.kind + '/' + l.id); if (parsed) beginImportFromParsedLink(parsed); } catch(e){} }, 2500 + i * 1500));
   (async () => { for (const id of ids){ try { await rematchUnmatchedInBackground(id); } catch(e){} } })();
 }
 
