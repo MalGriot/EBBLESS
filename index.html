@@ -10825,7 +10825,9 @@ document.querySelectorAll('[data-action="toggle-queue"]').forEach(btn => btn.add
       else window.ebbReloadApp();   // same path as the update button
     }, HOLD_MS);
   });
-  btn.style.touchAction = 'pan-y';   // so a sideways drag on the logo reaches us on touch screens
+  // 'none', not 'pan-y': with pan-y a tap that wobbles a few pixels became
+  // a page pan, the browser cancelled the touch and the tap never went Home
+  btn.style.touchAction = 'none';
   const phoneNav = () => window.matchMedia('(max-width:859.98px)').matches;
   let dragged = false;
   btn.addEventListener('pointermove', (e) => {
@@ -10837,6 +10839,14 @@ document.querySelectorAll('[data-action="toggle-queue"]').forEach(btn => btn.add
     if (timer && Math.hypot(e.clientX - startX, e.clientY - startY) > MOVE_TOLERANCE_PX) cancel();
   });
   btn.addEventListener('pointerdown', () => { dragged = false; });
+  // phones: a tap goes Home on release instead of waiting for the click,
+  // which a touch screen can drop; the click that follows is swallowed
+  btn.addEventListener('pointerup', (e) => {
+    if (e.pointerType !== 'touch' || dragged || !timer) return;   // no timer: the hold already fired
+    if (Math.hypot(e.clientX - startX, e.clientY - startY) > MOVE_TOLERANCE_PX) return;
+    swallowClick = true; setTimeout(() => { swallowClick = false; }, 800);
+    goHomeFromLogo();
+  });
   ['pointerup', 'pointercancel', 'pointerleave', 'dragstart'].forEach(t => btn.addEventListener(t, cancel));
   btn.addEventListener('click', (e) => {
     if (!swallowClick) return;
@@ -10846,7 +10856,8 @@ document.querySelectorAll('[data-action="toggle-queue"]').forEach(btn => btn.add
   });
 })();
 // #724: one tap on the logo goes Home (desktop, tablet and phone). Hold: mini player on desktop (hold-to-reload on phones). Drag right on a phone: the splash.
-$('wordmarkBtn').addEventListener('click', () => { leaveFullscreen(true); setView('home'); });
+function goHomeFromLogo(){ leaveFullscreen(true); setView('home'); }
+$('wordmarkBtn').addEventListener('click', goHomeFromLogo);
 
 // Bring the splash back over the already-running app (wordmark hold above).
 // Reuses the first-visit Tutorial/Enter choice: Enter just hides the splash
@@ -21135,6 +21146,9 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
+  { version: 493, date: '2026-11-04', items: [
+    'On phones, tapping the e logo goes Home every time, even when your finger moves a little.',
+  ] },
   { version: 492, date: '2026-11-04', items: [
     'Home opens with "What\'s the vibe?": type a mood or tap one, and it builds the songs. Nothing playing yet? "or set a vibe" takes you there.',
     'The sleep timer button and the vibe colors are for vibes only. Sets and your signup radios keep their shuffle button.',
