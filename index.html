@@ -9925,7 +9925,7 @@ function bringRender(){
   if (bringView === 'spotify'){
     $('bmTitle').textContent = 'Bring your Spotify';
     const nativeSp = !!(window.EbbNative && window.EbbNative.spotifyImport);
-    sc.innerHTML = (nativeSp ? '<div class="bm-lead">Sign in to Spotify and your whole library comes over: Liked Songs, albums and every playlist.</div><div class="bm-user" style="margin-bottom:14px"><button type="button" class="bm-btn bm-btn-go" data-bm="spapp">Sign in to Spotify</button></div><div class="bm-note">Your password goes to Spotify only. EBBLESS signs you out of Spotify here when it is done.</div><div class="bm-h" style="margin-top:18px">Or another way</div>' : '') + '<div class="bm-lead">Paste your playlist links and they come over in seconds. Liked Songs and everything else come from a file Spotify sends you.</div>' +
+    sc.innerHTML = (nativeSp ? '<div class="bm-lead">Sign in to Spotify and your whole library comes over: Liked Songs, albums and every playlist.</div><div class="bm-user" style="margin-bottom:14px"><button type="button" class="bm-btn bm-btn-go" data-bm="spapp">Sign in to Spotify</button></div><div class="bm-note">Your password goes to Spotify only, and nothing is read until you tap Bring my music. Signed up with Google or Facebook? Choose the one-time code option on Spotify\'s page: same account. EBBLESS signs you out of Spotify here when it is done.</div><div class="bm-h" style="margin-top:18px">Or another way</div>' : '') + '<div class="bm-lead">Paste your playlist links and they come over in seconds. Liked Songs and everything else come from a file Spotify sends you.</div>' +
       '<div class="bm-steps">' +
       '<div class="bm-step" style="display:block"><div style="display:flex;gap:12px;align-items:center"><span class="bm-num">1</span><div><div class="bm-st">Paste your playlist links or library</div><div class="bm-sd">On a computer, select your playlists in Spotify (Ctrl or Cmd + click), copy them, and paste here. On a phone, Share, Copy link, one at a time.</div></div></div><textarea id="bmSpLinks" rows="4" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="open.spotify.com/playlist/... or your copied library" style="width:100%;margin-top:10px;box-sizing:border-box;border-radius:12px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);color:inherit;font:inherit;padding:10px 12px;resize:vertical"></textarea><div class="bm-user"><button type="button" class="bm-btn bm-btn-go" data-bm="spgo">Bring them in</button></div></div>' +
       (nativeSp ? '' : '<div class="bm-step" style="display:block"><div style="display:flex;gap:12px;align-items:center"><span class="bm-num">+</span><div><div class="bm-st">On a computer: everything, right now</div><div class="bm-sd">Liked Songs, albums and all playlists, from your own signed-in Spotify tab. Copy the snippet, open open.spotify.com, open the browser console (F12, or Cmd + Option + J), paste it and press Enter, click Liked Songs, press Copy my library, then paste into the box above. If the console says to type allow pasting, do that first.</div></div></div><div class="bm-user"><button type="button" class="bm-btn" data-bm="spsnip">Copy the snippet</button></div></div>') +
@@ -10020,7 +10020,7 @@ function spotifyExportRun(){
   const say = (m) => { if (app) window.EbbSpotify.progress(m); else box.textContent = m; };
   const stop = (m) => { if (app) window.EbbSpotify.fail(m); else say(m); };
   (async () => {
-    say(app ? 'Sign in to Spotify. Your music comes over right after.' : 'EBBLESS export: click "Liked Songs" in the left list now.');
+    say(app ? 'Sign in to Spotify.' : 'EBBLESS export: click "Liked Songs" in the left list now.');
     // Wait for a token that belongs to a signed-in person (the logged-out player has one too).
     for (let k = 0, max = app ? 2000 : 400; k < max && !(tok && tok !== bad && tok.ok); k++){
       if (!tok){ await sleep(300); continue; }
@@ -10031,6 +10031,7 @@ function spotifyExportRun(){
     }
     if (!(tok && tok.ok)){ stop('Not signed in to Spotify. Sign in, then run it again.'); return; }
     const auth = tok.v;
+    if (app){ say('You are signed in to Spotify.'); window.EbbSpotify.ready(); await new Promise(r => { window.__ebbSpGo = r; }); }
     const get = async (u) => {
       for (let k = 0; k < 5; k++){
         const r = await of(u, { headers: { Authorization: auth } });

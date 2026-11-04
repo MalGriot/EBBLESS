@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.net.Uri;
 import android.os.Bundle;
 import android.view.Gravity;
+import android.view.View;
 import android.webkit.CookieManager;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
@@ -27,6 +28,7 @@ public class SpotifyImportActivity extends Activity {
     private static final String DESKTOP_UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36";
     private WebView web;
     private TextView status;
+    private Button go;
     private String script;
     private boolean finished;
 
@@ -47,13 +49,27 @@ public class SpotifyImportActivity extends Activity {
         status = new TextView(this);
         status.setTextColor(0xFFFFFFFF);
         status.setTextSize(14);
-        status.setText("Sign in to Spotify. Your music comes over right after.");
+        status.setText("Sign in to Spotify.");
         bar.addView(status, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
         Button cancel = new Button(this);
         cancel.setText("Cancel");
         cancel.setOnClickListener(v -> finishWith(null, null));
         bar.addView(cancel, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT));
         root.addView(bar, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+
+        // Shown once Spotify says who is signed in: nothing is read until the person taps it.
+        go = new Button(this);
+        go.setText("Bring my music");
+        go.setVisibility(View.GONE);
+        go.setOnClickListener(v -> { go.setVisibility(View.GONE); status.setText("Reading your library"); if (web != null) web.evaluateJavascript("window.__ebbSpGo&&window.__ebbSpGo()", null); });
+        root.addView(go, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+
+        TextView hint = new TextView(this);
+        hint.setTextColor(0xFFAAAAAA);
+        hint.setTextSize(12);
+        hint.setPadding(24, 4, 24, 8);
+        hint.setText("Signed up with Google or Facebook? Enter your email or phone number here and choose the one-time code option. It is the same Spotify account.");
+        root.addView(hint, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
 
         web = new WebView(this);
         root.addView(web, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f));
@@ -74,6 +90,7 @@ public class SpotifyImportActivity extends Activity {
 
         web.addJavascriptInterface(new Object() {
             @android.webkit.JavascriptInterface public void progress(String m) { runOnUiThread(() -> { if (status != null && m != null) status.setText(m); }); }
+            @android.webkit.JavascriptInterface public void ready() { runOnUiThread(() -> { if (go != null) { go.setVisibility(View.VISIBLE); status.setText("You are signed in to Spotify."); } }); }
             @android.webkit.JavascriptInterface public void done(String json) { runOnUiThread(() -> finishWith(json, null)); }
             @android.webkit.JavascriptInterface public void fail(String m) { runOnUiThread(() -> finishWith(null, m == null ? "Spotify did not answer. Try again." : m)); }
         }, "EbbSpotify");
@@ -81,6 +98,11 @@ public class SpotifyImportActivity extends Activity {
         web.setWebViewClient(new WebViewClient() {
             @Override public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest r) {
                 String sc = r.getUrl().getScheme();
+                String h = r.getUrl().getHost() == null ? "" : r.getUrl().getHost();
+                if (h.equals("accounts.google.com")) {   // Google refuses sign-in inside app windows; say so instead of showing its error page
+                    status.setText("Google does not allow sign-in inside apps. Use your email or phone number with the one-time code instead.");
+                    return true;
+                }
                 return !("https".equals(sc) || "http".equals(sc));   // keep sign-in inside this window; never launch the Spotify app
             }
             @Override public void onPageFinished(WebView v, String url) {
