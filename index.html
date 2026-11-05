@@ -2550,9 +2550,14 @@ body:has(#artworkWrap.is-playing) #libpl-panel.is-open .np-bars i{animation-play
    player (the active deck's iframe in #yt-host) is placed over the art area
    (#artworkWrap) by ytPanelSync, so the queue, library and search stay usable.
    z-index 40 sits under the bottom nav (45) and every menu/modal (60+). ---------- */
-/* video on: the art under it is hidden, not just covered */
-.artwork-wrap.yt-video,#flow-layer .flow-art.yt-video{background:transparent;box-shadow:none}
+/* video on: the art under it is hidden, not just covered. #749: the id
+   selector outranks body[data-look] .artwork-wrap's shadow, and the bevel
+   ::after (a 1px ring) is not a child, so it goes too - else an empty square
+   outline shows around the video. Its CSS animations pause while hidden. */
+#artworkWrap.yt-video,#flow-layer .flow-art.yt-video{background:transparent;box-shadow:none}
+#artworkWrap.yt-video::after,#flow-layer .flow-art.yt-video::after{display:none}
 .artwork-wrap.yt-video > *,.flow-art.yt-video > *{visibility:hidden}
+.artwork-wrap.yt-video *,.flow-art.yt-video *{animation-play-state:paused!important}
 #yt-host.is-shown.in-flow{z-index:51} /* above #flow-layer (50) */
 #yt-host.is-shown{position:fixed;z-index:40;opacity:1;pointer-events:auto;border-radius:var(--r-md);background:#000}
 #yt-host.is-shown > *{position:absolute;left:0;top:0;width:100%;height:100%;border:0}
