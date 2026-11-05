@@ -2857,6 +2857,8 @@ body.split-desktop.desktop-fs:not(.view-settings-active) .fs-timeline{display:fl
 .set-hub-row:first-child{border-top:0}
 .set-hub-row:hover,.set-hub-row:active{background:var(--panel-2,var(--panel-3))}
 .set-hub-row svg{flex:none;color:var(--faint)}
+.ui-lang-row{position:relative}
+.ui-lang-row select{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;font-size:16px}
 .hub-text{display:flex;flex-direction:column;gap:2px;min-width:0}
 .hub-t{font-size:16px;font-weight:600}
 .hub-s{font-size:13px;color:var(--faint);line-height:1.35}
@@ -5424,7 +5426,7 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
         <button type="button" class="set-hub-row" data-spage-go="playback"><span class="hub-text"><span class="hub-t">Playback</span><span class="hub-s">Blending, volume, ad skipping</span></span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
         <button type="button" class="set-hub-row" data-spage-go="customize"><span class="hub-text"><span class="hub-t">Customize</span><span class="hub-s">Look, library, player, gestures, backup</span></span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
         <button type="button" class="set-hub-row" data-spage-go="privacy"><span class="hub-text"><span class="hub-t">Privacy &amp; data</span><span class="hub-s">Listening profile, terms, clear playlists</span></span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
-        <button type="button" class="set-hub-row" id="uiLangRow"><span class="hub-text"><span class="hub-t">Language · भाषा</span><span class="hub-s">English · हिन्दी में देखें</span></span></button>
+        <label class="set-hub-row ui-lang-row" id="uiLangRow"><span class="hub-text"><span class="hub-t">Language</span><span class="hub-s">English</span></span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 3.8 5.7 3.8 9s-1.3 6.3-3.8 9c-2.5-2.7-3.8-5.7-3.8-9S9.5 5.7 12 3z"/></svg><select id="uiLangSelect" aria-label="Language"></select></label>
         <button type="button" class="set-hub-row" data-spage-go="app"><span class="hub-text"><span class="hub-t">App</span><span class="hub-s">Install, sounds, voice, shortcuts</span></span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
         <button type="button" class="set-hub-row" data-spage-go="help"><span class="hub-text"><span class="hub-t">Help &amp; feedback</span><span class="hub-s">Tell us about a bug or an idea</span></span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
         <button type="button" class="set-hub-row" data-spage-go="about"><span class="hub-text"><span class="hub-t">About</span><span class="hub-s">What's new, what EBBLESS is, credits</span></span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
@@ -18576,9 +18578,9 @@ function renderHome(){
    vibes, the same five all day. Static: no animation, no network until a tap. */
 function renderHomeVibe(body, mk){
   const sec = mk('section', 'hm-sec hm-vibe');
-  if (regionLooksIndian() || uiLang() === 'hi'){
-    const lb = mk('button', 'hm-uilang', uiLang() === 'hi' ? 'View in English' : 'हिन्दी में देखें'); lb.type = 'button';
-    lb.addEventListener('click', () => setUiLang(uiLang() === 'hi' ? 'en' : 'hi'));
+  if (regionLooksIndian()){   // India: one tap to Hindi (or back), whatever the phone is set to
+    const lb = mk('button', 'hm-uilang', uiLang() !== 'en' ? 'View in English' : 'हिन्दी में देखें'); lb.type = 'button';
+    lb.addEventListener('click', () => setUiLang(uiLang() !== 'en' ? 'en' : 'hi'));
     sec.appendChild(lb);
   }
   sec.appendChild(mk('h2', '', 'What\'s the vibe?'));
@@ -18618,84 +18620,103 @@ function renderHomeVibe(body, mk){
   sec.appendChild(renderMusicLangRow(mk, () => { const y = window.scrollY; renderHome(); window.scrollTo(0, y); }));
   body.appendChild(sec);
 }
-/* ui-lang: the app's own words in Hindi, one tap away. The table is keyed by
-   the English text and lives in the page (works offline, switches at once, no
-   AI). It covers the main screens first: navigation, Home and its vibe box,
-   Search, the empty player, the vibe results card, Library's filters and the
-   Settings list; anything not in it stays English. Text a screen builds
-   later goes through uiT(), and screens that rebuild call applyUiLang().
-   Song, artist and playlist names are never translated. Hindi wording to be
-   checked by a native speaker; "songs" is always गाने. */
+/* ui-lang: the app's own words in 32 languages (India, East Asia, Russia,
+   Africa, Europe). Each language is one small file, lang/<code>.json,
+   keyed by the English text: written once ahead of time, so switching is
+   instant and costs no AI, no server work and no limits. Only the language
+   in use is downloaded, then kept on this device (LS_UI_STRINGS) so it
+   works offline and opens without a flash of English.
+   Which one: a choice made in Settings > Language wins; otherwise the
+   phone's own language when it's one of these (its first preference, so an
+   English phone stays English). In India with an English phone, Home shows
+   a one-tap हिन्दी में देखें instead of switching on its own.
+   It covers the main screens: navigation, Home and its vibe box, Search,
+   the empty player, the vibe results card, Library's filters and the
+   Settings list; anything not in a table stays English. Text a screen sets
+   later goes through uiT()/uiF(), screens that rebuild call applyUiLang().
+   Song, artist and playlist names are never translated. Wording is to be
+   checked by native speakers; "songs" always means songs, never tracks. */
 var LS_UI_LANG = 'ebbless:uilang';
-var UI_STRINGS_HI = {
-  'Search': 'खोजें', 'Home': 'होम', 'Library': 'लाइब्रेरी', 'Player': 'प्लेयर', 'Queue': 'कतार', 'Settings': 'सेटिंग्स',
-  "What's the vibe?": 'आज का मूड क्या है?',
-  "Say it how you'd say it to a friend. We build the songs, in an order that flows.": 'जैसे किसी दोस्त से कहते, वैसे लिखिए। गाने हम चुनेंगे, ऐसे क्रम में जो बहता रहे।',
-  'Play': 'चलाएँ', 'rainy drive home': 'बारिश में घर की ड्राइव', 'Describe your vibe': 'अपना मूड बताइए',
-  'Your usual': 'आपका रोज़ का', 'What you tend to play around now': 'इस समय आप अक्सर यही सुनते हैं',
-  'Music in': 'संगीत की भाषा', '+ Music languages': '+ संगीत की भाषाएँ', 'More': 'और',
-  'English': 'अंग्रेज़ी', 'Hindi': 'हिन्दी', 'Punjabi': 'पंजाबी', 'Tamil': 'तमिल', 'Telugu': 'तेलुगु', 'Bengali': 'बांग्ला', 'Marathi': 'मराठी', 'Malayalam': 'मलयालम',
-  'Recently played': 'हाल ही में सुने', 'Top artists': 'टॉप कलाकार', 'Top albums': 'टॉप एल्बम', 'Top playlists': 'टॉप प्लेलिस्ट',
-  'Top songs': 'टॉप गाने', 'Top genres': 'टॉप शैलियाँ', 'Music map': 'संगीत का नक्शा', 'Explore your music map': 'अपने संगीत का नक्शा देखें',
-  'Play a few songs and your top artists, albums, playlists and songs will show up here.': 'कुछ गाने सुनिए, फिर आपके टॉप कलाकार, एल्बम, प्लेलिस्ट और गाने यहाँ दिखेंगे।',
-  'Nothing playing yet': 'अभी कुछ नहीं चल रहा', 'Find music': 'संगीत खोजें', 'or set a vibe': 'या अपना मूड चुनें',
-  'Picked for you': 'आपके लिए चुने गए', 'Search, paste a link, or say a vibe': 'खोजें, लिंक डालें, या अपना मूड लिखें',
-  'Search, paste a link, or describe your vibe': 'खोजें, लिंक डालें, या अपना मूड बताइए', 'Close search': 'खोज बंद करें',
-  'Paste a link to a playlist, album, song or artist from Spotify, Apple Music, YouTube or SoundCloud. Or search a song, an artist or a genre, or describe a mood.':
-    'Spotify, Apple Music, YouTube या SoundCloud से किसी प्लेलिस्ट, एल्बम, गाने या कलाकार का लिंक डालें। या कोई गाना, कलाकार या शैली खोजें, या अपना मूड बताइए।',
-  'Playlists': 'प्लेलिस्ट', 'Artists': 'कलाकार', 'Albums': 'एल्बम', 'Podcasts': 'पॉडकास्ट', 'Sets': 'सेट',
-  'Search your library': 'अपनी लाइब्रेरी में खोजें', 'New playlist': 'नई प्लेलिस्ट',
-  'Interpreting your vibe…': 'आपका मूड समझ रहे हैं…', 'Reading the mood': 'मूड पढ़ रहे हैं', 'Finding real songs': 'असली गाने ढूँढ रहे हैं',
-  'Finding more like it': 'ऐसे और गाने ढूँढ रहे हैं', 'Matching tempo and energy': 'रफ़्तार और जोश मिला रहे हैं', 'Shaping the flow': 'गानों का क्रम बना रहे हैं',
-  'Save & play': 'सेव करें और चलाएँ', 'Cancel': 'रद्द करें', 'you know this': 'यह आप जानते हैं', 'Share this vibe': 'यह मूड शेयर करें',
-  'Browse playlists for this vibe instead': 'इसके बजाय इस मूड की प्लेलिस्ट देखें',
-  'builds, then eases out': 'धीरे शुरू, फिर ऊपर, फिर शांत', 'winds down': 'धीरे धीरे शांत', 'stays steady': 'एक जैसा बना रहे', 'builds and holds': 'ऊपर जाए और टिका रहे',
-  'Playback': 'प्लेबैक', 'Blending, volume, ad skipping': 'गानों का मिलना, आवाज़, विज्ञापन',
-  'Customize': 'अपने हिसाब से', 'Look, library, player, gestures, backup': 'रूप, लाइब्रेरी, प्लेयर, इशारे, बैकअप',
-  'Privacy & data': 'प्राइवेसी और डेटा', 'Listening profile, terms, clear playlists': 'सुनने की प्रोफ़ाइल, शर्तें, प्लेलिस्ट साफ़ करें',
-  'App': 'ऐप', 'Install, sounds, voice, shortcuts': 'इंस्टॉल, आवाज़ें, वॉइस, शॉर्टकट',
-  'Language': 'भाषा', 'App language': 'ऐप की भाषा', 'Back': 'वापस',
-  'Help & feedback': 'मदद और सुझाव', 'Tell us about a bug or an idea': 'कोई गड़बड़ी या आइडिया बताइए',
-  'About': 'जानकारी', "What's new, what EBBLESS is, credits": 'नया क्या है, EBBLESS क्या है, क्रेडिट',
+var LS_UI_STRINGS = 'ebbless:uistrings';   // { code, v, strings }: the active language's table
+var UI_LANG_V = 1;                          // bump when lang/*.json change so stored copies refresh
+var UI_LANGS = {
+  hi: 'हिन्दी', bn: 'বাংলা', ta: 'தமிழ்', te: 'తెలుగు', mr: 'मराठी', pa: 'ਪੰਜਾਬੀ', gu: 'ગુજરાતી', kn: 'ಕನ್ನಡ', ml: 'മലയാളം',
+  'zh-CN': '简体中文', 'zh-TW': '繁體中文', ja: '日本語', ko: '한국어', ru: 'Русский',
+  sw: 'Kiswahili', am: 'አማርኛ', ha: 'Hausa', yo: 'Yorùbá', zu: 'isiZulu', ar: 'العربية',
+  es: 'Español', fr: 'Français', de: 'Deutsch', it: 'Italiano', pt: 'Português', nl: 'Nederlands', pl: 'Polski',
+  uk: 'Українська', tr: 'Türkçe', el: 'Ελληνικά', sv: 'Svenska', ro: 'Română',
 };
 var UI_LANG_ROOTS = ['#bottom-nav', '#topnav', '#view-home', '#view-search', '#trackMeta', '#libFilter', '#libTop', '#import-overlay', '#settingsHub', '#setTitle', '#settingsBackBtn'];
 var UI_ATTRS = ['placeholder', 'aria-label', 'title'];
-var uiAttrOrig = new WeakMap();
-function uiLang(){ return LS_UI_LANG && lsGet(LS_UI_LANG, null) === 'hi' ? 'hi' : 'en'; }
-function uiT(en){ return uiLang() === 'hi' && UI_STRINGS_HI && UI_STRINGS_HI[en] ? UI_STRINGS_HI[en] : en; }   // safe before the table's line runs
+var uiStrings = null;                       // English text -> translation, null while English
+var uiAttrSet = new WeakMap();              // element -> { attr: { en, set } }
+function uiLangFromDevice(){
+  try {
+    const first = String((navigator.languages && navigator.languages[0]) || navigator.language || '').toLowerCase();
+    if (/^zh/.test(first)) return /-(tw|hk|mo|hant)/.test(first) ? 'zh-TW' : 'zh-CN';
+    const base = first.slice(0, 2);
+    return UI_LANGS[base] ? base : 'en';
+  } catch(e){ return 'en'; }
+}
+function uiLang(){
+  const v = LS_UI_LANG && lsGet(LS_UI_LANG, null);
+  if (v === 'en' || (v && UI_LANGS && UI_LANGS[v])) return v;
+  return UI_LANGS ? uiLangFromDevice() : 'en';
+}
+function uiT(en){ return uiStrings && uiStrings[en] ? uiStrings[en] : en; }   // safe before the tables' lines run
+function uiF(en, vars){ let s = uiT(en); Object.keys(vars).forEach(k => { s = s.split('{' + k + '}').join(String(vars[k])); }); return s; }
+// The active language's table, from this device or lang/<code>.json; calls
+// back once it's in place (straight away when it was stored here).
+function loadUiStrings(code, done){
+  if (code === 'en' || !UI_LANGS[code]){ uiStrings = null; done && done(); return; }
+  const kept = lsGet(LS_UI_STRINGS, null);
+  if (kept && kept.code === code && kept.v === UI_LANG_V && kept.strings && typeof kept.strings === 'object'){ uiStrings = kept.strings; done && done(); return; }
+  fetch('lang/' + code + '.json').then(r => r.ok ? r.json() : null).then(d => {
+    if (!d || !d.strings || typeof d.strings !== 'object' || uiLang() !== code) return;
+    const clean = {};
+    Object.keys(d.strings).forEach(k => { const v = d.strings[k]; if (typeof v === 'string' && v.length <= 400) clean[k] = v; });
+    uiStrings = clean;
+    lsSet(LS_UI_STRINGS, { code, v: UI_LANG_V, strings: clean });
+    done && done();
+  }).catch(() => {});
+}
 // Swaps text and attributes under the given roots (all of UI_LANG_ROOTS by
-// default), keeping each original so English comes back without a reload.
+// default) into the active language, keeping each English original so any
+// other language, or English, comes back without a reload. Text the app has
+// changed since (a new title, a count) is taken as the new original.
 function applyUiLang(root){
-  const hi = uiLang() === 'hi';
-  if (!hi && !document.documentElement.hasAttribute('data-ui-lang')) return;
-  document.documentElement.lang = hi ? 'hi' : 'en';
-  document.documentElement.setAttribute('data-ui-lang', hi ? 'hi' : 'en');
+  const on = !!uiStrings;
+  if (!on && !document.documentElement.hasAttribute('data-ui-lang')) return;   // English and never switched: nothing to do
+  const code = on ? uiLang() : 'en';
+  document.documentElement.lang = code;
+  document.documentElement.setAttribute('data-ui-lang', code);
   const roots = root ? [root] : UI_LANG_ROOTS.map(q => document.querySelector(q)).filter(Boolean);
   roots.forEach(r => {
     const w = document.createTreeWalker(r, NodeFilter.SHOW_TEXT);
     let n;
     while ((n = w.nextNode())){
-      if (n.__uiEn != null && !hi){ n.nodeValue = n.__uiEn; n.__uiEn = null; continue; }
-      const k = n.nodeValue.trim(), v = hi && k && UI_STRINGS_HI[k];
-      if (v){ n.__uiEn = n.nodeValue; n.nodeValue = n.nodeValue.replace(k, v); }
+      const en = n.__uiEn != null && n.nodeValue === n.__uiSet ? n.__uiEn : n.nodeValue;
+      const k = en.trim(), v = on && k && uiStrings[k];
+      if (v){ n.__uiEn = en; n.__uiSet = en.replace(k, v); n.nodeValue = n.__uiSet; }
+      else if (n.__uiEn != null){ if (n.nodeValue !== en) n.nodeValue = en; n.__uiEn = n.__uiSet = null; }
     }
     r.querySelectorAll('[placeholder],[aria-label],[title]').forEach(el => {
-      const orig = uiAttrOrig.get(el) || {};
+      const rec = uiAttrSet.get(el) || {};
       UI_ATTRS.forEach(a => {
         const cur = el.getAttribute(a);
         if (cur == null) return;
-        if (!hi){ if (orig[a] != null && cur === UI_STRINGS_HI[orig[a]]) el.setAttribute(a, orig[a]); return; }
-        const v = UI_STRINGS_HI[cur.trim()];
-        if (v){ orig[a] = cur.trim(); el.setAttribute(a, v); }
+        const en = rec[a] && cur === rec[a].set ? rec[a].en : cur;
+        const v = on && uiStrings[en.trim()];
+        if (v){ rec[a] = { en, set: v }; el.setAttribute(a, v); }
+        else if (rec[a]){ if (cur !== en) el.setAttribute(a, en); delete rec[a]; }
       });
-      uiAttrOrig.set(el, orig);
+      uiAttrSet.set(el, rec);
     });
   });
 }
-function setUiLang(code){
-  lsSet(LS_UI_LANG, code === 'hi' ? 'hi' : 'en');
+// After a switch: the swap above, plus what screens set straight through uiT().
+function refreshUiLang(){
   applyUiLang();
-  // text set straight through uiT() isn't tracked by applyUiLang: set it again
   const st = $('setTitle'), sv = $('view-settings');
   if (st && sv){ const pg = sv.dataset.page; st.textContent = uiT(pg && SET_PAGE_TITLES[pg] ? SET_PAGE_TITLES[pg] : 'Settings'); }
   if ($('trackMeta') && $('trackMeta').classList.contains('is-empty')) setMarqueeText(trackTitle, uiT('Nothing playing yet'));
@@ -18703,16 +18724,28 @@ function setUiLang(code){
   if (state.currentView === 'home') renderHome();
   if (state.currentView === 'search') renderSearchTab();
 }
-// Settings list row: one tap flips the language.
+function setUiLang(code){
+  code = code === 'en' || UI_LANGS[code] ? code : 'en';
+  lsSet(LS_UI_LANG, code);
+  loadUiStrings(code, refreshUiLang);
+}
+// Settings list row: the native picker lists every language by its own name.
 function renderUiLangRow(){
-  const b = $('uiLangRow');
-  if (!b) return;
-  b.querySelector('.hub-s').textContent = uiLang() === 'hi' ? 'हिन्दी · Switch to English' : 'English · हिन्दी में देखें';
+  const row = $('uiLangRow'), sel = $('uiLangSelect');
+  if (!row || !sel) return;
+  const code = uiLang();
+  if (!sel.options.length){
+    sel.add(new Option('English', 'en'));
+    Object.keys(UI_LANGS).forEach(c => sel.add(new Option(UI_LANGS[c], c)));
+  }
+  sel.value = code;
+  row.querySelector('.hub-t').textContent = code === 'en' ? 'Language' : uiT('Language') + ' · Language';
+  row.querySelector('.hub-s').textContent = code === 'en' ? 'English' : UI_LANGS[code];
 }
 try {
-  $('uiLangRow').addEventListener('click', () => setUiLang(uiLang() === 'hi' ? 'en' : 'hi'));
+  $('uiLangSelect').addEventListener('change', (e) => setUiLang(e.target.value));
   renderUiLangRow();
-  applyUiLang();
+  loadUiStrings(uiLang(), () => { if (uiStrings) refreshUiLang(); });
 } catch(e){}
 // "Music in": one tap adds or drops a language. Shown open where the region
 // or a picked language says it matters, folded behind one chip elsewhere.
@@ -19506,7 +19539,7 @@ function stageVibeResults(text, interp, tracks){
   const heardN = tracks.filter(t => t.heard).length;
   const mood = vibeMoodWords(interp);
   if (interp.arc && VIBE_ARC_SHAPES[interp.arc]) mood.push(VIBE_ARC_SHAPES[interp.arc].label);
-  if (heardN) mood.push(uiLang() === 'hi' ? heardN + ' जाने-पहचाने · ' + (tracks.length - heardN) + ' नए' : heardN + ' you know · ' + (tracks.length - heardN) + ' new');
+  if (heardN) mood.push(uiF('{a} you know · {b} new', { a: heardN, b: tracks.length - heardN }));
   const chips = mood.map(w => '<span class="vibe-chip">' + escapeHtml(w) + '</span>').join('');
   importStage.innerHTML =
     '<button type="button" class="pick-x" aria-label="Close"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.4 5L5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6z"/></svg></button>' +
@@ -19516,7 +19549,7 @@ function stageVibeResults(text, interp, tracks){
     '<div class="vibe-chips">' + chips + '</div>' +
     '<div class="vibe-actions">' +
       '<button class="btn-ghost is-active" id="vibeSaveBtn">Save &amp; play</button>' +
-      '<button class="btn-ghost" id="vibePlayBtn">' + (uiLang() === 'hi' ? tracks.length + ' गाने चलाएँ' : 'Just play ' + tracks.length + ' songs') + '</button>' +
+      '<button class="btn-ghost" id="vibePlayBtn">' + escapeHtml(uiF('Just play {n} songs', { n: tracks.length })) + '</button>' +
     '</div>' +
     '<div class="search-results">' + rows + '</div>' +
     '<button class="btn-ghost" id="vibePlaylistsBtn" style="width:100%;margin-bottom:8px">Browse playlists for this vibe instead</button>' +
@@ -21408,7 +21441,7 @@ const WHATS_NEW = [
   { version: 495, date: '2026-11-05', items: [
     'Pick the languages you listen in, right under "What\'s the vibe?" on Home: Hindi, Punjabi, Tamil, Telugu and more. Vibes lean toward them, and in India Hindi is already on.',
     'Write a vibe in Hinglish or Hindi, like "dil toota hai yaar" or "baarish wali shaam", and you get Hindi songs. New house vibes too: baarish, chai, sukoon, sangeet, dosti, padhai, purane gaane.',
-    'EBBLESS in Hindi: tap हिन्दी में देखें on Home, or Language in Settings. The main screens switch at once, and one tap brings English back.',
+    'EBBLESS in 32 languages, from Hindi, Tamil and Bengali to Japanese, Russian, Swahili, Arabic, Spanish and German. It opens in your phone\'s language, or pick one under Language in Settings. In India, Home has a one-tap हिन्दी में देखें.',
   ] },
   { version: 494, date: '2026-11-04', items: [
     'Vibes learn what you mean by them. Skip a song early in a vibe and it stays out of that vibe; play one through or like it and it comes back next time. Artists you skip or keep lean down or up.',
