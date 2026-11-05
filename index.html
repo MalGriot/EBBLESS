@@ -37472,16 +37472,17 @@ function renderShelfInto(box, show){
   box.textContent = '';
   box.hidden = !items.length;
   if (box.id === 'libShelf'){ const lb = $('libShelfLabel'); if (lb) lb.hidden = box.hidden; }
+  const opens = box.id === 'libShelf'; // #741: Library Recents open the item's page; the empty player's tiles still play
   items.forEach(({ id, pl }) => {
     const b = document.createElement('button');
-    b.type = 'button'; b.className = 'home-shelf-item'; b.title = pl.name; b.setAttribute('aria-label', 'Play ' + pl.name);
+    b.type = 'button'; b.className = 'home-shelf-item'; b.title = pl.name; b.setAttribute('aria-label', (opens ? 'Open ' : 'Play ') + pl.name);
     const src = pl.image ? { art: pl.image } : pl.tracks.find(t => t.videoId || t.art);
     let cover;
     if (src){ cover = document.createElement('img'); cover.loading = 'lazy'; cover.alt = ''; attachCardArt(cover, src); }
     else { cover = document.createElement('div'); cover.className = 'home-shelf-ph'; }
     const nm = document.createElement('span'); nm.className = 'home-shelf-name'; nm.textContent = pl.name;
     b.appendChild(cover); b.appendChild(nm);
-    b.addEventListener('click', () => playPlaylistNow(id));
+    b.addEventListener('click', () => { if (!opens) playPlaylistNow(id); else if (openLibraryPanelId !== id) toggleLibraryPlaylistPanel(id); });
     box.appendChild(b);
   });
 }
