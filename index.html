@@ -2977,6 +2977,16 @@ html.reduce-motion *,html.reduce-motion *::before,html.reduce-motion *::after{an
 .song-page-lyric{font-size:17px;font-weight:600;line-height:1.4;padding:4px 0;color:var(--text);overflow-wrap:anywhere}
 .song-page-lyric.is-gap{min-height:14px}
 .song-page-link{cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+/* #754: artist name(s) on album and song pages, one tappable chip per artist */
+.page-artists{display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px;padding:6px 10px 0}
+.page-artist{display:inline-flex;align-items:center;gap:8px;min-height:44px;max-width:100%;padding:4px 12px 4px 4px;border:0;border-radius:999px;background:none;color:var(--accent);font:inherit;font-size:16px;font-weight:700;cursor:pointer}
+.page-artist:hover,.page-artist:focus-visible{background:color-mix(in srgb,var(--accent) 14%,transparent)}
+.page-artist:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.page-artist:active{transform:scale(.97)}
+.page-artist-ic{flex:none;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb,var(--accent) 20%,transparent)}
+.page-artist-ic svg{width:18px;height:18px}
+.page-artist-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-underline-offset:3px}
+.page-artist:hover .page-artist-name{text-decoration:underline}
 .song-credits{padding:2px 14px 12px}
 .song-credits .section-label{margin:6px 0 6px}
 .song-credits-line{display:flex;flex-wrap:wrap;gap:2px 10px;padding:7px 0;font-size:13px;border-top:1px solid var(--border);line-height:1.45}
@@ -13047,7 +13057,7 @@ function toggleLibraryPlaylistPanel(id){
   if (isAlbumEntry(pl) && !isArtistEntry(pl)){
     const secs = pl.tracks.reduce((n, t) => n + ((t && t.duration) || 0), 0);
     const mins = Math.round(secs / 60);
-    const bits = [albumArtistName(pl), albumYearOf(pl.releaseDate), pl.tracks.length ? pl.tracks.length + (pl.tracks.length === 1 ? ' song' : ' songs') : '', mins >= 1 ? (mins >= 60 ? Math.floor(mins / 60) + ' hr ' + (mins % 60) + ' min' : mins + ' min') : ''].filter(Boolean);
+    const bits = [albumYearOf(pl.releaseDate), pl.tracks.length ? pl.tracks.length + (pl.tracks.length === 1 ? ' song' : ' songs') : '', mins >= 1 ? (mins >= 60 ? Math.floor(mins / 60) + ' hr ' + (mins % 60) + ' min' : mins + ' min') : ''].filter(Boolean);
     if (bits.length){ const info = document.createElement('div'); info.className = 'currents-hint album-info'; info.textContent = bits.join(' · '); libplBody.appendChild(info); }
   }
   { const ai = libplBody.querySelector('.album-info');
@@ -13064,7 +13074,10 @@ function toggleLibraryPlaylistPanel(id){
       more.addEventListener('click', (e) => { e.stopPropagation(); toggleLibCtxMenu(id, more); });
       q.appendChild(more);
       libplBody.insertBefore(q, libplBody.firstChild);
-    } }
+    }
+    const albArtist = isAlb ? albumArtistName(pl) : '';
+    if (albArtist) libplBody.insertBefore(pageArtistRow([albArtist]), libplBody.firstChild);
+  }
   // encourage-liking-songs (#40): say plainly what tunes these picks, and
   // show a live like streak on Liked Songs (never mentions a broken one).
   if (id === SWELL_ID){
@@ -13673,8 +13686,9 @@ async function openAlbumPreview(a, name, backFn){
   libplBody.innerHTML = '';
   const sc = libplPanel.querySelector('.queue-scroll'); if (sc) sc.scrollTop = 0;
   libplReturnTo = null; libplResume = null; libplBackFn = backFn; syncLibplCloseBtn();
+  if (name) libplBody.appendChild(pageArtistRow([name]));
   const info = document.createElement('div'); info.className = 'currents-hint album-info';
-  info.textContent = [name, albumYearOf(a.releaseDate)].filter(Boolean).join(' · ');
+  info.textContent = albumYearOf(a.releaseDate) || '';
   const add = document.createElement('button'); add.type = 'button'; add.className = 'btn-ghost is-active';
   add.style.cssText = 'width:100%;margin-bottom:12px'; add.textContent = 'Add to library';
   add.addEventListener('click', async () => {
@@ -13690,7 +13704,7 @@ async function openAlbumPreview(a, name, backFn){
     if (openLibraryPanelId !== id) return;
     status.remove();
     const mins = Math.round(songs.reduce((n, x) => n + x.dur, 0) / 60000);
-    info.textContent = [name, albumYearOf(a.releaseDate), songs.length ? songs.length + (songs.length === 1 ? ' song' : ' songs') : '', mins >= 1 ? (mins >= 60 ? Math.floor(mins / 60) + ' hr ' + (mins % 60) + ' min' : mins + ' min') : ''].filter(Boolean).join(' · ');
+    info.textContent = [albumYearOf(a.releaseDate), songs.length ? songs.length + (songs.length === 1 ? ' song' : ' songs') : '', mins >= 1 ? (mins >= 60 ? Math.floor(mins / 60) + ' hr ' + (mins % 60) + ' min' : mins + ' min') : ''].filter(Boolean).join(' · ');
     if (!songs.length) libplBody.insertAdjacentHTML('beforeend', '<div class="empty-lib">No songs found.</div>');
     const list = document.createElement('div');
     songs.forEach((song, n) => list.appendChild(artistSongRow(song, a, n + 1)));
@@ -13867,6 +13881,21 @@ function buildSongInfoEl(c){
   box.appendChild(src);
   return box;
 }
+// #754: the artist name(s) at the top of an album or song page, each its own
+// button that opens that artist's page.
+function pageArtistRow(names, title){
+  const row = document.createElement('div'); row.className = 'page-artists';
+  names.forEach(n => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'page-artist';
+    b.setAttribute('aria-label', 'Open artist ' + n);
+    const ic = document.createElement('span'); ic.className = 'page-artist-ic'; ic.setAttribute('aria-hidden', 'true'); ic.innerHTML = MM_ICON_PERSON;
+    const nm = document.createElement('span'); nm.className = 'page-artist-name'; nm.textContent = n;
+    b.appendChild(ic); b.appendChild(nm);
+    b.addEventListener('click', (e) => { e.stopPropagation(); openArtistPage(n, title); });
+    row.appendChild(b);
+  });
+  return row;
+}
 // #533: a song's own page in the library panel. Only data the app already
 // holds (the track, its album in the library, the cached year lookup); the
 // artist name opens the artist page, the album opens the album.
@@ -13885,7 +13914,7 @@ function openSongPage(t, plId, trackIdx){
   libplPanel.classList.add('is-artist-info');
   libplTitle.textContent = t.title;
   if (t.art){ attachArtworkFallback(libplArt, { art: t.art }); libplArtWrap.hidden = false; } else { libplArt.removeAttribute('src'); libplArtWrap.hidden = true; }
-  libplHeroSync(t.artist || '');
+  libplHeroSync('Song');
   libplBody.innerHTML = '';
   const sc = libplPanel.querySelector('.queue-scroll'); if (sc) sc.scrollTop = 0;
   libplReturnTo = null; libplResume = null;
@@ -13901,12 +13930,7 @@ function openSongPage(t, plId, trackIdx){
   };
   const parts = [];
   const credited = trackArtistNames(t);
-  if (credited.length > 1){
-    const cr = document.createElement('span');
-    credited.forEach((n, i) => { if (i) cr.append(i === 1 ? ' feat. ' : ', '); cr.appendChild(addLink(n, () => openArtistPage(n, t.title))); });
-    parts.push(cr);
-  }
-  else if (t.artist) parts.push(addLink(t.artist, () => openArtistPage(t.artist, t.title)));
+  if (credited.length) libplBody.appendChild(pageArtistRow(credited, t.title));
   if (album) parts.push(addLink(album.name, () => { if (openLibraryPanelId !== album.id) toggleLibraryPlaylistPanel(album.id); }));
   const yearSpan = document.createElement('span');
   if (dur) parts.push(document.createTextNode(formatTime(dur)));
