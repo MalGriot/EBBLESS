@@ -18716,8 +18716,47 @@ function applyShareTargetFromUrl(){
   const m = (url + ' ' + text).match(/https?:\/\/\S+/i);
   const candidate = (m ? m[0] : (text || title)).trim();
   if (!candidate) return;
+  submitSharedLink(candidate);
+}
+
+// Puts a shared link through the paste box's own submit handler (see
+// applyShareTargetFromUrl above).
+function submitSharedLink(candidate){
   urlInput.value = candidate.slice(0, 250);
   try{ importForm.requestSubmit(); } catch(e){ importForm.dispatchEvent(new Event('submit', { cancelable: true })); }
+}
+
+/* NATIVE-LINK:BEGIN */
+// #746: hosts the native Android app may hand over (MusicLinks.java keeps the
+// same list): the link sources the paste box imports. Short links
+// (spotify.link, on.soundcloud.com) are left out; they need a redirect resolved.
+const NATIVE_LINK_HOSTS = new Set(['open.spotify.com', 'music.apple.com', 'music.youtube.com',
+  'youtube.com', 'www.youtube.com', 'm.youtube.com', 'youtu.be',
+  'soundcloud.com', 'www.soundcloud.com', 'm.soundcloud.com']);
+function nativeLinkAllowed(u){
+  if (typeof u !== 'string' || !u || u.length > 500 || !/^[\x21-\x7e]+$/.test(u)) return false;
+  let url;
+  try { url = new URL(u); } catch(e){ return false; }
+  return url.protocol === 'https:' && !url.username && !url.password && !url.port && NATIVE_LINK_HOSTS.has(url.hostname);
+}
+/* NATIVE-LINK:END */
+
+// #746: the Android app calls this when a music link is opened with or shared
+// to EBBLESS (MainActivity.takeLink). Checked again here, then held until
+// startApp() is done (a cold start) and put through the paste box like any
+// shared link. Returns true once taken, so the app stops holding it.
+let nativeLinkPending = null, nativeLinkReady = false;
+window.__ebbOpenLink = function(u){
+  if (!nativeLinkAllowed(u)) return false;
+  if (!nativeLinkReady){ nativeLinkPending = u; return true; }
+  submitSharedLink(u);
+  return true;
+};
+function applyNativeLink(){
+  nativeLinkReady = true;
+  const u = nativeLinkPending;
+  nativeLinkPending = null;
+  if (u) submitSharedLink(u);
 }
 
 // Beta signup playlist (Geethub #446): the link a tester put in the signup
@@ -38941,6 +38980,7 @@ function startApp(){
     // screen at this point (z-index 9999 vs. #import-overlay's 60) so this
     // resolves quietly underneath it, same as any other cold-boot work here.
     applySharedImportFromUrl();
+    applyNativeLink();
     betaPlaylistReady = true; applyBetaSignupPlaylist(); applyBetaSignupMusic();
   } catch(e){
     // Best-effort recovery: land on whatever view makes sense rather than

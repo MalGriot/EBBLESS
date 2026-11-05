@@ -49,6 +49,8 @@ public class MainActivity extends Activity {
     private volatile boolean pageStale;
     private String pendingState;
     private long pendingAt;
+    /** #746: a music link opened with or shared to EBBLESS, held until the page's hook takes it (a cold start waits for the page to load). */
+    private String pendingLink;
 
     /** A WebView that never tells the page it was hidden, so audio and timers keep going. */
     private static class KeepAliveWebView extends WebView {
@@ -622,7 +624,7 @@ public class MainActivity extends Activity {
                 if (bundled == null) bundled = cachedPage(r);
                 return bundled != null ? bundled : super.shouldInterceptRequest(v, r);
             }
-            @Override public void onPageFinished(WebView v, String url) { pushInsets(); }
+            @Override public void onPageFinished(WebView v, String url) { pushInsets(); deliverLink(); }
             @Override public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest r) {
                 if (!r.isForMainFrame()) return false;
                 return route(r.getUrl());
@@ -655,7 +657,7 @@ public class MainActivity extends Activity {
         startForegroundService(new Intent(this, PlaybackService.class));
 
         if (b != null) web.restoreState(b); else web.loadUrl(((getApplicationInfo().flags & android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0 ? HOME + "?mal" : HOME), java.util.Collections.singletonMap("Cache-Control", "no-cache")); // Pages caches the page 10 min; always revalidate
-        handleIntent(getIntent());
+        handleIntent(getIntent(), b != null);   // a restored activity was recreated with its old intent: don't import its link again
         refreshPageCopy();
     }
 
@@ -782,9 +784,40 @@ public class MainActivity extends Activity {
         startActivity(i);
     }
 
-    @Override protected void onNewIntent(Intent i) { super.onNewIntent(i); handleIntent(i); }
+    @Override protected void onNewIntent(Intent i) { super.onNewIntent(i); handleIntent(i, false); }
 
-    private void handleIntent(Intent i) {
+    /**
+     * #746: an open.spotify.com / music.apple.com / music.youtube.com link opened with EBBLESS (VIEW), or a music link shared to it
+     * (SEND text). Checked here against MusicLinks, then again by the page's __ebbOpenLink, which puts it through the paste box.
+     */
+    private void takeLink(Intent i) {
+        if (i == null || (i.getFlags() & Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY) != 0) return;   // reopened from recents: already handled
+        String act = i.getAction();
+        String raw;
+        if (Intent.ACTION_VIEW.equals(act) && i.getData() != null && "https".equalsIgnoreCase(i.getData().getScheme())) raw = i.getDataString();
+        else if (Intent.ACTION_SEND.equals(act)) raw = MusicLinks.firstHttps(i.getCharSequenceExtra(Intent.EXTRA_TEXT));
+        else return;
+        i.setAction(Intent.ACTION_MAIN); i.setData(null); i.removeExtra(Intent.EXTRA_TEXT);   // one use
+        String link = MusicLinks.allowed(raw);
+        if (link == null) {
+            android.widget.Toast.makeText(this, "EBBLESS opens Spotify, Apple Music, YouTube and SoundCloud links", android.widget.Toast.LENGTH_LONG).show();
+            return;
+        }
+        pendingLink = link;
+        deliverLink();
+    }
+
+    /** Hands pendingLink to the page; if the hook isn't there yet (page still loading) it stays pending for onPageFinished. */
+    private void deliverLink() {
+        final String l = pendingLink;
+        if (l == null || web == null) return;
+        pendingLink = null;
+        web.evaluateJavascript("window.__ebbOpenLink?__ebbOpenLink(" + JSONObject.quote(l) + "):false",
+                r -> { if (!"true".equals(r) && pendingLink == null) pendingLink = l; });
+    }
+
+    private void handleIntent(Intent i, boolean restored) {
+        if (!restored) takeLink(i);
         String wAct = i == null ? null : i.getStringExtra("widgetAction");   // a widget button tapped while the app was closed
         if (wAct != null) i.removeExtra("widgetAction");
         if (wAct != null || (i != null && i.getBooleanExtra("widgetResume", false))) {

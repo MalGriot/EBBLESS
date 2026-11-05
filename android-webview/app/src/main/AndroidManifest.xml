@@ -50,6 +50,52 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="ebbless" android:host="signin" />
             </intent-filter>
+            <!-- #746: music links can open in EBBLESS (MainActivity.takeLink, checked again by MusicLinks and the page).
+                 Not verified app links (we can't host assetlinks on these domains), so on Android 12+ the user turns them on
+                 once in Settings > Apps > EBBLESS > Open by default > Add links. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="open.spotify.com" />
+                <data android:pathPrefix="/track/" />
+                <data android:pathPrefix="/album/" />
+                <data android:pathPrefix="/playlist/" />
+                <data android:pathPrefix="/artist/" />
+                <data android:pathPrefix="/show/" />
+                <data android:pathPrefix="/episode/" />
+                <data android:pathPattern="/intl-.*/track/.*" />
+                <data android:pathPattern="/intl-.*/album/.*" />
+                <data android:pathPattern="/intl-.*/playlist/.*" />
+                <data android:pathPattern="/intl-.*/artist/.*" />
+                <data android:pathPattern="/intl-.*/show/.*" />
+                <data android:pathPattern="/intl-.*/episode/.*" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="music.apple.com" />
+                <data android:pathPattern="/.*/album/.*" />
+                <data android:pathPattern="/.*/playlist/.*" />
+                <data android:pathPattern="/.*/song/.*" />
+                <data android:pathPattern="/.*/artist/.*" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="music.youtube.com" />
+                <data android:pathPrefix="/watch" />
+                <data android:pathPrefix="/playlist" />
+                <data android:pathPrefix="/channel/" />
+            </intent-filter>
+            <!-- #746: a link shared from the Spotify / Apple Music / YouTube / SoundCloud app's Share sheet -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
         </activity>
 
         <!-- #691: full-screen player drawn over the lock screen; own task so closing it returns to the lock screen / standard player -->
