@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { parseVibeExclusions, filterExcluded, matchHouseVibe } from '../src/vibe-intent.js';
+import { parseVibeExclusions, filterExcluded, matchHouseVibe, vibeSeededShuffle, orderVibeSeeds } from '../src/vibe-intent.js';
 
 test('negations become exclusions and leave the rest of the sentence', () => {
   const r = parseVibeExclusions('late night drive, nothing sad, no country please');
@@ -68,4 +68,42 @@ test('house-vibes.json: valid entries, and each phrase finds its own entry', () 
     assert.ok(Array.isArray(v.seeds) && v.seeds.every(s => s && s.artist && s.title), 'entry ' + i + ' seeds');
     v.match.forEach(p => assert.equal(matchHouseVibe(p, data.vibes), v, '"' + p + '" lands on its own entry'));
   });
+});
+
+// #743: the model put Bon Iver's "Skinny Love" first in its seeds for most
+// mellow sentences, and seeds lead the list, so it opened nearly every playlist.
+test('the model\'s first seed does not lead every vibe', () => {
+  const modelSeeds = [
+    { artist: 'Bon Iver', title: 'Skinny Love' }, { artist: 'Adele', title: 'Someone Like You' },
+    { artist: 'The National', title: 'Slow Show' }, { artist: 'James Blake', title: 'Retrograde' },
+    { artist: 'Norah Jones', title: 'Come Away with Me' }, { artist: 'Jack Johnson', title: 'Banana Pancakes' },
+    { artist: 'Phoebe Bridgers', title: 'Motion Sickness' }, { artist: 'Frank Ocean', title: 'Pink + White' },
+  ];
+  const sentences = ['late night drive', 'feeling heartbroken', 'rainy sunday morning making coffee', 'cooking dinner with friends',
+    'quiet evening reading', 'missing home', 'sunset on the balcony', 'long train ride', 'winter walk', 'first coffee of the day',
+    'slow morning', 'driving home after work', 'sad but hopeful', 'candle lit bath', 'city lights at 2am', 'walking in the rain'];
+  const firsts = sentences.map(s => orderVibeSeeds(modelSeeds, s)[0].title);
+  const skinny = firsts.filter(t => t === 'Skinny Love').length;
+  assert.ok(skinny <= 4, 'Skinny Love led ' + skinny + ' of ' + sentences.length + ' vibes');
+  assert.ok(new Set(firsts).size >= 5, 'first songs vary: ' + firsts.join(', '));
+  // same sentence, same order (a cached answer and a fresh one agree), nothing lost
+  assert.deepEqual(orderVibeSeeds(modelSeeds, 'late night drive'), orderVibeSeeds(modelSeeds, 'late night drive'));
+  assert.equal(new Set(orderVibeSeeds(modelSeeds, 'winter walk').map(s => s.title)).size, modelSeeds.length);
+});
+
+test('house seeds keep their written order ahead of the model\'s', () => {
+  const house = [{ artist: 'Bon Iver', title: 'Holocene', house: true }, { artist: 'Fleet Foxes', title: 'Helplessness Blues', house: true }];
+  const model = [{ artist: 'A', title: 'a' }, { artist: 'B', title: 'b' }, { artist: 'C', title: 'c' }];
+  const out = orderVibeSeeds(house.concat(model), 'where am i going in life');
+  assert.deepEqual(out.slice(0, 2), house);
+  assert.deepEqual(out.slice(2).map(s => s.title).sort(), ['a', 'b', 'c']);
+  assert.deepEqual(orderVibeSeeds(undefined, 'x'), []);
+  assert.deepEqual(vibeSeededShuffle([], 'x'), []);
+});
+
+test('the worker grounds seeds in the per-sentence order, with a fresh cache key', () => {
+  const src = readFileSync(new URL('../src/index.js', import.meta.url), 'utf8');
+  assert.match(src, /mapWithConcurrency\(orderVibeSeeds\(interp\.seeds, cacheText\)/);
+  assert.match(src, /house: true \}\)\);/);
+  assert.doesNotMatch(src, /const VIBE_CACHE_VERSION = 'v3'/);
 });

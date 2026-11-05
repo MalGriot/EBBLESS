@@ -19,7 +19,7 @@ import { handleAdmin } from './admin.js';
 import { sanitizeLinkFix } from './linkfix.js';
 import { handleNowPlaying } from './nowplaying.js';
 import { handleWaves } from './waves.js';
-import { parseVibeExclusions, filterExcluded, matchHouseVibe } from './vibe-intent.js';
+import { parseVibeExclusions, filterExcluded, matchHouseVibe, vibeSeededShuffle, orderVibeSeeds } from './vibe-intent.js';
 import { HOUSE_VIBES, HOUSE_VIBES_VERSION } from './house-vibes.js';
 import { parseMusicLangs, detectVibeLangs, vibeLangKey, vibeLangHint, vibeLangTags, vibeSeedMinListeners, vibeLangLists } from './vibe-locale.js';
 import { deepFindKey, ytPlaylistFromData, ytLockupVideos, ytRowsContinuation } from './yt-page.js';
@@ -4108,7 +4108,7 @@ async function handleArtistMap(url, env, ctx) {
 // Privacy: the sentence is never logged or stored anywhere but the edge
 // cache entry keyed by its normalized text (which holds only the derived
 // interpretation, not who asked).
-const VIBE_CACHE_VERSION = 'v3';
+const VIBE_CACHE_VERSION = 'v4';   // v4: model seeds no longer lead in the model's order (#743)
 const VIBE_MAX_INPUT = 300;
 const VIBE_AI_MODEL = '@cf/meta/llama-3.1-8b-instruct-fast';
 const VIBE_AI_TIMEOUT_MS = 9000;
@@ -4200,7 +4200,7 @@ const VIBE_SYSTEM_PROMPT =
   '"keywords": 1-3 short playlist search phrases; ' +
   '"energy": [min, max] between 0 and 1; ' +
   '"bpm": [min, max] tempo range; ' +
-  '"seeds": 8 objects {"artist": "...", "title": "..."} naming REAL, well-known, officially released songs that fit. Never invent songs; if unsure, pick famous ones.';
+  '"seeds": 8 objects {"artist": "...", "title": "..."} naming REAL, well-known, officially released songs that fit. Never invent songs; if unsure, pick famous ones. Use 8 different artists and avoid the single most obvious song for the mood.';
 
 const VIBE_JSON_SCHEMA = {
   type: 'object',
@@ -4321,24 +4321,15 @@ async function vibeTagTracks(tag, env) {
     .map(t => ({ title: t.name, artist: t.artist.name, image: null, from: 'tag:' + tag }));
 }
 
-// Deterministic per-sentence shuffle (so a cached answer and a fresh one
-// agree) - Last.fm's top lists are popularity-ordered, and taking just the
-// top N of each would give every "chill" request the same five songs.
-function vibeSeededShuffle(arr, seedText) {
-  let h = 2166136261;
-  for (let i = 0; i < seedText.length; i++) { h ^= seedText.charCodeAt(i); h = Math.imul(h, 16777619); }
-  const out = arr.slice();
-  for (let i = out.length - 1; i > 0; i--) {
-    h ^= h << 13; h ^= h >>> 17; h ^= h << 5;
-    const j = (h >>> 0) % (i + 1);
-    [out[i], out[j]] = [out[j], out[i]];
-  }
-  return out;
-}
+// vibeSeededShuffle (vibe-intent.js): Last.fm's top lists are popularity-
+// ordered, and taking just the top N of each would give every "chill"
+// request the same five songs.
 
 async function vibeGroundTracks(interp, env, cacheText, minListeners, langs) {
+  // Model seeds in a per-sentence order, not the model's (#743): it names the
+  // same famous song first for most mellow sentences, and seeds lead the list.
   const [verified, tagLists] = await Promise.all([
-    mapWithConcurrency(interp.seeds, 4, s => vibeVerifySeed(s, env, minListeners).catch(() => null)),
+    mapWithConcurrency(orderVibeSeeds(interp.seeds, cacheText), 4, s => vibeVerifySeed(s, env, minListeners).catch(() => null)),
     mapWithConcurrency(interp.tags, 4, t => vibeTagTracks(t, env).catch(() => [])),
   ]);
   const tracks = [];
@@ -4458,7 +4449,7 @@ async function handleVibeInterpret(url, env, ctx, request) {
 function vibeApplyHouse(interp, house) {
   const seeds = (Array.isArray(house.seeds) ? house.seeds : [])
     .filter(x => x && x.title && x.artist)
-    .map(x => ({ title: String(x.title).slice(0, 120), artist: String(x.artist).slice(0, 120) }));
+    .map(x => ({ title: String(x.title).slice(0, 120), artist: String(x.artist).slice(0, 120), house: true }));
   const tags = [];
   (Array.isArray(house.tags) ? house.tags : []).concat(interp.tags || []).forEach(t => { t = String(t || '').toLowerCase().slice(0, 30); if (t && !tags.includes(t)) tags.push(t); });
   const e = Array.isArray(house.energy) && house.energy.length === 2 && house.energy.every(n => typeof n === 'number' && n >= 0 && n <= 1) ? house.energy.slice() : interp.energy;

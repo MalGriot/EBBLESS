@@ -83,3 +83,27 @@ export function matchHouseVibe(text, list) {
   }));
   return best;
 }
+
+// Deterministic per-sentence shuffle, so a cached answer and a fresh one agree.
+export function vibeSeededShuffle(arr, seedText) {
+  const text = String(seedText || '');
+  let h = 2166136261;
+  for (let i = 0; i < text.length; i++) { h ^= text.charCodeAt(i); h = Math.imul(h, 16777619); }
+  const out = (arr || []).slice();
+  for (let i = out.length - 1; i > 0; i--) {
+    h ^= h << 13; h ^= h >>> 17; h ^= h << 5;
+    const j = (h >>> 0) % (i + 1);
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+}
+
+// Seed order for grounding (#743). Seeds lead a vibe's list, and the model
+// names the same famous song first for most mellow sentences (Bon Iver's
+// "Skinny Love" opened nearly every playlist), so its own order is dropped:
+// house seeds (hand-picked, marked house: true) stay first as written, and
+// the model's follow in a per-sentence shuffled order.
+export function orderVibeSeeds(seeds, seedText) {
+  const list = Array.isArray(seeds) ? seeds : [];
+  return list.filter(s => s && s.house).concat(vibeSeededShuffle(list.filter(s => s && !s.house), seedText));
+}
