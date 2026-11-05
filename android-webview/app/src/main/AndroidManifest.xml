@@ -68,6 +68,7 @@
         <activity
             android:name=".SpotifyImportActivity"
             android:exported="false"
+            android:windowSoftInputMode="adjustResize"
             android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden|uiMode" />
 
         <receiver android:name=".UpdateReceiver" android:exported="false" />
