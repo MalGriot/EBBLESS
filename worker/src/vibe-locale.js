@@ -84,7 +84,7 @@ export function detectVibeLangs(text, listenerLangs, country) {
 // Short, stable cache-key part: '' for plain English vibes.
 export function vibeLangKey(d) {
   if (!d.strong.length && !d.lean.length) return '';
-  return 'L2' + (d.strong.length ? 's' + d.strong.join('.') : 'w' + d.lean.join('.')) + (d.old ? 'o' : '');   // L2: language-only lists
+  return 'L3' + (d.strong.length ? 's' + d.strong.join('.') : 'w' + d.lean.join('.')) + (d.old ? 'o' : '');   // L3: language-only lists and seeds
 }
 
 // Extra system line for the model, or null.
@@ -120,24 +120,40 @@ export function vibeSeedMinListeners(d, base) {
   return langs.reduce((m, l) => Math.min(m, MUSIC_LANGS[l].minListeners || base), base);
 }
 
+// Last.fm tags that say a song is Indian music, for checking a seed's own tags.
+const INDIAN_TAGS = new Set(Object.keys(MUSIC_LANGS).flatMap(l => MUSIC_LANGS[l].tags).concat(
+  ['indian', 'desi', 'filmi', 'indian pop', 'sufi', 'qawwali', 'ghazal', 'devotional', 'bhajan', 'indian classical', 'carnatic', 'hindustani', 'punjabi pop']));
+// A seed in a clear-language vibe stays when its artist is in the language's
+// lists, when Last.fm has no tags for it (small Indian releases often have
+// none), or when one of its tags is Indian; a Western hit the model slipped
+// in ("The A Team" in a Punjabi drive) has tags and none of them fit.
+export function vibeSeedFitsLang(seedTags, artistKnown, d) {
+  if (!d.strong.length || artistKnown) return true;
+  const tags = (seedTags || []).map(t => String(t).toLowerCase());
+  return !tags.length || tags.some(t => INDIAN_TAGS.has(t));
+}
+
 // A vibe that is clearly in a language (strong): the mood tags' lists are
 // worldwide ("sad" is mostly Western), so they keep only artists that the
-// language's own lists or the verified seeds also have, and each language
-// list gives twice the songs. When the language lists came back empty (a
-// thin tag), nothing is filtered, so the vibe still gets a full list.
-// -> { lists, take }, aligned with tags.
+// language's own lists or the kept seeds also have, and each language list
+// gives twice the songs. Seeds are checked by vibeSeedFitsLang (their own
+// Last.fm tags ride along as `_tags`). When the language lists came back
+// empty (a thin tag), the mood lists aren't filtered, so the vibe still gets
+// a full list. -> { lists, take, seeds }, lists and take aligned with tags.
 export function vibeLangLists(tags, lists, d, seeds, norm, perTag) {
   const langTags = [];
   d.strong.forEach(l => MUSIC_LANGS[l].tags.forEach(t => { if (!langTags.includes(t)) langTags.push(t); }));
-  const plain = { lists, take: tags.map(() => perTag) };
+  const plain = { lists, take: tags.map(() => perTag), seeds: seeds || [] };
   if (!langTags.length) return plain;
   const isLang = tags.map(t => langTags.includes(t));
   const known = new Set();
   lists.forEach((l, i) => { if (isLang[i]) (l || []).forEach(t => known.add(norm(t.artist))); });
-  if (!known.size) return plain;
-  (seeds || []).forEach(s => known.add(norm(s.artist)));
+  const kept = (seeds || []).filter(s => vibeSeedFitsLang(s._tags, known.has(norm(s.artist)), d));
+  if (!known.size) return Object.assign(plain, { seeds: kept });
+  kept.forEach(s => known.add(norm(s.artist)));
   return {
     lists: lists.map((l, i) => isLang[i] ? l : (l || []).filter(t => known.has(norm(t.artist)))),
     take: isLang.map(x => x ? perTag * 2 : perTag),
+    seeds: kept,
   };
 }

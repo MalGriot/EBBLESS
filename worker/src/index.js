@@ -4301,7 +4301,9 @@ async function vibeVerifySeed(seed, env, minListeners) {
   // Last.fm serves a generic grey star for anything without real art -
   // not worth showing; the client resolves art itself when this is null.
   const img = imgs.length && !/2a96cbd8b46e442fc41c2b86b821562f/.test(imgs[imgs.length - 1]['#text'] || '') ? imgs[imgs.length - 1]['#text'] : '';
-  return { title: t.name, artist: t.artist.name, image: img || null, from: 'seed' };
+  const toptags = t.toptags && t.toptags.tag ? [].concat(t.toptags.tag) : [];
+  // _tags only feeds the language check in vibeGroundTracks and is removed there
+  return { title: t.name, artist: t.artist.name, image: img || null, from: 'seed', _tags: toptags.map(x => x && x.name).filter(Boolean).slice(0, 8) };
 }
 
 // Deep cuts: each tag's list goes 60 deep in the same single Last.fm call, and
@@ -4347,12 +4349,13 @@ async function vibeGroundTracks(interp, env, cacheText, minListeners, langs) {
     seen.add(k);
     tracks.push(t);
   };
-  const seeds = verified.filter(Boolean);
+  // A vibe clearly in one language keeps its seeds and the worldwide mood
+  // lists to that language's music (vibe-locale.js).
+  const verifiedSeeds = verified.filter(Boolean);
+  const shaped = langs ? vibeLangLists(interp.tags, tagLists, langs, verifiedSeeds, vibeTitleNorm, VIBE_TRACKS_PER_TAG) : { lists: tagLists, take: tagLists.map(() => VIBE_TRACKS_PER_TAG), seeds: verifiedSeeds };
+  const seeds = shaped.seeds.map(({ _tags, ...s }) => s);
   seeds.forEach(push);
-  // Round-robin across tags so no one tag dominates the list. A vibe clearly
-  // in one language keeps the worldwide mood lists to that language's
-  // artists (vibe-locale.js).
-  const shaped = langs ? vibeLangLists(interp.tags, tagLists, langs, seeds, vibeTitleNorm, VIBE_TRACKS_PER_TAG) : { lists: tagLists, take: tagLists.map(() => VIBE_TRACKS_PER_TAG) };
+  // Round-robin across tags so no one tag dominates the list.
   const shuffled = shaped.lists.map((l, i) => vibeSeededShuffle(l, cacheText).slice(0, shaped.take[i]));
   const rounds = Math.max(VIBE_TRACKS_PER_TAG, ...shaped.take);
   for (let i = 0; i < rounds && tracks.length < VIBE_MAX_TRACKS; i++) {

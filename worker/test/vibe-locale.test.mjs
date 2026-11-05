@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert';
-import { parseMusicLangs, detectVibeLangs, vibeLangKey, vibeLangHint, vibeLangTags, vibeSeedMinListeners, vibeLangLists } from '../src/vibe-locale.js';
+import { parseMusicLangs, detectVibeLangs, vibeLangKey, vibeLangHint, vibeLangTags, vibeSeedMinListeners, vibeLangLists, vibeSeedFitsLang } from '../src/vibe-locale.js';
 
 test('Hinglish sentences read as Hindi', () => {
   assert.deepStrictEqual(detectVibeLangs('dil toota hai yaar', [], null).strong, ['hi']);
@@ -46,13 +46,13 @@ test('cache key part, tags, hint and seed bar', () => {
   assert.strictEqual(vibeSeedMinListeners(plain, 5000), 5000);
 
   const strong = detectVibeLangs('dil toota hai yaar', [], null);
-  assert.strictEqual(vibeLangKey(strong), 'L2shi');
+  assert.strictEqual(vibeLangKey(strong), 'L3shi');
   assert.deepStrictEqual(vibeLangTags(['sad', 'soul', 'indie folk'], strong, 4), ['bollywood', 'hindi', 'sad', 'soul']);
   assert.match(vibeLangHint(strong), /Hindi/);
   assert.strictEqual(vibeSeedMinListeners(strong, 5000), 500);
 
   const lean = detectVibeLangs('rainy drive home', ['hi'], null);
-  assert.strictEqual(vibeLangKey(lean), 'L2whi');
+  assert.strictEqual(vibeLangKey(lean), 'L3whi');
   assert.deepStrictEqual(vibeLangTags(['chill', 'soul', 'lo-fi', 'jazz'], lean, 4), ['bollywood', 'chill', 'soul', 'lo-fi']);
   assert.match(vibeLangHint(lean), /half/);
 });
@@ -82,4 +82,19 @@ test('no filtering for English, a lean, or when the language lists came back emp
   assert.strictEqual(lean.lists, lists);
   const empty = vibeLangLists(['bollywood', 'sad'], [[], lists[0]], detectVibeLangs('dil toota hai yaar', [], null), [], norm, 12);
   assert.deepStrictEqual(empty.lists[1], lists[0], 'thin language: keep the mood list whole');
+});
+
+test('seeds in a clear-language vibe: Western hits out, untagged and Indian-tagged in', () => {
+  const norm = (a) => String(a).toLowerCase();
+  const d = detectVibeLangs('late night drive punjabi', [], null);
+  const lists = [[{ artist: 'Diljit Dosanjh', title: 'x' }], [{ artist: 'Malkit Singh', title: 'y' }], [{ artist: 'Adele', title: 'z' }]];
+  const seeds = [
+    { artist: 'Ed Sheeran', title: 'The A Team', _tags: ['acoustic', 'folk', 'singer-songwriter'] },
+    { artist: 'Guru Randhawa', title: 'Lahore', _tags: ['punjabi', 'indian pop'] },
+    { artist: 'Tegi Pannu', title: 'Schedule', _tags: [] },
+    { artist: 'Diljit Dosanjh', title: 'Lover', _tags: ['pop'] },
+  ];
+  const out = vibeLangLists(['punjabi', 'bhangra', 'sad'], lists, d, seeds, norm, 12);
+  assert.deepStrictEqual(out.seeds.map(s => s.artist), ['Guru Randhawa', 'Tegi Pannu', 'Diljit Dosanjh']);
+  assert.strictEqual(vibeSeedFitsLang(['acoustic'], false, detectVibeLangs('rainy drive home', ['en'], null)), true, 'English vibes keep every seed');
 });
