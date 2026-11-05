@@ -1559,6 +1559,23 @@ body:has(#import-overlay.is-open) #fsBtn{display:none}
 .visual-tabs .v-tab.is-active{background:var(--accent);color:var(--on-accent,#151107)}
 .visual-tabs.yt-on .v-tab:not(#ytPanelBtn).is-active{background:none;color:var(--faint)}
 .visual-tabs .v-tab:disabled{opacity:.35;pointer-events:none}
+/* #747 cinema mode: the Cinema tab shows only while the video is on screen. On (html.ebb-cinema), one static
+   dim layer covers the page and only the video, the visual tabs and the transport sit above it. #cinemaDim
+   lives inside #view-player so ytPanelSync's #735 cover check still counts it as the player. Solid fill, no
+   backdrop-filter (video moves above it), opacity-only fade, hidden after it. Covered means stopped: #ambient pauses. */
+#cinemaBtn{display:none}
+.player-stage:has(> #artworkWrap.yt-video) #cinemaBtn{display:flex}
+#cinemaBtn[aria-pressed="true"]{color:var(--accent)}
+#cinemaDim{position:fixed;inset:0;z-index:46;background:rgba(0,0,0,.86);opacity:0;visibility:hidden;pointer-events:none;
+  transition:opacity var(--dur-surface) var(--ease-in-out),visibility 0s var(--dur-surface)}
+html.ebb-cinema:not(.ebb-pip) body:has(#artworkWrap.yt-video) #cinemaDim{opacity:1;visibility:visible;pointer-events:auto;cursor:pointer;
+  transition:opacity var(--dur-surface) var(--ease-in-out),visibility 0s}
+html.ebb-cinema:not(.ebb-pip) body:has(#artworkWrap.yt-video) :is(.player-stage > .visual-tabs,.transport-full){z-index:47}
+html.ebb-cinema:not(.ebb-pip) body:not(.desktop-fs):has(#artworkWrap.yt-video) :is(.player-stage > .visual-tabs,.transport-full){position:relative}
+html.ebb-cinema:not(.ebb-pip) body:has(#artworkWrap.yt-video) #yt-host.is-shown:not(.in-flow){z-index:47}
+/* desktop fullscreen: the floating topbar (z 45) sits above #view-player (z 44) and so above the dim; fade it to match */
+html.ebb-cinema:not(.ebb-pip) body.desktop-fs:not(.fs-chrome-hidden):has(#artworkWrap.yt-video) #topbar{opacity:.14}
+html.ebb-cinema:not(.ebb-pip) body:has(#artworkWrap.yt-video) #ambient :is(.layer,.ambient-veil){animation-play-state:paused}
 /* visualizer tab icon: three cymatics plate figures crossfading, one full
    3-shape cycle every 20s (3 cycles/min). each phase holds ~5s, fades ~1.7s.
    reduced motion: first figure only, static. */
@@ -4972,6 +4989,7 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
 
   <!-- ===== PLAYER ===== -->
   <main class="view" id="view-player" hidden>
+    <div id="cinemaDim" aria-hidden="true"></div>
     <div class="fs-timeline" id="fsTimeline" role="list" aria-label="Up next"></div>
     <div class="view-scroll">
       <div class="player-stage">
@@ -5002,6 +5020,10 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
           <button class="v-tab" id="ytPanelBtn" title="Watch the video" aria-label="Watch the video for this song in the player" aria-pressed="false" disabled aria-disabled="true">
             <svg viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" clip-rule="evenodd" d="M3 7.5A2.5 2.5 0 015.5 5h13A2.5 2.5 0 0121 7.5v9a2.5 2.5 0 01-2.5 2.5h-13A2.5 2.5 0 013 16.5zm7.2 1.3v6.4l5.3-3.2z"/></svg>
             <span class="v-tab-label">Video</span>
+          </button>
+          <button class="v-tab" id="cinemaBtn" title="Cinema mode: dim the rest of the page" aria-label="Cinema mode: dim everything but the video" aria-pressed="false">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.5 14.6A8.5 8.5 0 019.4 3.5a8.5 8.5 0 1011.1 11.1z"/></svg>
+            <span class="v-tab-label">Cinema</span>
           </button>
           <div class="art-style-menu" id="artStyleMenu">
             <button class="art-style-opt" data-style="default">
@@ -5654,6 +5676,7 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
           <li><span><kbd>X</kbd></span>Visualizer</li>
           <li><span><kbd>C</kbd></span>Lyrics</li>
           <li><span><kbd>V</kbd></span>Video</li>
+          <li><span><kbd>T</kbd></span>With the video showing: cinema mode (dim the rest)</li>
           <li><span><kbd>I</kbd></span>Visualizer: hold pattern on / off</li>
           <li><span><kbd>K</kbd></span>Shuffle</li>
           <li><span><kbd>O</kbd></span>Repeat</li>
@@ -21827,6 +21850,30 @@ function closeYtPanel(auto){
 }
 ytPanelBtn.addEventListener('click', (e) => { e.stopPropagation(); if (ytOn) closeYtPanel(); else openYtPanel(); });
 window.addEventListener('resize', () => { if (ytPanelOpen()) ytPanelSync(); });
+// #747 cinema mode. The look is CSS (html.ebb-cinema + #artworkWrap.yt-video), so it follows ytPanelSync
+// and ends with the video; the choice is remembered, so the next video opens the same way.
+const LS_CINEMA = 'ebbless:cinema';
+const cinemaBtn = $('cinemaBtn');
+function setCinema(on, save){
+  document.documentElement.classList.toggle('ebb-cinema', !!on);
+  cinemaBtn.setAttribute('aria-pressed', String(!!on));
+  if (save !== false) lsSet(LS_CINEMA, !!on);
+}
+function cinemaActive(){
+  return document.documentElement.classList.contains('ebb-cinema') && !state.flowOpen && artworkWrap.classList.contains('yt-video');
+}
+setCinema(lsGet(LS_CINEMA, false) === true, false);
+cinemaBtn.addEventListener('click', (e) => { e.stopPropagation(); setCinema(!document.documentElement.classList.contains('ebb-cinema')); });
+$('cinemaDim').addEventListener('click', (e) => { e.stopPropagation(); setCinema(false); });
+// T toggles it while the video shows; Esc leaves it before anything else. Registered ahead of the global
+// shortcut handler, so preventDefault here makes that one skip this Esc (one press, one thing).
+document.addEventListener('keydown', (e) => {
+  if (e.metaKey || e.ctrlKey || e.altKey || e.defaultPrevented || e.repeat) return;
+  const t = e.target;
+  if (t && (t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable || (t.tagName === 'INPUT' && !/^(range|checkbox|radio|button|submit|reset|file|color|image)$/i.test(t.type)))) return;
+  if (e.key === 'Escape' && cinemaActive()){ e.preventDefault(); setCinema(false); }
+  else if ((e.key === 't' || e.key === 'T') && artworkWrap.classList.contains('yt-video') && !state.flowOpen){ e.preventDefault(); cinemaBtn.click(); }
+});
 creditsBtn.addEventListener('click', openCreditsModal);
 $('creditsCloseBtn').addEventListener('click', closeCreditsModal);
 dangerScrim.addEventListener('click', closeCreditsModal);
@@ -33594,6 +33641,7 @@ if (window.matchMedia('(hover:hover) and (pointer:fine)').matches){
     ['#milkTabBtn', 'D'],
     ['#visualTabs .v-tab[data-mode="lyrics"]', 'C'],
     ['#ytPanelBtn', 'V'],
+    ['#cinemaBtn', 'T'],
     ['#reportBugBtn', 'Shift+B'],
     ['#suggestIdeaBtn', 'Shift+S']
   ];
