@@ -1443,6 +1443,29 @@ body:has(#musicMap:not([hidden])):has(#mini-bar:not([hidden])) .mm-foot{padding-
 .vibe-share svg{width:17px;height:17px}
 .import-stage .step{font-size:15px;color:var(--faint);margin:0 0 20px;transition:color var(--dur-ui) var(--ease-out)}
 .import-stage .flow-line{margin-bottom:14px}
+/* #753: one song's actions (playSingleSongLink): the song on top, four tiles. Hover changes colour only, the press is transform only */
+.ss-head{display:flex;align-items:center;gap:12px;width:100%;margin:0 0 16px;text-align:left}
+.ss-art{position:relative;flex:none;width:56px;height:56px;border-radius:var(--r-md);overflow:hidden;background:var(--panel-2);color:var(--faint);display:flex;align-items:center;justify-content:center}
+.ss-art svg{width:24px;height:24px}
+.ss-art img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.ss-art img:not([src]){display:none}
+.ss-meta{flex:1;min-width:0}
+.ss-title,.ss-artist{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ss-title{font-size:15px;font-weight:600;color:var(--text)}
+.ss-artist{font-size:13px;color:var(--faint);margin-top:2px}
+.ss-artist:empty{display:none}
+.ss-acts{display:grid;grid-template-columns:1fr 1fr;grid-auto-rows:1fr;gap:10px;width:100%}
+.ss-tile{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;min-height:100px;padding:14px 8px;border:1px solid var(--border-2);border-radius:var(--r-lg);
+  background:var(--panel-2);color:var(--text);font-size:13.5px;font-weight:600;line-height:1.2;cursor:pointer;transition:transform var(--dur-ui) var(--ease-out)}
+.ss-tile:hover{background:var(--panel-3)}
+.ss-tile:active{transform:scale(.97)}
+.ss-ic{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--panel-3);color:var(--text)}
+.ss-tile:hover .ss-ic{background:var(--panel)}
+.ss-ic svg{width:20px;height:20px}
+.ss-lbl{display:flex;flex-direction:column;align-items:center;gap:3px}
+.ss-sub{font-size:11px;font-weight:500;opacity:.7}
+.ss-tile.is-primary,.ss-tile.is-primary:hover{background:var(--accent);border-color:var(--accent);color:var(--on-accent,#151107)}
+.ss-tile.is-primary .ss-ic{background:color-mix(in srgb,var(--on-accent,#151107) 14%,transparent);color:inherit}
 .import-stage .counter{font-size:12px;color:var(--faint-2)}
 .import-preview{margin-top:34px;width:100%;max-height:180px;overflow:hidden;position:relative}
 .import-preview::after{content:'';position:absolute;left:0;right:0;bottom:0;height:40px;
@@ -2316,6 +2339,7 @@ body.queue-open #bottom-nav button[data-view].is-active{color:var(--faint-2)}
 #libplBody .track-row .handle svg{width:12px;height:16px}
 #libplBody .track-row.is-dragging{opacity:.85;box-shadow:0 6px 18px rgba(0,0,0,.4);z-index:2}
 #libpl-panel.is-drop-target{outline:2px solid var(--accent);outline-offset:-2px}
+#view-player.is-drop-target{outline:2px solid var(--accent);outline-offset:-2px}   /* #753: a song or list dropped here plays now */
 .libpl-addbar .btn-ghost{width:100%}
 .as-head{width:100%;text-align:left;margin-bottom:12px}
 .as-head .as-to{font-size:15px;font-weight:600;color:var(--text)}
@@ -12828,12 +12852,17 @@ function renderPlayHistory(){
     meta.appendChild(title); meta.appendChild(artist);
     row.appendChild(img); row.appendChild(meta);
     row.addEventListener('click', () => playFromHistory(h));
+    // #753: a recent song drags to the queue or the player like a library song
+    row._dragSong = { title: h.title, artist: h.artist, art: h.art || null, get: async () => { const i = historyTrackIdx(h); return i < 0 ? null : { plId: h.plId, idx: i }; } };
     histBody.appendChild(row);
   });
 }
-function playFromHistory(h){
+function historyTrackIdx(h){
   const pl = h.plId && getCachedPlaylist(h.plId);
-  const i = pl ? pl.tracks.findIndex(t => t && t.title === h.title && (t.videoId || '') === h.videoId) : -1;
+  return pl ? pl.tracks.findIndex(t => t && t.title === h.title && (t.videoId || '') === h.videoId) : -1;
+}
+function playFromHistory(h){
+  const i = historyTrackIdx(h);
   if (i < 0){ showToast("That song isn't in your library anymore."); return; }
   playLibraryTrackInline(h.plId, i);
 }
@@ -13285,6 +13314,7 @@ function toggleLibraryPlaylistPanel(id){
           meta.appendChild(ttl); meta.appendChild(sub);
           row.appendChild(img); row.appendChild(meta);
           row.addEventListener('click', () => { toggleLibraryPlaylistPanel(aid); if (openLibraryPanelId === aid){ libplReturnTo = id; syncLibplCloseBtn(); } });
+          row._dragColl = aid;   // #753: drags to the queue or the player like its library card
           list.appendChild(row);
         });
       };
@@ -13597,6 +13627,20 @@ async function artistSongTrack(song, album){
   if (!m || !m.videoId) return null;
   return { title: song.title, artist: song.artist, videoId: m.videoId, matchedTitle: m.title || '', channel: m.channel || '', plays: 0, art: song.art || null, duration: m.duration || 0, srcDuration: Math.round(song.dur / 1000) || null };
 }
+// a matched song as a findable one-song list, so a queue entry can point at it
+function artistSongPl(track){
+  const pl = { id: 'addprev:' + track.videoId, type: 'track', name: track.title, image: null, tracks: [track], ts: Date.now() };
+  persistPlaylistObj(pl);
+  return pl;
+}
+// #753: the Liked Songs copy of an album song, found by name (the song isn't matched to a video until it's tapped)
+function likedArtistSong(song){
+  const liked = getCachedPlaylist(LIKED_ID);
+  if (!liked || !Array.isArray(liked.tracks)) return null;
+  const v = song.scId ? soundCloudVideoId(song.scId) : '';
+  const tk = artistNameKey(song.title), ak = artistNameKey(song.artist);
+  return liked.tracks.find(t => t && t.videoId && (v ? t.videoId === v : artistNameKey(t.title) === tk && artistNameKey(t.artist) === ak)) || null;
+}
 async function artistSongAct(song, album, el, act){
   if (el.dataset.busy) return;
   el.dataset.busy = '1'; el.style.opacity = '.5';
@@ -13604,9 +13648,8 @@ async function artistSongAct(song, album, el, act){
     const track = await artistSongTrack(song, album);
     if (!track){ showToast("Couldn't find that song."); return; }
     if (act === 'add'){ openAddToPlaylistPicker(track); return; }
-    const pl = { id: 'addprev:' + track.videoId, type: 'track', name: track.title, image: null, tracks: [track], ts: Date.now() };
-    persistPlaylistObj(pl);
-    playSingleSongLink(pl);
+    if (act === 'like'){ if (!isTrackLiked(track.videoId)) toggleLikeTrack(track); return; }
+    playSingleSongLink(artistSongPl(track));
   } catch(err){ showToast("Couldn't load that song."); }
   finally { delete el.dataset.busy; el.style.opacity = ''; }
 }
@@ -13621,12 +13664,32 @@ function artistSongRow(song, album, n, year){
   const subTxt = [song.artist, year].filter(Boolean).join(' · ');
   if (subTxt){ const sub = document.createElement('div'); sub.className = 'artist'; sub.textContent = subTxt; meta.appendChild(sub); }
   const acts = document.createElement('div'); acts.className = 'row-actions';
+  // #753: heart beside the plus, like the library's song rows
+  const heart = document.createElement('button'); heart.type = 'button'; heart.className = 'like-btn';
+  const syncHeart = () => {
+    const on = !!likedArtistSong(song);
+    heart.classList.toggle('is-liked', on);
+    heart.innerHTML = on ? CTX_ICON_LIKE_ON : CTX_ICON_LIKE_OFF;
+    heart.title = on ? 'Remove from Liked Songs' : 'Add to Liked Songs';
+    heart.setAttribute('aria-label', heart.title + ': ' + song.title);
+  };
+  syncHeart();
+  heart.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    const liked = likedArtistSong(song);
+    if (liked) toggleLikeTrack(liked); else await artistSongAct(song, album, heart, 'like');
+    syncHeart();
+  });
+  acts.appendChild(heart);
   const plus = document.createElement('button'); plus.type = 'button';
   plus.setAttribute('aria-label', 'Add ' + song.title + ' to playlist'); plus.title = 'Add to playlist';
   plus.innerHTML = CTX_ICON_PLUS;
   plus.addEventListener('click', (e) => { e.stopPropagation(); artistSongAct(song, album, plus, 'add'); });
   acts.appendChild(plus);
   row.addEventListener('click', () => artistSongAct(song, album, row, 'play'));
+  // #753: drags to the queue or the player like a library song; matched to a video on drop
+  row._dragSong = { title: song.title, artist: song.artist, art: song.art || (album && album.art) || null,
+    get: async () => { const t = await artistSongTrack(song, album); return t ? { plId: artistSongPl(t).id, idx: 0 } : null; } };
   row.appendChild(img); row.appendChild(meta); row.appendChild(acts);
   return row;
 }
@@ -17071,7 +17134,7 @@ let relinkDragCtx = null; // { list, t } of the open matching-links window
       return;
     }
     const row = rowOf(e.target);
-    if (!row || !row.draggable) return;
+    if (!row || !row.draggable || row._dragSong || row._dragColl) return;   // #753: queue/player only, see the queue drag below
     let t = null, pl0 = null;
     dragSrcPl = null;
     if (row.classList.contains('q-row')){
@@ -17199,13 +17262,30 @@ let relinkDragCtx = null; // { list, t } of the open matching-links window
    under the pointer. A playlist/album asks first (Enter confirms). Mouse only:
    armed on a mouse pointerdown like the other drags, so touch is untouched. */
 (function(){
-  let drag = null; // { kind: 'song', plId, idx } | { kind: 'coll' | 'artist', plId } | { kind: 'np' }
+  // { kind: 'song', plId, idx } | { kind: 'coll' | 'artist', plId } | { kind: 'np' }
+  // | { kind: 'ref', get } (#753: a song shown outside a library list, e.g. the album window or Recents; get() finds or matches it)
+  let drag = null;
   let ph = null, dropIdx = -1;
   const scrollEl = () => queueBody.closest('.queue-scroll') || queueBody;
+  // #753: songs and lists also drop on the player, which plays them now
+  const onPlayer = (el) => !!drag && ['song', 'ref', 'coll'].includes(drag.kind) && !!(el && el.closest && el.closest('#view-player'));
   function clearUi(){
     if (ph){ ph.remove(); ph = null; }
     dropIdx = -1;
     scrollEl().classList.remove('is-drop-target');
+    views.player.classList.remove('is-drop-target');
+  }
+  function playEntryNow(plId, idx){
+    const pl = playlistById(plId);
+    if (!pl || !pl.tracks[idx] || !pl.tracks[idx].videoId) return;
+    const had = state.queuePos >= 0;
+    queuePlayNext(idx, plId);   // an empty queue starts with it
+    if (had) queueJumpTo(state.queuePos + 1);
+  }
+  async function resolveRef(d){
+    const r = await d.get().catch(() => null);
+    if (!r) showToast("Couldn't find that song.");
+    return r;
   }
   function insertAt(clientY){
     const rows = Array.from(queueBody.querySelectorAll('.q-row'));
@@ -17239,16 +17319,36 @@ let relinkDragCtx = null; // { list, t } of the open matching-links window
       drag = { kind: 'np' };
     } else {
       const row = e.target.closest && e.target.closest('.track-row');
-      if (!row || !row.draggable || !row.dataset.plId) return;
-      drag = { kind: 'song', plId: row.dataset.plId, idx: parseInt(row.dataset.idx, 10) };
+      if (!row || !row.draggable) return;
+      const ref = row._dragSong, coll = row._dragColl && getCachedPlaylist(row._dragColl);
+      if (ref){
+        drag = { kind: 'ref', get: ref.get };
+        try { e.dataTransfer.setData('text/plain', ref.title + (ref.artist ? ' - ' + ref.artist : '')); } catch(_){}
+        const rowImg = row.querySelector('img');
+        setDragChip(e, ref.title, ref.artist, ref.art || (rowImg && (rowImg.currentSrc || rowImg.src)) || null);
+        row.classList.add('is-song-drag');
+      } else if (coll){
+        drag = { kind: 'coll', plId: coll.id };
+        const by = coll.artist || coll.owner || '';
+        try { e.dataTransfer.setData('text/plain', coll.name + (by ? ' - ' + by : '')); } catch(_){}
+        const tArts = (coll.tracks || []).map(x => x && x.art).filter(Boolean);
+        setDragChip(e, coll.name, by, coll.image || tArts[0] || null);
+      } else if (row.dataset.plId){
+        drag = { kind: 'song', plId: row.dataset.plId, idx: parseInt(row.dataset.idx, 10) };
+      } else return;
     }
     e.dataTransfer.effectAllowed = 'copyMove';
   });
   document.addEventListener('dragover', (e) => {
     if (!drag) return;
     const sc = scrollEl();
-    if (!sc.contains(e.target)){ clearUi(); return; }
+    if (!sc.contains(e.target)){
+      clearUi();
+      if (onPlayer(e.target)){ e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; views.player.classList.add('is-drop-target'); }
+      return;
+    }
     e.preventDefault(); e.dataTransfer.dropEffect = 'copy';
+    views.player.classList.remove('is-drop-target');
     sc.classList.add('is-drop-target');
     // edge auto-scroll so far rows are reachable
     const b = sc.getBoundingClientRect();
@@ -17274,11 +17374,32 @@ let relinkDragCtx = null; // { list, t } of the open matching-links window
     return order.length;
   }
   document.addEventListener('drop', (e) => {
-    if (!drag || !scrollEl().contains(e.target)) return;
+    if (!drag) return;
+    const toPlayer = !scrollEl().contains(e.target) && onPlayer(e.target);
+    if (!toPlayer && !scrollEl().contains(e.target)) return;
     e.preventDefault();
     const d = drag; drag = null;
     const toPos = dropIdx < 0 ? state.queue.length : state.queuePos + 1 + dropIdx;
     clearUi();
+    if (toPlayer){
+      if (d.kind === 'coll') playPlaylistNow(d.plId);
+      else if (d.kind === 'song') playEntryNow(d.plId, d.idx);
+      else resolveRef(d).then(r => { if (r) playEntryNow(r.plId, r.idx); });
+      return;
+    }
+    if (d.kind === 'ref'){
+      // matching can take a moment: keep the spot relative to the playing song
+      const after = state.queuePos >= 0 ? toPos - state.queuePos : -1;
+      resolveRef(d).then(r => {
+        if (!r) return;
+        const pl = playlistById(r.plId);
+        if (!pl || !pl.tracks[r.idx] || !pl.tracks[r.idx].videoId) return;
+        if (state.queuePos < 0 || after < 0){ queueAddToEnd(r.idx, r.plId); }
+        else { state.queue.splice(Math.min(state.queuePos + after, state.queue.length), 0, { plId: r.plId, idx: r.idx }); renderQueuePanel(); schedulePreload(state.queuePos); }
+        showToast('Added to queue');
+      });
+      return;
+    }
     if (d.kind === 'artist' || d.kind === 'np'){
       let name, own;
       if (d.kind === 'np'){
@@ -18080,12 +18201,21 @@ function playSingleSongLink(pl, targetIndex){
   // findable later (playlistById falls back to the cache)
   if (!getCachedPlaylist(pl.id)) persistPlaylistObj(pl);
   openImportOverlay();
+  // #753: the song on top, then four big tiles in this order: Play now, Play next, Add to queue, Add to playlist
+  const tile = (id, icon, label, sub, primary) =>
+    '<button type="button" class="ss-tile' + (primary ? ' is-primary' : '') + '" id="' + id + '"><span class="ss-ic">' + icon + '</span>' +
+    '<span class="ss-lbl">' + label + (sub ? '<span class="ss-sub">' + sub + '</span>' : '') + '</span></button>';
   importStage.innerHTML =
-    '<div class="step">&ldquo;' + escapeHtml(track.title) + '&rdquo;</div>' +
-    '<button class="btn-ghost" id="ssNextBtn" style="width:100%;text-align:left;margin-bottom:8px;display:block">Play next</button>' +
-    '<button class="btn-ghost" id="ssQueueBtn" style="width:100%;text-align:left;margin-bottom:8px;display:block">Add to queue</button>' +
-    '<button class="btn-ghost" id="ssPlaylistBtn" style="width:100%;text-align:left;margin-bottom:8px;display:block">Add to playlist</button>' +
-    '<button class="btn-ghost" id="ssNowBtn" style="width:100%;text-align:left;display:block">Play now (replaces the queue)</button>';
+    '<div class="ss-head"><div class="ss-art">' + CTX_ICON_ALBUM + '</div><div class="ss-meta"><div class="ss-title"></div><div class="ss-artist"></div></div></div>' +
+    '<div class="ss-acts">' +
+      tile('ssNowBtn', CTX_ICON_PLAY, 'Play now', 'Replaces the queue', true) +
+      tile('ssNextBtn', CTX_ICON_PLAY_NEXT, 'Play next') +
+      tile('ssQueueBtn', CTX_ICON_ADD_QUEUE, 'Add to queue') +
+      tile('ssPlaylistBtn', CTX_ICON_ADD_PLAYLIST, 'Add to playlist') +
+    '</div>';
+  importStage.querySelector('.ss-title').textContent = track.title;
+  importStage.querySelector('.ss-artist').textContent = track.artist || '';
+  const ssImg = document.createElement('img'); ssImg.alt = ''; attachArtworkFallback(ssImg, track, true); importStage.querySelector('.ss-art').appendChild(ssImg);
   $('ssNextBtn').addEventListener('click', () => { closeImportOverlay(); queuePlayNext(0, pl.id); showToast('Playing next'); });
   $('ssQueueBtn').addEventListener('click', () => { closeImportOverlay(); queueAddToEnd(0, pl.id); showToast('Added to queue'); });
   $('ssPlaylistBtn').addEventListener('click', () => openAddToPlaylistPicker(track));
