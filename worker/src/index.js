@@ -21,6 +21,7 @@ import { handleNowPlaying } from './nowplaying.js';
 import { handleWaves } from './waves.js';
 import { parseVibeExclusions, filterExcluded, matchHouseVibe } from './vibe-intent.js';
 import { HOUSE_VIBES, HOUSE_VIBES_VERSION } from './house-vibes.js';
+import { parseMusicLangs, detectVibeLangs, vibeLangKey, vibeLangHint, vibeLangTags, vibeSeedMinListeners, vibeLangLists } from './vibe-locale.js';
 import { deepFindKey, ytPlaylistFromData, ytLockupVideos, ytRowsContinuation } from './yt-page.js';
 import { handleSession, isSessionToken, verifySession } from './session.js';
 import { handleProfileDelete } from './profile-delete.js';
@@ -4255,13 +4256,14 @@ function vibeSanitizeAi(raw, fallback) {
   };
 }
 
-async function vibeAskAi(text, env) {
+async function vibeAskAi(text, env, hint) {
   if (!env.AI || typeof env.AI.run !== 'function') return { result: null, why: 'no-binding' };
   let timer;
   try {
     const run = env.AI.run(VIBE_AI_MODEL, {
       messages: [
         { role: 'system', content: VIBE_SYSTEM_PROMPT },
+        ...(hint ? [{ role: 'system', content: hint }] : []),
         { role: 'user', content: text },
       ],
       max_tokens: 600,
@@ -4287,11 +4289,11 @@ const VIBE_SEED_MIN_LISTENERS = 5000;
 function vibeTitleNorm(s) {
   return String(s || '').toLowerCase().replace(/[([].*?[)\]]/g, ' ').replace(/\s[-–—]\s.*$/, '').replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
 }
-async function vibeVerifySeed(seed, env) {
+async function vibeVerifySeed(seed, env, minListeners) {
   const data = await lastfmCall('track.getInfo', { track: seed.title, artist: seed.artist, autocorrect: '1' }, env);
   const t = data && data.track;
   if (!t || !t.name || !t.artist || !t.artist.name) return null;
-  if ((parseInt(t.listeners, 10) || 0) < VIBE_SEED_MIN_LISTENERS) return null;
+  if ((parseInt(t.listeners, 10) || 0) < (minListeners || VIBE_SEED_MIN_LISTENERS)) return null;
   const a = vibeTitleNorm(seed.title), b = vibeTitleNorm(t.name);
   if (!(a && b && (a === b || a.startsWith(b + ' ') || b.startsWith(a + ' ')))) return null;
   if (!metricsArtistMatch(seed.artist, t.artist.name)) return null;
@@ -4299,7 +4301,9 @@ async function vibeVerifySeed(seed, env) {
   // Last.fm serves a generic grey star for anything without real art -
   // not worth showing; the client resolves art itself when this is null.
   const img = imgs.length && !/2a96cbd8b46e442fc41c2b86b821562f/.test(imgs[imgs.length - 1]['#text'] || '') ? imgs[imgs.length - 1]['#text'] : '';
-  return { title: t.name, artist: t.artist.name, image: img || null, from: 'seed' };
+  const toptags = t.toptags && t.toptags.tag ? [].concat(t.toptags.tag) : [];
+  // _tags only feeds the language check in vibeGroundTracks and is removed there
+  return { title: t.name, artist: t.artist.name, image: img || null, from: 'seed', _tags: toptags.map(x => x && x.name).filter(Boolean).slice(0, 8) };
 }
 
 // Deep cuts: each tag's list goes 60 deep in the same single Last.fm call, and
@@ -4332,9 +4336,9 @@ function vibeSeededShuffle(arr, seedText) {
   return out;
 }
 
-async function vibeGroundTracks(interp, env, cacheText) {
+async function vibeGroundTracks(interp, env, cacheText, minListeners, langs) {
   const [verified, tagLists] = await Promise.all([
-    mapWithConcurrency(interp.seeds, 4, s => vibeVerifySeed(s, env).catch(() => null)),
+    mapWithConcurrency(interp.seeds, 4, s => vibeVerifySeed(s, env, minListeners).catch(() => null)),
     mapWithConcurrency(interp.tags, 4, t => vibeTagTracks(t, env).catch(() => [])),
   ]);
   const tracks = [];
@@ -4345,17 +4349,22 @@ async function vibeGroundTracks(interp, env, cacheText) {
     seen.add(k);
     tracks.push(t);
   };
-  const seeds = verified.filter(Boolean);
+  // A vibe clearly in one language keeps its seeds and the worldwide mood
+  // lists to that language's music (vibe-locale.js).
+  const verifiedSeeds = verified.filter(Boolean);
+  const shaped = langs ? vibeLangLists(interp.tags, tagLists, langs, verifiedSeeds, vibeTitleNorm, VIBE_TRACKS_PER_TAG) : { lists: tagLists, take: tagLists.map(() => VIBE_TRACKS_PER_TAG), seeds: verifiedSeeds };
+  const seeds = shaped.seeds.map(({ _tags, ...s }) => s);
   seeds.forEach(push);
   // Round-robin across tags so no one tag dominates the list.
-  const shuffled = tagLists.map(l => vibeSeededShuffle(l, cacheText).slice(0, VIBE_TRACKS_PER_TAG));
-  for (let i = 0; i < VIBE_TRACKS_PER_TAG && tracks.length < VIBE_MAX_TRACKS; i++) {
+  const shuffled = shaped.lists.map((l, i) => vibeSeededShuffle(l, cacheText).slice(0, shaped.take[i]));
+  const rounds = Math.max(VIBE_TRACKS_PER_TAG, ...shaped.take);
+  for (let i = 0; i < rounds && tracks.length < VIBE_MAX_TRACKS; i++) {
     shuffled.forEach(l => { if (l[i] && tracks.length < VIBE_MAX_TRACKS) push(l[i]); });
   }
   return { tracks, seedsVerified: seeds.length, seedsSuggested: interp.seeds.length };
 }
 
-async function handleVibeInterpret(url, env, ctx) {
+async function handleVibeInterpret(url, env, ctx, request) {
   const rawQ = url.searchParams.get('q') || '';
   if (rawQ.length > VIBE_MAX_INPUT * 2) return json({ error: 'too long' }, 413);
   const text = vibeNormalizeInput(rawQ);
@@ -4369,7 +4378,15 @@ async function handleVibeInterpret(url, env, ctx) {
   const intent = parseVibeExclusions(text);
   const house = matchHouseVibe(text, HOUSE_VIBES);
   const hasIntent = intent.exclude.length || intent.instrumental || intent.energyCap != null || intent.energyFloor != null;
-  const keyVersion = VIBE_CACHE_VERSION + (hasIntent ? 'x' : '') + (house ? 'h' + HOUSE_VIBES_VERSION : '');
+  // Music languages (vibe-locale.js): from the sentence, else the listener's
+  // ?langs=, else the request's country. Each combination caches on its own.
+  const country = request && request.cf && request.cf.country;
+  const langs = detectVibeLangs(text, parseMusicLangs(url.searchParams.get('langs')), country);
+  // a house vibe can name its language ("baarish" is one word, too few to read as Hindi)
+  const houseLangs = house && Array.isArray(house.langs) ? parseMusicLangs(house.langs.join(',')).filter(l => l !== 'en') : [];
+  if (houseLangs.length && !langs.strong.length) { langs.strong = houseLangs; langs.lean = []; }
+  const minListeners = vibeSeedMinListeners(langs, VIBE_SEED_MIN_LISTENERS);
+  const keyVersion = VIBE_CACHE_VERSION + (hasIntent ? 'x' : '') + (house ? 'h' + HOUSE_VIBES_VERSION : '') + vibeLangKey(langs);
 
   const cache = caches.default;
   const cacheKey = new Request('https://cache.internal/' + keyVersion + '/vibe-interpret/' + encodeURIComponent(cacheText));
@@ -4387,7 +4404,7 @@ async function handleVibeInterpret(url, env, ctx) {
   const readText = intent.clean.length >= 3 ? intent.clean : text;
   const heuristic = vibeHeuristic(readText);
   let interp = null, source = 'heuristic', why = null;
-  const ai = forceHeuristic ? { result: null, why: 'forced' } : await vibeAskAi(readText, env);
+  const ai = forceHeuristic ? { result: null, why: 'forced' } : await vibeAskAi(readText, env, vibeLangHint(langs));
   if (ai.result != null) {
     interp = vibeSanitizeAi(ai.result, heuristic);
     if (interp) source = 'ai'; else why = 'unparseable';
@@ -4395,14 +4412,15 @@ async function handleVibeInterpret(url, env, ctx) {
   if (!interp) interp = heuristic;
   if (house) interp = vibeApplyHouse(interp, house);
   if (intent.instrumental && !interp.tags.includes('instrumental')) interp = Object.assign({}, interp, { tags: ['instrumental'].concat(interp.tags).slice(0, VIBE_MAX_TAGS) });
+  interp = Object.assign({}, interp, { tags: vibeLangTags(interp.tags, langs, VIBE_MAX_TAGS) });
 
-  const grounded = await vibeGroundTracks(interp, env, cacheText);
+  const grounded = await vibeGroundTracks(interp, env, cacheText, minListeners, langs);
   // An AI answer whose tags all came back empty on Last.fm (too exotic) -
   // top up with the heuristic's broader tags so there's still a list.
   if (source === 'ai' && grounded.tracks.length < 10) {
     const extraTags = heuristic.tags.filter(t => !interp.tags.includes(t));
     if (extraTags.length) {
-      const more = await vibeGroundTracks({ seeds: [], tags: extraTags }, env, cacheText);
+      const more = await vibeGroundTracks({ seeds: [], tags: extraTags }, env, cacheText, minListeners, langs);
       const seen = new Set(grounded.tracks.map(t => vibeTitleNorm(t.title) + '|' + vibeTitleNorm(t.artist)));
       more.tracks.forEach(t => { const k = vibeTitleNorm(t.title) + '|' + vibeTitleNorm(t.artist); if (!seen.has(k) && grounded.tracks.length < VIBE_MAX_TRACKS) { seen.add(k); grounded.tracks.push(t); } });
     }
@@ -4419,6 +4437,7 @@ async function handleVibeInterpret(url, env, ctx) {
     bpm: interp.bpm,
     seeds: { suggested: grounded.seedsSuggested, verified: grounded.seedsVerified },
     house: !!house,
+    langs: langs.strong.length ? langs.strong : langs.lean,
     tracks: grounded.tracks,
   };
   // A real AI answer is stable for a given sentence - keep it a week. A
@@ -5207,7 +5226,7 @@ export default {
       if (url.pathname === '/similar') return await handleSimilar(url, env, ctx);
       if (url.pathname === '/artistmap') return await handleArtistMap(url, env, ctx);
       if (url.pathname === '/tags') return await handleTags(url, env, ctx);
-      if (url.pathname === '/vibe-interpret') return await handleVibeInterpret(url, env, ctx);
+      if (url.pathname === '/vibe-interpret') return await handleVibeInterpret(url, env, ctx, request);
       if (url.pathname === '/voice/plan') return await handleVoicePlan(request, env, ctx, { json, verifyIdentity: (t, e, c) => verifyGoogleIdToken(t, e.GOOGLE_CLIENT_ID, e, c), groundMood: voiceGroundMood });
       if (url.pathname === '/metrics') return await handleMetrics(request, env, ctx);
       if (url.pathname === '/ytmix') return await handleYtMix(url, ctx);
