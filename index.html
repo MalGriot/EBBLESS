@@ -156,7 +156,8 @@ try {
     window.__ebbMediaAction = function (a) {
       try {
         if (a === 'like') { var lb = document.getElementById('playerLikeBtn'); if (lb) lb.click(); return; }
-        var map = { play: 'play', pause: 'pause', next: 'nexttrack', prev: 'previoustrack' }, m = /^seekto:(.+)$/.exec(a);
+        // stop: the app's pause for a call, another app's audio or a headphone / Bluetooth disconnect (#755); the page's stop handler, no needle sound
+        var map = { play: 'play', pause: 'pause', stop: 'stop', next: 'nexttrack', prev: 'previoustrack' }, m = /^seekto:(.+)$/.exec(a);
         if (m) { if (handlers.seekto) handlers.seekto({ action: 'seekto', seekTime: parseFloat(m[1]) }); return; }
         // iPod player (lock screen): play a queue row, play a library playlist, soft sounds on/off
         var iq = /^playqueueindex:(\d+)$/.exec(a), ip = /^(?:playlist|album|artist|podcast):(.+)$/.exec(a), isf = /^softtap:([01])$/.exec(a);
@@ -27474,10 +27475,17 @@ function createAudioDeckPlayer(deck, videoId){
     castWatchAirPlay(deck.audioEl);
   }
   const el = deck.audioEl;
-  let auState = -1, loadSeq = 0;
+  let auState = -1, loadSeq = 0, ownPause = false;
   const emit = (s) => { auState = s; if (deck.gen === myGen) onDeckStateChange(deck, { data: s }); };
-  el.onplaying = () => emit(YT.PlayerState.PLAYING);
-  el.onpause = () => { if (!el.ended) emit(YT.PlayerState.PAUSED); };
+  el.onplaying = () => { ownPause = false; emit(YT.PlayerState.PLAYING); };
+  el.onpause = () => {
+    const own = ownPause; ownPause = false;
+    if (el.ended) return;
+    emit(YT.PlayerState.PAUSED);
+    // #755: a pause the page didn't ask for while hidden is the phone's (a call, another app's audio): coming back
+    // must not undo it. Not iOS, which holds media on lock and counts on that resume.
+    if (!own && document.hidden && !isIOS && deck.gen === myGen && deck === activeDeck()) noteHiddenPlayIntent(false);
+  };
   el.onended = () => emit(YT.PlayerState.ENDED);
   el.onerror = () => {
     if (deck.gen !== myGen || deck !== activeDeck() || deck.kind !== 'au') return;
@@ -27486,8 +27494,8 @@ function createAudioDeckPlayer(deck, videoId){
   };
   deck.player = {
     playVideo(){ const p = el.play(); if (p && p.catch) p.catch(() => { if (deck === activeDeck()) setPlayingUI(false); }); },
-    pauseVideo(){ el.pause(); },
-    stopVideo(){ el.pause(); try { el.currentTime = 0; } catch(e){} },
+    pauseVideo(){ ownPause = true; el.pause(); },
+    stopVideo(){ ownPause = true; el.pause(); try { el.currentTime = 0; } catch(e){} },
     mute(){ el.muted = true; },
     unMute(){ el.muted = false; },
     isMuted(){ return el.muted; },
@@ -27501,6 +27509,7 @@ function createAudioDeckPlayer(deck, videoId){
       const onLoad = typeof opts === 'object' && opts.onLoad;
       const mySeq = ++loadSeq;
       auState = -1;
+      ownPause = true;   // a new src pauses a playing element
       el.oncanplay = () => {
         el.oncanplay = null;
         if (deck.gen !== myGen || mySeq !== loadSeq) return;
