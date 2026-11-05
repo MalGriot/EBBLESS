@@ -84,7 +84,7 @@ export function detectVibeLangs(text, listenerLangs, country) {
 // Short, stable cache-key part: '' for plain English vibes.
 export function vibeLangKey(d) {
   if (!d.strong.length && !d.lean.length) return '';
-  return 'L' + (d.strong.length ? 's' + d.strong.join('.') : 'w' + d.lean.join('.')) + (d.old ? 'o' : '');
+  return 'L2' + (d.strong.length ? 's' + d.strong.join('.') : 'w' + d.lean.join('.')) + (d.old ? 'o' : '');   // L2: language-only lists
 }
 
 // Extra system line for the model, or null.
@@ -118,4 +118,26 @@ export function vibeLangTags(tags, d, max) {
 export function vibeSeedMinListeners(d, base) {
   const langs = d.strong.length ? d.strong : d.lean;
   return langs.reduce((m, l) => Math.min(m, MUSIC_LANGS[l].minListeners || base), base);
+}
+
+// A vibe that is clearly in a language (strong): the mood tags' lists are
+// worldwide ("sad" is mostly Western), so they keep only artists that the
+// language's own lists or the verified seeds also have, and each language
+// list gives twice the songs. When the language lists came back empty (a
+// thin tag), nothing is filtered, so the vibe still gets a full list.
+// -> { lists, take }, aligned with tags.
+export function vibeLangLists(tags, lists, d, seeds, norm, perTag) {
+  const langTags = [];
+  d.strong.forEach(l => MUSIC_LANGS[l].tags.forEach(t => { if (!langTags.includes(t)) langTags.push(t); }));
+  const plain = { lists, take: tags.map(() => perTag) };
+  if (!langTags.length) return plain;
+  const isLang = tags.map(t => langTags.includes(t));
+  const known = new Set();
+  lists.forEach((l, i) => { if (isLang[i]) (l || []).forEach(t => known.add(norm(t.artist))); });
+  if (!known.size) return plain;
+  (seeds || []).forEach(s => known.add(norm(s.artist)));
+  return {
+    lists: lists.map((l, i) => isLang[i] ? l : (l || []).filter(t => known.has(norm(t.artist)))),
+    take: isLang.map(x => x ? perTag * 2 : perTag),
+  };
 }
