@@ -46,13 +46,13 @@ test('cache key part, tags, hint and seed bar', () => {
   assert.strictEqual(vibeSeedMinListeners(plain, 5000), 5000);
 
   const strong = detectVibeLangs('dil toota hai yaar', [], null);
-  assert.strictEqual(vibeLangKey(strong), 'L3shi');
+  assert.strictEqual(vibeLangKey(strong), 'L4shi');
   assert.deepStrictEqual(vibeLangTags(['sad', 'soul', 'indie folk'], strong, 4), ['bollywood', 'hindi', 'sad', 'soul']);
   assert.match(vibeLangHint(strong), /Hindi/);
   assert.strictEqual(vibeSeedMinListeners(strong, 5000), 500);
 
   const lean = detectVibeLangs('rainy drive home', ['hi'], null);
-  assert.strictEqual(vibeLangKey(lean), 'L3whi');
+  assert.strictEqual(vibeLangKey(lean), 'L4whi');
   assert.deepStrictEqual(vibeLangTags(['chill', 'soul', 'lo-fi', 'jazz'], lean, 4), ['bollywood', 'chill', 'soul', 'lo-fi']);
   assert.match(vibeLangHint(lean), /half/);
 });
@@ -63,12 +63,13 @@ test('a clear-language vibe keeps worldwide mood lists to that language\'s artis
   const tags = ['bollywood', 'hindi', 'sad', 'romantic'];
   const lists = [
     [{ artist: 'Arijit Singh', title: 'Channa Mereya' }],
-    [{ artist: 'Lata Mangeshkar', title: 'Lag Jaa Gale' }],
-    [{ artist: 'Adele', title: 'Someone Like You' }, { artist: 'Arijit Singh', title: 'Tum Hi Ho' }],
+    [{ artist: 'Lata Mangeshkar', title: 'Lag Jaa Gale' }, { artist: 'Arijit Singh', title: 'Kabira' }, { artist: 'Ed Sheeran', title: 'Sapphire' }],
+    [{ artist: 'Adele', title: 'Someone Like You' }, { artist: 'Arijit Singh', title: 'Tum Hi Ho' }, { artist: 'Ed Sheeran', title: 'The A Team' }],
     [{ artist: 'Taylor Swift', title: 'Lover' }, { artist: 'Atif Aslam', title: 'Tere Bin' }],
   ];
   const out = vibeLangLists(tags, lists, d, [{ artist: 'Atif Aslam', title: 'Tere Bin' }], norm, 12);
-  assert.deepStrictEqual(out.lists[2].map(t => t.artist), ['Arijit Singh'], 'Adele out, the Hindi artist stays');
+  assert.deepStrictEqual(out.lists[2].map(t => t.artist), ['Arijit Singh'], 'Adele out, and one crossover song does not let Ed Sheeran in');
+  assert.ok(out.lists[1].some(t => t.title === 'Sapphire'), 'the crossover song itself stays');
   assert.deepStrictEqual(out.lists[3].map(t => t.artist), ['Atif Aslam'], 'a seed artist counts as known');
   assert.deepStrictEqual(out.take, [24, 24, 12, 12]);
 });

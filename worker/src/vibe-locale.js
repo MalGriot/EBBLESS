@@ -84,7 +84,7 @@ export function detectVibeLangs(text, listenerLangs, country) {
 // Short, stable cache-key part: '' for plain English vibes.
 export function vibeLangKey(d) {
   if (!d.strong.length && !d.lean.length) return '';
-  return 'L3' + (d.strong.length ? 's' + d.strong.join('.') : 'w' + d.lean.join('.')) + (d.old ? 'o' : '');   // L3: language-only lists and seeds
+  return 'L4' + (d.strong.length ? 's' + d.strong.join('.') : 'w' + d.lean.join('.')) + (d.old ? 'o' : '');   // L4: language-only lists and seeds
 }
 
 // Extra system line for the model, or null.
@@ -135,8 +135,9 @@ export function vibeSeedFitsLang(seedTags, artistKnown, d) {
 
 // A vibe that is clearly in a language (strong): the mood tags' lists are
 // worldwide ("sad" is mostly Western), so they keep only artists that the
-// language's own lists or the kept seeds also have, and each language list
-// gives twice the songs. Seeds are checked by vibeSeedFitsLang (their own
+// language's own lists have at least twice (one crossover hit, like Ed
+// Sheeran's Punjabi "Sapphire", doesn't make an artist Punjabi) or that are
+// kept seeds, and each language list gives twice the songs. Seeds are checked by vibeSeedFitsLang (their own
 // Last.fm tags ride along as `_tags`). When the language lists came back
 // empty (a thin tag), the mood lists aren't filtered, so the vibe still gets
 // a full list. -> { lists, take, seeds }, lists and take aligned with tags.
@@ -146,10 +147,11 @@ export function vibeLangLists(tags, lists, d, seeds, norm, perTag) {
   const plain = { lists, take: tags.map(() => perTag), seeds: seeds || [] };
   if (!langTags.length) return plain;
   const isLang = tags.map(t => langTags.includes(t));
-  const known = new Set();
-  lists.forEach((l, i) => { if (isLang[i]) (l || []).forEach(t => known.add(norm(t.artist))); });
-  const kept = (seeds || []).filter(s => vibeSeedFitsLang(s._tags, known.has(norm(s.artist)), d));
-  if (!known.size) return Object.assign(plain, { seeds: kept });
+  const count = new Map();
+  lists.forEach((l, i) => { if (isLang[i]) (l || []).forEach(t => { const a = norm(t.artist); count.set(a, (count.get(a) || 0) + 1); }); });
+  const kept = (seeds || []).filter(s => vibeSeedFitsLang(s._tags, count.has(norm(s.artist)), d));
+  if (!count.size) return Object.assign(plain, { seeds: kept });
+  const known = new Set(Array.from(count).filter(([, n]) => n >= 2).map(([a]) => a));
   kept.forEach(s => known.add(norm(s.artist)));
   return {
     lists: lists.map((l, i) => isLang[i] ? l : (l || []).filter(t => known.has(norm(t.artist)))),
