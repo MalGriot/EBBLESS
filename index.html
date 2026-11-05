@@ -2309,7 +2309,7 @@ body.queue-open #bottom-nav button[data-view].is-active{color:var(--faint-2)}
     transition:background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out)}
   #libpl-panel .queue-head .close-btn svg{width:20px;height:20px}
 }
-.queue-scroll{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.queue-scroll{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}   /* #752: a full-width button's hover grow (#395 scale) must not toggle a sideways scrollbar */
 .queue-body{padding:4px 0 24px}   /* #655: rows run edge to edge so the hover box does too */
 .libpl-addbar{padding:0 12px 8px;flex:none}
 #libplBody .track-row .handle{flex:none;width:18px;height:28px;margin-right:2px;display:flex;align-items:center;justify-content:center;color:var(--faint-2);cursor:grab;touch-action:none}
