@@ -1152,6 +1152,11 @@ body.relink-dragging #import-overlay{opacity:0;pointer-events:none}
      nudged down so it reads as centered in the tile instead of floating
      toward the top; see brand/tmp-heart-center.html to re-tune by eye. */
   transform:translateY(7.1%)}
+/* #739: Unliked gets a recycle glyph, Liked's counterpart */
+.lib-card .art .face.unliked-face{display:flex;align-items:center;justify-content:center;background:#121212;color:var(--faint)}
+.lib-card .art .face.unliked-face svg{width:50%;height:50%}
+.unliked-artists{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 14px}
+.track-row .unliked-restore{padding:5px 12px;font-size:12px}
 .lib-card .name{margin-top:9px;font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lib-card .name .new-dot{display:inline-block;width:6px;height:6px;margin-left:6px;margin-bottom:1px;border-radius:50%;
   background:var(--faint);vertical-align:middle}
@@ -7450,6 +7455,7 @@ const SWELL_ID = 'swell';                    // fixed id for the built-in daily-
 const BLEND_ID = 'blend';                    // fixed id for the built-in SwiiiRrrLL daily blend of the library
 const BLEND_NAME = 'SwiiiRrrLL';
 const NP_ID = 'nowplaying';                  // fixed id for the built-in live "what MAL GRIOT is playing" playlist
+const UNLIKED_ID = 'unliked';                // #739: the built-in Unliked view, drawn from the thumbs-down list (LS_DECLINED); never saved, synced, or counted as listening
 const NOWPLAYING_TITLE = 'ON AIR';   // the live feed's name: rename here only
 // Looping art for SwiiiRrrLL and ON AIR (Geethub #444): a muted video laid over
 // the normal tile, still poster underneath. Reduced-motion gets the poster only;
@@ -8936,7 +8942,7 @@ function orderedLibraryIds(){
   return lib.includes(SWELL_ID) ? [SWELL_ID].concat(withBlend) : withBlend;
 }
 
-function recordLastPlayed(plId){ if (plId) lsSet(LS_LASTPLAYED(plId), Date.now()); }
+function recordLastPlayed(plId){ if (plId && plId !== UNLIKED_ID) lsSet(LS_LASTPLAYED(plId), Date.now()); }
 function getLastPlayed(id){ return lsGet(LS_LASTPLAYED(id), null); }
 function recordLastOpened(plId){ if (plId) lsSet(LS_LASTOPENED(plId), Date.now()); }
 function getLastOpened(id){ return lsGet(LS_LASTOPENED(id), null); }
@@ -9291,6 +9297,7 @@ function queueBackgroundLoad(id, type){
 const resolvingTracks = new Map(); // playlistId -> resolved[] of a resolvePlaylist loop still running
 // Strips " - Topic" from tracks saved before #240 too.
 function getCachedPlaylist(id){
+  if (id === UNLIKED_ID) return unlikedPlaylist();
   const pl = lsGet(LS_PL(id), null);
   if (pl) stripTopicArtists(pl.tracks);
   return pl;
@@ -9420,7 +9427,7 @@ function playlistById(id){
   return getCachedPlaylist(id);
 }
 function persistPlaylistObj(pl, knownChange){
-  if (pl) lsSet(LS_PL(pl.id), pl, knownChange);
+  if (pl && pl.id !== UNLIKED_ID) lsSet(LS_PL(pl.id), pl, knownChange);
 }
 
 // Tracks playlists that are playing on their first resolved track while the
@@ -12505,6 +12512,7 @@ function renderLibrary(){
       lsDel(LS_PL(id));
     }
   });
+  if (showPlaylists && !searchQ) try{ libraryGrid.appendChild(buildUnlikedCard()); } catch(e){}   // #739: Unliked sits last
   if (albumGroups.size){
     const folded = lsGet(LS_ALBUM_ARTIST_FOLDED, {});
     // One-album artists share a single "One album" section instead of a header each
@@ -12777,7 +12785,7 @@ const PLAYHIST_MAX = 500, PLAYHIST_MIN_SEC = 10;
 let playHistKey = '', playHistSecs = 0, playHistLogged = false;
 
 function recordPlayHistory(t, plId){
-  if (!t || !t.title || isRickroll(t)) return;
+  if (!t || !t.title || isRickroll(t) || plId === UNLIKED_ID) return;
   const list = lsGet(LS_PLAYHIST, []);
   const top = list[0];
   if (top && top.plId === plId && top.videoId === (t.videoId || '') && top.title === t.title) return;  // consecutive repeat
@@ -13003,6 +13011,7 @@ function toggleLibraryPlaylistPanel(id){
     closeLibraryPlaylistPanel();
     return;
   }
+  if (id === UNLIKED_ID){ openUnlikedPanel(); return; }
   const pl = getCachedPlaylist(id);
   if (!pl){ showToast("Couldn't find that playlist."); return; }
   awardMilestone(isArtistEntry(pl) || isAlbumEntry(pl) ? 'openpage' : 'revisit');
@@ -16598,7 +16607,7 @@ setInterval(() => { if (!document.hidden) refreshNowPlaying(); }, NP_POLL_MS);
 setInterval(() => { if (!document.hidden && npTuned) refreshNowPlaying(); }, NP_POLL_TUNED_MS);
 
 // Podcasts never get Discover's similar-songs continuation.
-function isDiscoverOn(id){ return !isPodcastPlaylistId(id) && id !== NP_ID && lsGet(LS_DISCOVER(id), true); }
+function isDiscoverOn(id){ return !isPodcastPlaylistId(id) && id !== NP_ID && id !== UNLIKED_ID && lsGet(LS_DISCOVER(id), true); }
 function setDiscoverOn(id, on){ lsSet(LS_DISCOVER(id), !!on); }
 
 function isTrackLiked(videoId){
@@ -22426,7 +22435,7 @@ let statsLastTick = 0;
 function statsTick(){
   const now = Date.now(), prev = statsLastTick;
   statsLastTick = 0;
-  if (!statsEnabled() || document.body.classList.contains('onb-active') || isRickroll(currentTrack())) return;   // #614
+  if (!statsEnabled() || document.body.classList.contains('onb-active') || isRickroll(currentTrack()) || unlikedPlay(state.queuePos)) return;   // #614
   if (!artworkWrap.classList.contains('is-playing')) return;
   statsLastTick = now;
   statsTouch();
@@ -22563,7 +22572,7 @@ function playLogTick(){
   if (weekUp.frozen || document.body.classList.contains('onb-active') || isRickroll(currentTrack())) return;   // #614
   if (!artworkWrap.classList.contains('is-playing')) return;
   const q = state.queue[state.queuePos], t = currentTrack();
-  if (!q || !t) return;
+  if (!q || !t || q.plId === UNLIKED_ID) return;
   playLogLastTick = now;
   // Background tabs can tick once a minute; cap so a suspended tab waking
   // up doesn't count the whole gap (same idea as statsTick).
@@ -22609,7 +22618,7 @@ function playLogTick(){
 // tester week-up gate waits for.
 function playLogCompleted(pos){
   const t = trackAt(pos), q = state.queue[pos];
-  if (!t || !q || isPodcastPlaylistId(q.plId) || isRickroll(t)) return;   // #614
+  if (!t || !q || isPodcastPlaylistId(q.plId) || q.plId === UNLIKED_ID || isRickroll(t)) return;   // #614
   const e = playLog.tr[playLogTrackKey(t)];
   if (e) e.c = (+e.c || 0) + 1;
   playLog.c++;
@@ -24560,6 +24569,138 @@ function removeDecline(videoId){
   lsSet(LS_DECLINED, d);
   tasteMemo = null;
 }
+
+/* ---------- Unliked (GitHub #739) ---------- */
+// A built-in library entry drawn straight from LS_DECLINED (no second copy):
+// thumbs-downed songs, newest first, plus the artists turned down outright.
+// Playing from it is fine, but those plays never reach play counts, history,
+// taste, the play log or stats, and Unliked is never a Swirl/Currents source.
+function unlikedPlaylist(){
+  let v = {};
+  try { v = declinedStore().v; } catch(e){}
+  const tracks = Object.keys(v).reverse().filter(id => v[id]).map(id => ({ videoId: id, title: v[id].t || '', artist: v[id].a || '' }));
+  return { id: UNLIKED_ID, type: 'custom', name: 'Unliked', image: null, tracks, ts: Date.now() };
+}
+function unlikedPlay(pos){ const e = state.queue[pos]; return !!(e && e.plId === UNLIKED_ID); }
+// Artists with two or more thumbs-downs (or "Not this artist"): the ones
+// applyTastePreference leaves out entirely.
+function unlikedArtists(){
+  const d = declinedStore(), names = new Map();
+  Object.keys(d.v).forEach(id => { const e = d.v[id], k = e && primaryArtistKey(e.a); if (k && !names.has(k)) names.set(k, String(e.a).split(/\s*(?:,|&|\s(?:feat\.?|ft\.?|x|with)\s)\s*/i)[0].trim()); });
+  return Object.keys(d.a).filter(k => d.a[k] >= 2).map(k => ({ key: k, name: names.get(k) || k }));
+}
+// Lets an artist back in: their weight goes, and any "Not this artist" reason
+// with it. Songs thumbed down one by one stay in Unliked until restored.
+function clearDeclinedArtist(key){
+  const d = declinedStore();
+  if (!d.a[key]) return;
+  delete d.a[key];
+  Object.keys(d.v).forEach(id => { const e = d.v[id]; if (e && e.r === 'artist' && primaryArtistKey(e.a) === key) delete e.r; });
+  lsSet(LS_DECLINED, d);
+  tasteMemo = null;
+}
+function unlikedRefresh(){
+  const sc = libplPanel.querySelector('.queue-scroll'), top = sc ? sc.scrollTop : 0;
+  rerenderLibraryKeepPanel();
+  if (sc) sc.scrollTop = top;
+}
+// Same path as the Undo on a thumbs-down (undoDeclineCurrents).
+function restoreUnlikedSong(t){
+  removeDecline(t.videoId);
+  recordListenSignal(t, 3);
+  unlikedRefresh();
+  showToast('Restored');
+}
+const UNLIKED_GLYPH = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M5.77 7.15 7.2 4.78l1.03-1.71c.39-.65 1.33-.65 1.72 0l1.48 2.46-1.23 2.06-1 1.62-3.43-2.06zm15.95 5.82-1.6-2.66-3.46 2L18.87 16H20c.76 0 1.45-.43 1.79-1.11.14-.28.21-.58.21-.89 0-.36-.1-.71-.28-1.03zM16 21h1.5c.76 0 1.45-.43 1.79-1.11L20.74 17H16v-2l-4 4 4 4v-2zm-6-4H5.7l-.84 1.41c-.3.5-.32 1.12-.06 1.65.28.57.87.94 1.52.94H10v-4zm-3.88-2.65 1.73 1.04L6.48 9.9 1 11.27l1.7 1.02-.41.69c-.35.59-.38 1.31-.07 1.92l1.63 3.26 2.27-3.81zm10.9-9.21-1.3-2.17C15.35 2.37 14.7 2 14 2h-3.53l3.12 5.2-1.72 1.03 5.49 1.37 1.37-5.49-1.71 1.03z"/></svg>';
+// The library tile: last in Playlists, a recycle glyph where Liked has its heart.
+function buildUnlikedCard(){
+  const pl = unlikedPlaylist(), n = pl.tracks.length;
+  const card = document.createElement('div');
+  card.className = 'lib-card'; card.dataset.plId = UNLIKED_ID;
+  const artDiv = document.createElement('div'); artDiv.className = 'art single';
+  artDiv.innerHTML = '<div class="face unliked-face">' + UNLIKED_GLYPH + '</div>';
+  const overlay = document.createElement('div'); overlay.className = 'title-overlay';
+  const mq = document.createElement('div'); mq.className = 'marquee'; mq.dataset.text = pl.name;
+  overlay.appendChild(mq); artDiv.appendChild(overlay);
+  const info = document.createElement('div'); info.className = 'info';
+  const name = document.createElement('div'); name.className = 'name'; name.textContent = pl.name;
+  const count = document.createElement('div'); count.className = 'count';
+  count.textContent = n ? n + (n === 1 ? ' song' : ' songs') : 'Songs you thumbs down show up here';
+  info.appendChild(name); info.appendChild(count);
+  const rowActions = document.createElement('div'); rowActions.className = 'row-actions';
+  if (n){
+    const mkPlay = (cls) => {
+      const b = document.createElement('button'); b.className = cls; b.setAttribute('aria-label', 'Play Unliked');
+      b.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
+      b.addEventListener('click', (e) => { e.stopPropagation(); playPlaylistNow(UNLIKED_ID); });
+      return b;
+    };
+    artDiv.appendChild(mkPlay('card-play'));
+    rowActions.appendChild(mkPlay('row-play'));
+  }
+  card.appendChild(artDiv); card.appendChild(info); card.appendChild(rowActions);
+  card.addEventListener('click', () => toggleLibraryPlaylistPanel(UNLIKED_ID));
+  return card;
+}
+function openUnlikedPanel(){
+  if (state.queueOpen) closeQueuePanel();
+  collapseLibWide();
+  const fresh = openLibraryPanelId !== UNLIKED_ID;
+  openLibraryPanelId = UNLIKED_ID;
+  libplAddBar.hidden = true; libplVibeBar.hidden = true;
+  resetArtistPhoto();
+  libplPanel.classList.remove('is-artist-info', 'is-album');
+  libplTitle.textContent = 'Unliked';
+  libplTitle.classList.remove('np-live');
+  libplArt.removeAttribute('src'); libplArtWrap.hidden = true;
+  libplReturnTo = null; libplResume = null; libplBackFn = null; syncLibplCloseBtn();
+  const pl = unlikedPlaylist(), artists = unlikedArtists();
+  libplHeroSync(pl.tracks.length ? pl.tracks.length + (pl.tracks.length === 1 ? ' song' : ' songs') : '');
+  libplBody.innerHTML = '';
+  if (fresh){ const sc = libplPanel.querySelector('.queue-scroll'); if (sc) sc.scrollTop = 0; }
+  if (!pl.tracks.length && !artists.length){
+    const empty = document.createElement('div'); empty.className = 'empty-lib';
+    empty.textContent = 'Songs you thumbs down show up here.';
+    libplBody.appendChild(empty);
+  } else {
+    const hint = document.createElement('div'); hint.className = 'currents-hint';
+    hint.textContent = "Kept out of your picks. Plays from here don't count.";
+    libplBody.appendChild(hint);
+  }
+  if (artists.length){
+    const lbl = document.createElement('div'); lbl.className = 'q-section-label'; lbl.textContent = 'Artists';
+    const box = document.createElement('div'); box.className = 'unliked-artists';
+    artists.forEach(a => {
+      const chip = document.createElement('button'); chip.type = 'button'; chip.className = 'lib-album-chip';
+      chip.textContent = a.name + ' ×'; chip.title = 'Let ' + a.name + ' back in'; chip.setAttribute('aria-label', 'Restore ' + a.name);
+      chip.addEventListener('click', () => { clearDeclinedArtist(a.key); unlikedRefresh(); showToast(a.name + ' can come back in your picks'); });
+      box.appendChild(chip);
+    });
+    libplBody.appendChild(lbl); libplBody.appendChild(box);
+  }
+  if (pl.tracks.length){
+    if (artists.length){ const lbl = document.createElement('div'); lbl.className = 'q-section-label'; lbl.textContent = 'Songs'; libplBody.appendChild(lbl); }
+    pl.tracks.forEach((t, i) => {
+      const row = document.createElement('div'); row.className = 'track-row';
+      row.style.cursor = 'pointer';
+      const img = document.createElement('img'); attachCardArt(img, t);
+      const meta = document.createElement('div'); meta.className = 'meta';
+      const title = document.createElement('div'); title.className = 'title'; title.textContent = t.title;
+      const artist = document.createElement('div'); artist.className = 'artist'; artist.textContent = t.artist;
+      meta.appendChild(title); meta.appendChild(artist);
+      const acts = document.createElement('div'); acts.className = 'row-actions';
+      const back = document.createElement('button'); back.type = 'button'; back.className = 'btn-ghost unliked-restore';
+      back.textContent = 'Restore'; back.setAttribute('aria-label', 'Restore ' + t.title);
+      back.addEventListener('click', (e) => { e.stopPropagation(); restoreUnlikedSong(t); });
+      acts.appendChild(back);
+      row.appendChild(img); row.appendChild(meta); row.appendChild(acts);
+      row.addEventListener('click', () => playLibraryTrackInline(UNLIKED_ID, i));
+      libplBody.appendChild(row);
+    });
+  }
+  libplPanel.classList.add('is-open'); libplScrim.classList.add('is-open');
+  syncHistoryBuffer();
+}
 // Take track idx out of CuRRentSSsss, rewriting queue entries that point
 // past it (same approach as removeDiscoverFromQueue: the entry playing now
 // keeps playing, wherever it lands).
@@ -25665,10 +25806,11 @@ function buildBlendTracks(){
   if (!sources.length) return [];
   const prev = getCachedPlaylist(BLEND_ID);
   const yesterday = new Set(prev ? prev.tracks.map(t => t.videoId).filter(Boolean) : []);
+  const unliked = declinedStore().v;   // #739: songs in Unliked stay out of the blend
   const quota = Math.max(BLEND_MIN_PER_SOURCE, Math.ceil(BLEND_TARGET / sources.length));
   const seen = new Set();
   const pools = sources.map(pl => {
-    const playable = currentsShuffled(pl.tracks.filter(t => t && t.videoId && !isAudioVideoId(t.videoId)));
+    const playable = currentsShuffled(pl.tracks.filter(t => t && t.videoId && !isAudioVideoId(t.videoId) && !unliked[t.videoId]));
     // fresh-to-the-blend first, yesterday's picks only as filler
     return playable.filter(t => !yesterday.has(t.videoId)).concat(playable.filter(t => yesterday.has(t.videoId)));
   });
@@ -26797,7 +26939,7 @@ function onDeckStateChange(deck, e){
   else if (e.data === YT.PlayerState.ENDED){
     if (swapInProgress) return;
     if (deck.confirmed && deck.kind === 'yt' && state.repeat === 'one' && !weekUp.frozen){ loopOneInPlace(deck); return; }
-    if (deck.confirmed){ recordListenSignal(trackAt(state.queuePos), 1); notePlayedThrough(state.queuePos); playNext(true); watchSCAutoAdvance(); }
+    if (deck.confirmed){ if (!unlikedPlay(state.queuePos)) recordListenSignal(trackAt(state.queuePos), 1); notePlayedThrough(state.queuePos); playNext(true); watchSCAutoAdvance(); }
   }
 }
 
@@ -32412,6 +32554,7 @@ function bumpPlayCount(entry){
   const pl = playlistById(entry.plId);
   const t = pl && pl.tracks[entry.idx];
   if (!t || isRickroll(t)) return;   // #614
+  if (entry.plId === UNLIKED_ID){ npSchedulePublish(4000); return; }   // #739: plays from Unliked count for nothing
   t.plays = (t.plays || 0) + 1;
   persistPlaylistObj(pl);
   recordLatestPlayed(t);
@@ -33251,7 +33394,7 @@ function userTogglePlayback(){
 // never counts as a skip. It also marks the track (and so its artist) down
 // in the taste table CuRRentSSsss seeds and ranks from (noteTaste).
 function recordSkipIfEarly(){
-  if (state.queuePos < 0) return;
+  if (state.queuePos < 0 || unlikedPlay(state.queuePos)) return;
   const t = trackAt(state.queuePos);
   if (!t) return;
   const elapsed = Date.now() - (lastTrackStartTs || Date.now());
@@ -37273,7 +37416,7 @@ function maybeLoopOne(ad, cur, dur){
   loopOneInPlace(ad);
 }
 function loopOneInPlace(ad){
-  recordListenSignal(trackAt(state.queuePos), 1);
+  if (!unlikedPlay(state.queuePos)) recordListenSignal(trackAt(state.queuePos), 1);
   notePlayedThrough(state.queuePos);
   lastTrackStartTs = Date.now();
   ad.player.seekTo(0, true);
@@ -38292,7 +38435,7 @@ function notePlayedThrough(pos){
   try {
     const t = trackAt(pos);
     const entry = state.queue[pos];
-    if (!t || !t.videoId || (entry && isPodcastPlaylistId(entry.plId))) return;
+    if (!t || !t.videoId || (entry && (isPodcastPlaylistId(entry.plId) || entry.plId === UNLIKED_ID))) return;
     noteTaste(t, 'finish');
     try { const vt = currentVibeText(); if (vt) vibeTasteNote(vt, t, 'finish'); } catch(e){}
     const s = likeNudgeState();
