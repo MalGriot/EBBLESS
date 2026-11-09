@@ -55,12 +55,6 @@ h1.display{font-size:clamp(34px,10vw,48px);font-weight:700;letter-spacing:-.01em
 .lede{color:var(--faint);font-size:15px;margin:0 0 8px;max-width:46ch}
 .tester-label{font-size:12px;font-weight:600;letter-spacing:1.6px;color:var(--accent);margin:0 0 14px}
 
-/* spots meter */
-.meter{margin:28px 0 8px;display:flex;align-items:baseline;justify-content:space-between;gap:12px}
-.meter b{font-size:22px;font-weight:700}
-.meter span{font-size:13px;color:var(--faint)}
-.meter-track{height:2px;background:var(--panel-3);border-radius:1px;overflow:hidden}
-.meter-fill{height:100%;width:0;background:var(--text);transition:width 600ms var(--ease-out)}
 
 /* form */
 form{margin-top:36px}
@@ -163,8 +157,6 @@ form{margin-top:36px}
 .hero{display:flex;flex-direction:column;align-items:center;text-align:center;
   min-height:calc(100svh - 150px);justify-content:center;padding-bottom:24px}
 .hero .lede{margin-left:auto;margin-right:auto}
-.hero #meter{width:100%;max-width:360px;text-align:left}
-.hero .meter{margin-top:22px}
 .btn.join{width:100%;max-width:360px;margin-top:28px;padding:18px 24px;font-size:16px;font-weight:700;letter-spacing:1.6px}
 .btn.join:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 .join-hint{font-size:12.5px;color:var(--faint-2);margin:10px 0 0}
@@ -217,7 +209,6 @@ form{margin-top:36px}
 .path-card .btn.join{max-width:none;margin-top:16px}
 .path-card .join-hint{text-align:center}
 .path-card .btn.block{margin-top:auto;letter-spacing:1.2px;font-weight:600}
-.path-card #meter{width:100%}
 #state .btn.join{margin-top:24px}
 
 .journeys{display:flex;flex-direction:column;gap:24px}

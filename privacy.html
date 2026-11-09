@@ -26,13 +26,13 @@ code{font-size:13px;background:rgba(255,255,255,.08);padding:1px 5px;border-radi
 <a class="back" href="./">&larr; Back to EBBLESS</a>
 
 <h1>Privacy Policy</h1>
-<p class="meta">Last updated 2026-10-29. EBBLESS is in private beta, so this will change. Written from what the app's code actually does, not from a template.</p>
+<p class="meta">Last updated 2026-11-09. EBBLESS is in open beta, so this will change. Written from what the app's code actually does, not from a template.</p>
 
 <div class="box"><strong>The short version.</strong>
 <ul>
 <li>Your library, playlists and settings live on your device. If you sign in with Google, a copy is stored on our server so it follows you between devices.</li>
 <li>EBBLESS watches what you play, finish, skip and like to shape Discover and your picks. You can turn that off and erase it in Settings, under Privacy &amp; data.</li>
-<li>There is no advertising and no third-party tracking or analytics code in the app. Beta testers' usage is counted for us (details below).</li>
+<li>There is no advertising and no third-party tracking or analytics code in the app. Only people who chose to join the beta community as testers have their usage counted for us (details below). Everyone else's use is not counted.</li>
 <li>Music comes from other services (YouTube and others). They get some information when you use them. See "Other services".</li>
 </ul></div>
 
@@ -54,7 +54,7 @@ code{font-size:13px;background:rgba(255,255,255,.08);padding:1px 5px;border-radi
 
 <h2>3. Accounts and sign-in</h2>
 <p><strong>Google sign-in is optional.</strong> When you use it, our server verifies your Google token and gets your Google account ID and email address. It creates an EBBLESS login session (stored on your device; the server keeps only a hash of it, for up to 90 days of inactivity). Your email is shown in Settings and stored with your cloud profile.</p>
-<p><strong>The private beta</strong> uses an invite. When you sign up we collect your name or nickname, email, and your answers to the sign-up questions (such as a playlist link and music taste), plus your browser's user-agent string. These go to a Google Sheet that the operator uses to approve testers and send invites. Testers are identified by a tester token.</p>
+<p><strong>The beta community</strong> is optional: you don't need it to use EBBLESS. If you join, we collect your name or nickname, email, and your answers to the sign-up questions (such as a playlist link and music taste), plus your browser's user-agent string. These go to a Google Sheet that the operator uses to run feedback rounds and send tester links. Testers are identified by a tester token.</p>
 <p>Feedback and bug reports you send include what you type and technical details (device, operating system, browser, screen size, and for wrong-song reports, the song and the match that played). They go to the same Sheet or to our server's report storage.</p>
 
 <h2>4. What is stored on our server</h2>
@@ -108,7 +108,6 @@ code{font-size:13px;background:rgba(255,255,255,.08);padding:1px 5px;border-radi
 <ul>
 <li>EBBLESS contains <strong>no advertising</strong>, no third-party analytics SDK, and no tracking pixels.</li>
 <li><strong>Beta usage counts.</strong> If you are a beta tester (you have a tester token) and use the real site (not localhost), the app sends our server counts only: sessions, listening time, songs and playlists played, playlists added, and which features you used. Not song names, playlist names, links, or device details. These go into the operator's Sheet against your tester number. Sent every 10 minutes while open and when you leave the tab. <strong>There is currently no switch for this in Settings;</strong> a developer console command exists, which is not good enough, and is listed as an open item for the operator.</li>
-<li>The 15-minute sample runs in a throwaway store and is blocked from sending account, profile or usage data.</li>
 <li>Our server (on Cloudflare) receives your IP address with each request, as every web server does, and Cloudflare may keep standard request logs. We have not verified Cloudflare's retention for this deployment.</li>
 </ul>
 

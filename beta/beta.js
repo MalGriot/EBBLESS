@@ -1,5 +1,5 @@
-/* Owner's developer-mode shortcut: Ctrl+Option+Cmd+M toggles ebbless:wrappedBypass (no 2-week gate, see TESTER WEEK UP).
-   Works on every screen, including the beta lock and beta/feedback.html (this same snippet is at the top of beta/beta.js). */
+/* Owner's developer-mode shortcut: Ctrl+Option+Cmd+M toggles ebbless:wrappedBypass (no end-of-round tester recap, see TESTER WEEK UP).
+   Works on every screen, including beta/feedback.html (this same snippet is at the top of beta/beta.js). */
 window.addEventListener('keydown', function (e) {
   if (!(e.ctrlKey && e.altKey && e.metaKey && e.code === 'KeyM')) return;
   e.preventDefault(); e.stopImmediatePropagation();
@@ -183,9 +183,22 @@ window.addEventListener('keydown', function (e) {
 
   // Background layers (see .bg in beta.css). Form pages pass quiet so the
   // video stays up top and the fields sit on solid --bg.
-  // Inside the app's beta lock (iframe, ?embed=1): the lock's own video shows through, and color states go to the lock.
+  // Inside the app's beta overlay (iframe, ?embed=1: Settings > Beta community, the beta invite,
+  // the tester recap): no background video of its own, and color states go to the app.
   const EMBED = window.parent !== window && /[?&]embed=1/.test(location.search);
   if (EMBED) document.documentElement.classList.add('embed');
+  // A link back to the app closes the overlay instead of loading the app inside it,
+  // and links off this site open outside it (most sites refuse to be framed).
+  if (EMBED) document.addEventListener('click', (e) => {
+    const a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
+    if (!a) return;
+    let u;
+    try { u = new URL(a.href, location.href); } catch(err){ return; }
+    if (u.origin === location.origin && u.pathname === new URL('../', location.href).pathname){
+      e.preventDefault();
+      try { parent.postMessage({ ebbClose: true }, location.origin); } catch(err){}
+    } else if (u.origin !== location.origin){ a.target = '_blank'; a.rel = 'noopener'; }
+  });
   function background(){
     if (EMBED) return;
     const bg = document.createElement('div');

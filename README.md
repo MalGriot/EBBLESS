@@ -88,7 +88,7 @@ testing. Staging has its own separate KV namespaces (see `worker/wrangler.toml`)
 so nothing written there touches production's quota. Plain `npx wrangler
 deploy` (no `--env`) still targets production as before.
 
-## Welcome page (the beta splash)
+## Welcome page
 
 The welcome page (`welcome/`, served at `/EBBLESS/welcome/`) embeds the real player
 in an iframe (`welcome/app-demo.html`, `welcome/app-ambient.css`). Both are generated from
@@ -117,41 +117,38 @@ has moved.
   not reload, so the song keeps playing). Phone and tablet scroll with a firm
   snap, and the chapter title in the top bar has an arrow to the next chapter.
 - The search chapter's chips type their example into the player's paste box.
-- The "Try it" chapter points at the 15-minute sample (`sample/`).
-- The page's own links into the beta use `/beta/#join`, which opens the signup form.
+- "Open EBBLESS" buttons go straight to the app (`../`); "Join the beta
+  community" uses `/beta/#join`, which opens the signup form.
 - For a quick look: `?device=phone|tablet|laptop` picks the frame, and a
   `#chapter-id` hash opens that chapter.
 
-## Sample (15-minute try-out)
+## Open beta (no gate)
 
-`/EBBLESS/sample/` (`sample/index.html`) runs the real app in sample mode. The
-stub fetches `../index.html`, adds `<base href="../">` and sets
-`window.__EBB_SAMPLE`; `../?sample` does the same without the stub. Design and
-decisions: [`docs/SAMPLE-SPLASH-PLAN.md`](docs/SAMPLE-SPLASH-PLAN.md). In
-`index.html` look for "SAMPLE MODE" (head script: flag, storage shim, network
-backstop; main script: intro, clock, expiry; plus `EBB_SAMPLE` checks).
+EBBLESS is open to everyone: no invite, approval or tester link is needed to
+use it. Until 2026-11-09 the app sat behind a tester lock and a 15-minute
+sample; both are gone (`sample/` now just redirects to the app;
+`docs/SAMPLE-SPLASH-PLAN.md` is history). What stayed:
 
-- Storage is a throwaway copy (sessionStorage under `ebbless-sample:`); only
-  `ebbless:sampleTrial` (and an `ebbless_sample` cookie) touch real storage.
-  Posts to account, profile, feedback, stats and shared-KV routes are blocked.
-- The 15 minutes start the first time a real queue track plays (not the
-  tutorial's music) and only run while a track is really playing: loading,
-  the ad wait and pauses do not count. Used time survives refresh. Tapping
-  the countdown pill asks whether to end the sample and join the beta. At 0
-  the screen ends with "Join the beta" (`beta/#join`; "Join the waitlist" if
-  the beta is full). It is a soft limit: private windows, clearing site data
-  or another browser start a new trial.
-- The tutorial prompt waits for the splash to clear and the tutorial button
-  to show, then another 7 seconds.
-- A browser with a beta tester token is sent to the real app
-  (`?sample=force` shows the sample anyway).
-- Console: `ebblessSample.status()`, `.skipTo(ms)`, `.expireNow()`, `.reset()`.
-- Bump `CACHE_VERSION` in `sw.js` with any change to `index.html`.
+- The beta community is voluntary. In the app, "BETA INVITE" in
+  `index.html` shows a small "Help shape EBBLESS" card once, from the 2nd
+  day of use, after a song has played, at a calm moment; never to a tester or
+  someone who already signed up on that device. "Maybe later" re-asks after 30
+  days at most once more. Settings > Feedback & support > Beta community opens
+  the signup any time. Both open `beta/` in an in-app overlay (`openBetaFrame`,
+  `?embed=1`), so the music keeps playing. Dev: `?betainvite`,
+  `ebblessBetaInvite()`, `.state()`, `.reset()`.
+- Tester tokens still work (the "beta tester token" script at the top of
+  `<body>`): `?t=<token>` links a device, `/beta/me` refreshes `ebbless:betaMe`,
+  and Google sign-in claims a tester's token on a new device (once per account
+  per device). A token the worker rejects is forgotten, nothing locks.
+- Send feedback is for everyone (Settings, the desktop nav button, and the
+  phone header icon after 3 days).
+- The mobile install gate (#262) is a separate platform rule and is unchanged.
 
 ## Reading tester feedback
 
-Settings > Feedback & support > "Send feedback" lets beta testers report bugs or ideas
-with no login and no GitHub. It POSTs to the worker's `/tester-report`,
+Settings > Feedback & support > "Send feedback" lets anyone report bugs or ideas
+with no login and no GitHub (a tester's report also carries their tester number). It POSTs to the worker's `/tester-report`,
 which stores each report in `MATCH_REPORTS` under a `tester:<ts>:<uuid>` key
 (max 5 per IP per 10 minutes). The same form also opens on its own as a
 periodic "Are you feeling this app or nah?" thumbs check (from the 3rd day of
@@ -167,14 +164,16 @@ npx wrangler kv key get --binding=MATCH_REPORTS "tester:<ts>:<uuid>"
 
 ## Beta tester system
 
-`beta/` holds the 50-person beta: static pages on the same GitHub Pages site,
+`beta/` holds the voluntary beta community (feedback rounds of up to 50 Active
+testers; EBBLESS itself is open to everyone): static pages on the same GitHub Pages site,
 backed by `worker/src/beta.js` (routes under `/beta/*`). The worker validates
 and throttles requests, then hands them to a Google Sheet's Apps Script web
 app ([`tools/beta-sheet.gs`](tools/beta-sheet.gs), setup steps at the top).
 The Sheet is the source of truth and the admin view.
 
-- `beta/` - public signup (shows `17 / 50 testers`, counting Active testers;
-  switches to "THE BETA IS FULL." plus a waitlist option at 50). "Sign up
+- `beta/` - public signup for the beta community (no spot count shown; when
+  50 testers are Active it says "THIS ROUND IS FULL." and offers the list for
+  the next round). "Sign up
   with Google" sends the form in one tap: the worker verifies the ID token
   and stores the verified address as `google_email` (also the contact
   email). "No Google account?" falls back to name + email fields.
@@ -203,24 +202,14 @@ Sheet tabs, kept as separate records so the history survives:
   feedback form once and stamps `feedback_request_sent`.
 - **Dashboard** - applicant, tester, feedback and bug counts, `X / 50`.
 
-The app itself (`/`) is locked to Active testers: a full-screen gate at the
-top of `index.html` checks the browser's tester token (saved by the tester
-page or a `?t=` on the app URL) against `/beta/me`, and re-locks if the
-tester goes Inactive. localhost is never locked. It's client-side, so it
-keeps the public out, not a determined dev.
-
-Getting in takes no pasting. The invite email links straight to the app
-(`/EBBLESS/?t=<token>`), which unlocks that browser. Installed apps:
-Android's shares Chrome's storage (and in-scope links open it), and on
-iPhone the token rides along into Add to Home Screen (page URL and
-manifest `start_url`). Anything the link can't reach (an iPhone home-screen
-app added before, another device) uses the gate's Google button:
-`/beta/claim` returns the token linked to that Google account, or, if none,
-the Active tester whose `google_email` (the account they signed up with,
-carried from Applicants to Testers on acceptance) or invite email is that
-account's verified email (Sheet action `token_by_email`). So a tester who
-signed up with Google gets in on any device with one sign-in; one who
-signed up with a non-Google email relies on the invite link.
+The app itself (`/`) is not locked (open beta). A tester's token only ties
+their device to their tester record: the invite email links straight to the
+app (`/EBBLESS/?t=<token>`), which saves the token in that browser. Installed
+apps: Android's shares Chrome's storage, and on iPhone the token rides along
+into Add to Home Screen. On another device, signing in with Google in Settings
+claims it (`/beta/claim`: the token linked to that Google account, or the
+Active tester whose `google_email` or invite email is that account's verified
+email, Sheet action `token_by_email`).
 
 The 50 cap counts Active testers only. Accepting a 51st (or reactivating
 someone past the cap) is reverted with a message in the Sheet. Tester numbers
@@ -241,13 +230,14 @@ and sends `window_days` in `me_`; the worker (`windowEndsAt`,
 before the first feedback email has gone out), plus `windowDays: 7` only for
 7-day testers. A 7-day window gets feedback emails at 24 hours and 7 days
 (the 7-day one closes the round); a 14-day window keeps 24 hours, 7 days and
-14 days. The beta lock saves it with the
-tester's first name in `ebbless:betaMe`. Past that time the app still opens
-and plays normally until one full song finishes in that session (heard at
-least 30s and half the track, not skipped or seeked to the end). Then
-playback stops, every control freezes, the app fades out, and a "That's
-your 7 days (or 2 weeks), <name>" screen takes over: "Give feedback"
-(`beta/feedback.html?t=<token>`) and a Wrapped-style recap of their week.
+14 days. The beta tester token script saves it with the
+tester's first name in `ebbless:betaMe`. Past that time, once per round
+(`ebbless:weekUpSeen`), after one full song (heard at least 30s and half
+the track, not skipped or seeked to the end) a "That's your 7 days (or 2
+weeks), <name>" screen shows: "Give feedback" (`beta/feedback.html?t=<token>`
+in the in-app overlay), "Join the next beta" and a Wrapped-style recap of
+their round. "Keep listening" closes it. Nothing freezes and the music never
+stops (open beta).
 
 The recap comes from the on-device PLAY LOG in `index.html`
 (`ebbless:playLog`: per-track plays, completed plays and minutes, playlists,
@@ -267,8 +257,8 @@ deployment version; the worker change alone does nothing.
 
 Owner: `?wrapped=preview` shows the screen now with this browser's own log
 (demo data if empty), `?wrapped=demo` always uses demo data; both have a
-Close button and freeze nothing. `?wrapped=gate` makes this tab session
-act expired (one full song, then the real freeze). A browser with
+Close button and send nothing. `?wrapped=gate` makes this tab session
+act as if the round ended (one full song, then the real recap). A browser with
 `ebblessStats.off()` or `ebblessWrapped.bypass()` never gets the gate.
 Console: `ebblessWrapped()` (preview), `ebblessWrapped.log()`.
 
