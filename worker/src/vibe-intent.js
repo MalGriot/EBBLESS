@@ -103,7 +103,20 @@ export function vibeSeededShuffle(arr, seedText) {
 // "Skinny Love" opened nearly every playlist), so its own order is dropped:
 // house seeds (hand-picked, marked house: true) stay first as written, and
 // the model's follow in a per-sentence shuffled order.
+// Songs the model names for nearly every mood no matter what was asked (#743:
+// even with shuffled order, Skinny Love still sat in the top three of every
+// mellow vibe). Each is kept for about one sentence in four, chosen per
+// sentence so a cached answer and a fresh one agree, and when kept it goes
+// last among the seeds. Titles are compared normalised (artist|title).
+export const OVERUSED_SEEDS = ['bon iver|skinny love'];
+function overusedKey(s) { return String(s.artist || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim() + '|' + String(s.title || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim(); }
 export function orderVibeSeeds(seeds, seedText) {
   const list = Array.isArray(seeds) ? seeds : [];
-  return list.filter(s => s && s.house).concat(vibeSeededShuffle(list.filter(s => s && !s.house), seedText));
+  const house = list.filter(s => s && s.house);
+  const rest = list.filter(s => s && !s.house);
+  const crowded = rest.filter(s => OVERUSED_SEEDS.includes(overusedKey(s)));
+  const normal = rest.filter(s => !crowded.includes(s));
+  // one stable coin per sentence and song: keep when its hash lands in 1 of 4
+  const kept = crowded.filter(s => vibeSeededShuffle([0, 1, 2, 3], String(seedText || '') + '|' + overusedKey(s))[0] === 0);
+  return house.concat(vibeSeededShuffle(normal, seedText), kept);
 }
