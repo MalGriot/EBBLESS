@@ -17384,9 +17384,12 @@ async function startRadio(name, own, keepPlaying){
   } finally { radioBusy = false; }
 }
 
+// #742: Liked Songs is always the first row (even before the first like), the
+// rest keep library order. "+ New playlist" stays a separate button below.
 function openAddToPlaylistPicker(track){
   openImportOverlay();
-  const customs = addablePlaylists();
+  const liked = getCachedPlaylist(LIKED_ID) || { id: LIKED_ID, name: 'Liked Songs', tracks: [] };
+  const customs = [liked].concat(addablePlaylists().filter(p => p.id !== LIKED_ID));
   const rowsHtml = customs.map(p =>
     '<label class="btn-ghost pl-pick" style="width:100%;text-align:left;margin-bottom:8px;display:flex;align-items:center;gap:10px;cursor:pointer">' +
       '<input type="checkbox" class="pl-pick-cb" data-id="' + p.id + '" style="flex:none">' +
@@ -17410,8 +17413,18 @@ function openAddToPlaylistPicker(track){
     });
   });
   addBtn.addEventListener('click', () => {
-    const ids = checked().map(cb => cb.dataset.id);
+    let ids = checked().map(cb => cb.dataset.id);
     closeImportOverlay();
+    // Liked Songs goes through the like path so hearts, taste signals and streaks stay in sync
+    if (ids.includes(LIKED_ID)){
+      ids = ids.filter(id => id !== LIKED_ID);
+      if (isTrackLiked(track.videoId)) showToast('Already in Liked Songs');
+      else {
+        toggleLikeTrack(track);
+        const cur = currentTrack();
+        if (cur && cur.videoId === track.videoId) updatePlayerLikeBtn(cur);
+      }
+    }
     // one playlist at a time, so a duplicate prompt waits its turn
     const next = (i) => { if (i < ids.length) addTrackToPlaylistAsk(ids[i], track, () => next(i + 1)); };
     next(0);
@@ -17442,10 +17455,11 @@ function openSingleTrackDestinationPicker(track){
     '</div>' +
     '<button class="btn-ghost" id="plNewFromSingleTrackBtn" style="width:100%">+ New playlist</button>';
   $('singleTrackLikedBtn').addEventListener('click', () => {
-    ensureLikedPlaylist();
-    const wasLiked = isTrackLiked(track.videoId);
-    addTrackToPlaylist(LIKED_ID, track);
-    if (!wasLiked && isTrackLiked(track.videoId)){ noteLikeStreak(); likeNudgeTrackChanged(track); }
+    // #742: same like path as the heart, so its state, taste signals and streak stay in sync
+    if (isTrackLiked(track.videoId)) showToast('Already in Liked Songs');
+    else toggleLikeTrack(track);
+    const cur = currentTrack();
+    if (cur && cur.videoId === track.videoId) updatePlayerLikeBtn(cur);
     closeImportOverlay();
   });
   importStage.querySelectorAll('.pl-pick').forEach(btn => {
