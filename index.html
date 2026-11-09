@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <script>
-/* Owner's developer-mode shortcut: Ctrl+Option+Cmd+M toggles ebbless:wrappedBypass (no 2-week gate, see TESTER WEEK UP).
-   Works on every screen, including the beta lock and beta/feedback.html (this same snippet is at the top of beta/beta.js). */
+/* Owner's developer-mode shortcut: Ctrl+Option+Cmd+M toggles ebbless:wrappedBypass (no end-of-round tester recap, see TESTER WEEK UP).
+   Works on every screen, including beta/feedback.html (this same snippet is at the top of beta/beta.js). */
 window.addEventListener('keydown', function (e) {
   if (!(e.ctrlKey && e.altKey && e.metaKey && e.code === 'KeyM')) return;
   e.preventDefault(); e.stopImmediatePropagation();
@@ -214,16 +214,14 @@ if (/EBBLESS-Android/.test(navigator.userAgent)) { try {
     if (o['--clock-accent']) localStorage.setItem('ebbless:lastAccent', JSON.stringify(o));
   }).observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
 } catch (e) {} }
-if (/EBBLESS-Android/.test(navigator.userAgent)) { try { if (/^t[0-9a-f]{12}-[0-9a-f]{32}$/.test(localStorage.getItem('ebbless:betaToken') || '') && Date.now() - (+localStorage.getItem('ebbless:betaOk') || 0) < 7 * 24 * 3600 * 1000) document.documentElement.classList.add('ebb-unlocked'); } catch (e) {} }
 if (/EBBLESS-Android/.test(navigator.userAgent)) { var pl = document.createElement('link'); pl.rel = 'preload'; pl.as = 'video'; pl.href = 'brand/assets/splash-cymatics-alpha.webm'; document.head.appendChild(pl); }</script>
 <style>
 /* Android app (android-webview/): budget phones dropped ~1 in 3 frames of the background videos
    because of the live CSS filter plus the mix-blend-mode tint over them. Lite mode uses *-alpha.webm:
    black frames whose transparency is the picture's brightness, laid over a solid accent layer. That
    is the same result as the grayscale + color-blend look (accent x brightness) with plain compositing. */
-html.ebb-android #splash .splash-video, html.ebb-android #beta-lock .bl-video, html.ebb-android video.lib-bg-video{filter:none}
-html.ebb-android #splash .splash-tint, html.ebb-android #beta-lock .bl-tint, html.ebb-android .lib-bg-tint{mix-blend-mode:normal;opacity:0;background:var(--clock-accent,#e0b26a)}
-html.ebb-android #beta-lock .bl-video{transition:none}
+html.ebb-android #splash .splash-video, html.ebb-android video.lib-bg-video{filter:none}
+html.ebb-android #splash .splash-tint, html.ebb-android .lib-bg-tint{mix-blend-mode:normal;opacity:0;background:var(--clock-accent,#e0b26a)}
 /* splash: flat black + logo until the new video is really playing, then the normal reveal (no grey poster flash) */
 html.ebb-android #splash .splash-poster{display:none}
 html.ebb-android #splash .splash-tint{opacity:0}
@@ -238,10 +236,8 @@ html.ebb-android #splash.is-active .splash-black{animation-duration:700ms}
 html.ebb-android #splash.is-active img{animation:splash-logo-in 700ms var(--ease-out) 350ms forwards}
 html.ebb-android #splash.is-choice .splash-choice{transition-delay:1000ms}
 html.ebb-android #splash.is-choice.is-return .splash-choice{transition-delay:250ms}
-/* a device already let in must not flash the lock page while the script decides: hide it until the lock script re-locks */
-html.ebb-unlocked:not(.ebb-relock) #beta-lock{display:none!important}
 /* the splash opens on the plain accent and eases into its final (lighter) colour over 3s */
-html.ebb-android #splash .splash-tint, html.ebb-android #beta-lock .bl-tint{transition:background 3s ease-in-out}
+html.ebb-android #splash .splash-tint{transition:background 3s ease-in-out}
 /* the app's native splash is up: the web one stays invisible (still wired up, so the app can press its Enter) and its videos stay unloaded */
 html.ebb-nsplash #splash{visibility:hidden!important}
 /* screen off (set by the Android app): hide every screen so the compositor can drop its textures; the players stay (#yt-host, audio) */
@@ -253,13 +249,11 @@ html.ebb-pip #yt-host.is-shown{z-index:200;border-radius:0}
 html.ebb-android video.ebb-ready{opacity:1!important}
 html.ebb-android #splash:has(.splash-video.ebb-ready) .splash-tint{opacity:1;z-index:-3;background:color-mix(in srgb, var(--clock-accent,#e0b26a) 72%, #fff)}
 html.ebb-android #splash:has(.splash-video.ebb-ready) .splash-poster{display:none}
-html.ebb-android #beta-lock .bl-bg:has(.bl-video.ebb-ready) .bl-tint{opacity:1;z-index:-1;background:color-mix(in srgb, var(--clock-accent,#e0b26a) 72%, #fff)}
-html.ebb-android #beta-lock .bl-bg:has(.bl-video.ebb-ready) .bl-poster{display:none}
 html.ebb-android .lib-bg{isolation:isolate}
 html.ebb-android .lib-bg:has(video.lib-bg-video.ebb-ready) .lib-bg-tint{opacity:1;z-index:-1;background:color-mix(in srgb, var(--clock-accent,#e0b26a) 72%, #fff)}
 html.ebb-android .lib-bg:has(video.lib-bg-video.ebb-ready) .lib-bg-poster{display:none}
-/* covered means not painted: while the splash or beta lock is up, skip painting the app beneath it (cost ~10% of video frames) */
-html.ebb-android.ebb-covered body > *:not(#splash):not(#beta-lock):not(script):not(style){visibility:hidden}
+/* covered means not painted: while the splash is up, skip painting the app beneath it (cost ~10% of video frames) */
+html.ebb-android.ebb-covered body > *:not(#splash):not(script):not(style){visibility:hidden}
 </style>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>EBBLESS</title>
@@ -267,65 +261,6 @@ html.ebb-android.ebb-covered body > *:not(#splash):not(#beta-lock):not(script):n
 <link rel="icon" type="image/png" sizes="16x16" href="brand/assets/icons/favicon-16.png">
 <meta name="description" content="Music without the ebb. Paste a playlist, keep listening.">
 <meta name="theme-color" content="#121212">
-<script>
-/* ---- SAMPLE MODE (docs/SAMPLE-SPLASH-PLAN.md) ----
-   /sample/ (sample/index.html) or ?sample runs this same app as a 15-minute
-   try-out. Everything the visitor does lands in a throwaway copy of
-   localStorage (sessionStorage under a prefix: survives a refresh, gone when
-   the tab closes), so no real library, settings or beta data is read or
-   written. Only the trial record ebbless:sampleTrial reaches real storage.
-   Anything that could write to an account or the worker is blocked below.
-   A browser that already holds a beta tester token goes to the real app
-   instead (add ?sample=force to see the sample anyway). Runs before every
-   other script: it must stay first. */
-(function(){
-  var on = window.__EBB_SAMPLE === true || /[?&]sample(?:[=&]|$)/.test(location.search);
-  window.__EBB_SAMPLE = on;
-  if (!on) return;
-  var real = null, ss = null;
-  try { real = window.localStorage; real.getItem('x'); } catch(e){ real = null; }
-  try { ss = window.sessionStorage; ss.getItem('x'); } catch(e){ ss = null; }
-  var force = /[?&]sample=force(?:&|$)/.test(location.search);
-  try {
-    var tok = real && real.getItem('ebbless:betaToken');
-    if (!force && tok && /^t[0-9a-f]{12}-[0-9a-f]{32}$/.test(tok) && !window.__EBB_SAMPLE_STUB){
-      location.replace(location.pathname); return;
-    }
-  } catch(e){}
-  var P = 'ebbless-sample:', PASS = { 'ebbless:sampleTrial': 1 }, mem = {};
-  function names(){
-    var out = [], i, k;
-    if (ss){ for (i = 0; i < ss.length; i++){ k = ss.key(i); if (k && k.indexOf(P) === 0) out.push(k.slice(P.length)); } }
-    else out = Object.keys(mem);
-    return out;
-  }
-  var shim = {
-    getItem: function(k){ k = String(k); if (PASS[k]) return real ? real.getItem(k) : null; if (ss) return ss.getItem(P + k); return Object.prototype.hasOwnProperty.call(mem, k) ? mem[k] : null; },
-    setItem: function(k, v){ k = String(k); v = String(v); if (PASS[k]){ if (real) real.setItem(k, v); return; } if (ss) ss.setItem(P + k, v); else mem[k] = v; },
-    removeItem: function(k){ k = String(k); if (PASS[k]){ if (real) real.removeItem(k); return; } if (ss) ss.removeItem(P + k); else delete mem[k]; },
-    clear: function(){ names().forEach(function(k){ shim.removeItem(k); }); },
-    key: function(i){ return names()[i] || null; }
-  };
-  Object.defineProperty(shim, 'length', { get: function(){ return names().length; } });
-  Object.defineProperty(window, 'localStorage', { configurable: true, get: function(){ return shim; } });
-  // the "what's new" card is for people who already knew EBBLESS
-  try { if (shim.getItem('ebbless:whatsNewSeen') === null) shim.setItem('ebbless:whatsNewSeen', '999999'); } catch(e){}
-  // Backstop: nothing the sample does may write to the worker's account,
-  // profile, feedback, stats or shared-KV routes (the UI for each is hidden
-  // or reworded too; this just guarantees nothing leaves if one slips by).
-  var BLOCK = /\/(pool\/signal|report|tester-report|profile\/|auth\/|nowplaying|podcaption\/|beta\/(activity|me|claim|link|rejoin|google))/;
-  var realFetch = window.fetch;
-  if (realFetch) window.fetch = function(input, init){
-    try {
-      var url = typeof input === 'string' ? input : (input && input.url) || '';
-      var method = String((init && init.method) || (input && input.method) || 'GET').toUpperCase();
-      if (method === 'POST' && /workers\.dev/.test(url) && BLOCK.test(url) && !(/EBBLESS-Android/.test(navigator.userAgent) && /\/tester-report/.test(url)))
-        return Promise.resolve(new Response('{"error":"Not available in the sample."}', { status: 403, headers: { 'Content-Type': 'application/json' } }));
-    } catch(e){}
-    return realFetch.apply(this, arguments);
-  };
-})();
-</script>
 <link rel="manifest" href="manifest.json">
 <!-- Google sign-in (gsi/client) is loaded by window.__ebbLoadGsi in the first head script -->
 <link rel="apple-touch-icon" href="brand/assets/icons/apple-touch-icon.png">
@@ -1526,6 +1461,17 @@ body:has(#musicMap:not([hidden])):has(#mini-bar:not([hidden])) .mm-foot{padding-
 .signin-nudge{position:fixed;left:50%;bottom:calc(var(--nav-h) + 24px);transform:translateX(-50%);z-index:79;width:min(340px,calc(100vw - 32px));
   background:var(--panel-3);color:var(--text);font-size:12.5px;padding:14px 16px;border-radius:20px;box-shadow:0 8px 24px rgba(0,0,0,.4);
   display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center}
+/* beta community invite (BETA INVITE in the script): the sign-in nudge's card */
+.beta-invite .bi-title{font-size:14px;font-weight:600}
+.beta-invite .bi-text{line-height:1.45}
+.beta-invite .bi-join{background:var(--accent);border-color:var(--accent);color:var(--on-accent,#151107);font-weight:600}
+/* the beta pages in the app (openBetaFrame): solid, no video; the covered app stops painting, the players stay */
+#betaJoin{position:fixed;inset:0;z-index:30001;background:#121212;color:#f2f2f2;display:flex;flex-direction:column}
+#betaJoin .bj-bar{display:flex;align-items:center;justify-content:space-between;padding:calc(14px + var(--safe-t)) 16px 4px;max-width:560px;width:100%;margin:0 auto;box-sizing:border-box}
+#betaJoin .bj-bar img{height:18px;width:auto;display:block}
+#betaJoin .bj-back{font:inherit;font-size:13px;letter-spacing:1.2px;text-transform:uppercase;color:#f2f2f2;background:none;border:0;padding:8px 0;cursor:pointer}
+#betaJoin iframe{flex:1;width:100%;border:0;background:transparent;color-scheme:dark}
+body.beta-join-on #app > :not(#yt-host),body.beta-join-on > :not(#app):not(#betaJoin):not(script):not(style):not(link):not(audio){visibility:hidden}
 .btn-ghost.is-active{background:var(--accent);border-color:var(--accent);color:var(--on-accent,#151107)}
 /* on/off switch (Settings > Playback); .is-active + aria-checked = on */
 .switch{position:relative;flex:none;width:46px;height:28px;border-radius:14px;padding:0;background:var(--panel-3);border:1px solid var(--border-2);
@@ -3131,7 +3077,6 @@ body.split-desktop .like-nudge{bottom:auto;top:calc(var(--topbar-h) + 12px)}
 .tester-banner{display:flex;align-items:center;gap:4px;flex:none;background:var(--panel-3);color:var(--text);
   font-size:12px;line-height:1.3;padding:3px;border-radius:20px;white-space:nowrap;
   position:absolute;left:64px;top:var(--safe-t);bottom:0;margin:auto 0;height:30px;z-index:6}
-.tester-banner .tb-text{display:none}
 .tester-banner .tb-ico{display:none;width:16px;height:16px}
 /* beside the logo, in space the search bar never uses (it starts at --tb-l or further right); on phones only a round icon fits */
 @media (max-width:859.98px){.tester-banner{left:56px}}
@@ -3154,11 +3099,11 @@ body.split-desktop #topbar:has(#navFeedbackBtn:not([hidden])){--tb-r:280px}
 #navFeedbackBtn:not([hidden])::after{content:'';position:absolute;inset:0;border-radius:inherit;box-shadow:0 0 0 5px rgba(224,178,106,.45);pointer-events:none;opacity:0;animation:navFbRing 1.6s ease-in-out infinite}
 /* the help button just changes colour, once every 3s, in coarse steps. #635: animating `color` restyled and repainted the top bar (it sits over moving video) on every step, about half the idle main-thread cost on a phone. An accent copy of the icon (a mask of the same glyph) fades over the faint one instead: opacity only. */
 @keyframes helpGlow{0%,100%{opacity:0}50%{opacity:1}}
-#helpBtn.is-unplayed,#helpBtn.is-nudge{position:relative;opacity:1}
-#helpBtn.is-unplayed::after,#helpBtn.is-nudge::after{content:'';position:absolute;inset:8px;background:var(--accent);pointer-events:none;opacity:0;animation:helpGlow 3s steps(12) infinite;-webkit-mask:var(--help-glyph) center/contain no-repeat;mask:var(--help-glyph) center/contain no-repeat;--help-glyph:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.6' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='9.5'/%3E%3Cpath d='M9.3 9.2a2.8 2.8 0 0 1 5.4 1c0 1.9-2.7 2.4-2.7 4.1'/%3E%3Ccircle cx='12' cy='17.4' r='.4' fill='%23000'/%3E%3C/svg%3E")}
+#helpBtn.is-unplayed{position:relative;opacity:1}
+#helpBtn.is-unplayed::after{content:'';position:absolute;inset:8px;background:var(--accent);pointer-events:none;opacity:0;animation:helpGlow 3s steps(12) infinite;-webkit-mask:var(--help-glyph) center/contain no-repeat;mask:var(--help-glyph) center/contain no-repeat;--help-glyph:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.6' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='9.5'/%3E%3Cpath d='M9.3 9.2a2.8 2.8 0 0 1 5.4 1c0 1.9-2.7 2.4-2.7 4.1'/%3E%3Ccircle cx='12' cy='17.4' r='.4' fill='%23000'/%3E%3C/svg%3E")}
 #navFeedbackBtn:not([hidden]) svg{color:var(--accent)}
 /* Geethub #461: header tutorial button blinks (same keyframes as Feedback) until the tutorial has been played once */
-@media (prefers-reduced-motion:reduce){#helpBtn.is-unplayed{color:var(--accent)}#helpBtn.is-unplayed::after,#helpBtn.is-nudge::after{animation:none}#navFeedbackBtn:not([hidden])::after{animation:none}}
+@media (prefers-reduced-motion:reduce){#helpBtn.is-unplayed{color:var(--accent)}#helpBtn.is-unplayed::after{animation:none}#navFeedbackBtn:not([hidden])::after{animation:none}}
 @media (prefers-reduced-motion:reduce){
   #navFeedbackBtn:not([hidden]){animation:none;outline:2px solid var(--accent)}}
 .tester-banner .tb-send{flex:none;background:var(--accent);color:var(--on-accent,#151107);border-radius:14px;padding:6px 12px;font-size:12px;font-weight:600}
@@ -3172,7 +3117,7 @@ body.split-desktop .tester-banner .tb-send{padding:0}body.split-desktop .tester-
 body.install-banner-on:not(.onb-active):not(.desktop-fs) .tester-banner{bottom:var(--ib-h)}
 body.onb-active .tester-banner,body.desktop-fs .tester-banner,body:has(#splash:not(.is-hidden)) .tester-banner,
 body:has(#flow-layer.is-open) .tester-banner,body:has(#lyricsFsLayer.is-open) .tester-banner,
-body:has(#danger-scrim.is-open) .tester-banner,body:has(#beta-lock:not([hidden])) .tester-banner{display:none}
+body:has(#danger-scrim.is-open) .tester-banner{display:none}
 /* install banner (#262): a slim strip along the bottom of the topbar, shown
    on every open in a browser tab (never installed/standalone). While it's up
    the topbar grows by --ib-h via --topbar-h, so every view, panel and the
@@ -4274,10 +4219,14 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
 }
 /* ---- tester week up + recap (TESTER WEEK UP in the script) ----
    The app fades and blurs out under body.week-up-fading, then #weekUp fades
-   in on top of everything (above the beta lock), in the lock's language:
-   grayscale cymatics poster tinted with the accent, uppercase headline,
-   accent hairline. */
-body.week-up-fading > :not(#weekUp){transition:opacity 2.4s var(--ease-in-out),filter 2.4s var(--ease-in-out);opacity:0;filter:blur(8px) grayscale(1);pointer-events:none}
+   in on top of everything: grayscale cymatics poster tinted with the
+   accent, uppercase headline, accent hairline. The music keeps playing
+   underneath (open beta), so once the recap is up the covered app stops
+   painting (GPU budget: covered means stopped); the players stay, as in
+   screen-off mode. */
+body.week-up-fading > :not(#weekUp):not(#betaJoin){transition:opacity 2.4s var(--ease-in-out),filter 2.4s var(--ease-in-out);opacity:0;filter:blur(8px) grayscale(1);pointer-events:none}
+body.week-up-on > :not(#weekUp):not(#betaJoin){transition:none;filter:none}
+body.week-up-on #app > :not(#yt-host),body.week-up-on > :not(#app):not(#weekUp):not(#betaJoin):not(script):not(style):not(link):not(audio){visibility:hidden}
 body.week-up-on{overflow:hidden}
 #weekUp{position:fixed;inset:0;z-index:30000;background:#121212;color:var(--text);overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;
   isolation:isolate;opacity:0;transition:opacity 1.2s var(--ease-out);font-size:15px;line-height:1.5}
@@ -4454,210 +4403,53 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
 <body>
 <script>try{var _l=new URLSearchParams(location.search).get('look');if(_l!=='off')document.body.dataset.look=_l||'a'}catch(e){}</script>
 
-<!-- ---- beta lock ----
-     The app is private to Active beta testers (see beta/ and README "Beta
-     tester system"). Visible by default so nothing shows before the check;
-     the script right below hides it synchronously for a browser whose token
-     was verified recently, then re-checks /beta/me in the background. A token
-     the worker rejects (tester set Inactive in the Sheet) re-locks. Offline
-     with a previously verified token stays unlocked. localhost is never
-     locked. Client-side only: it keeps the public out, not a determined dev. -->
-<style>
-#beta-lock{position:fixed;inset:0;z-index:20000;background:#121212;color:#f2f2f2;overflow:hidden;overscroll-behavior:none;touch-action:none;
-  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:15px;line-height:1.5}
-#beta-lock[hidden]{display:none}
-#beta-lock .bl-bg{position:fixed;inset:0;z-index:-1;pointer-events:none}
-#beta-lock .bl-bg > *{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-/* pre-grayscaled copies (beta/media), so no yellow source frame can show before the tint */
-#beta-lock .bl-poster{background:url(beta/media/bg-poster-gray.jpg) center/cover no-repeat}
-#beta-lock .bl-video{opacity:0;transition:opacity 900ms ease}
-#beta-lock .bl-video.is-playing{opacity:1}
-#beta-lock .bl-tint{background:var(--accent);mix-blend-mode:color;transition:background 4s linear}
-#beta-lock .bl-fade{background:linear-gradient(rgba(18,18,18,.45) 0%, rgba(18,18,18,.82) 38%, #121212 72%)}
-#beta-lock{isolation:isolate}
-/* Google check on the lock: gold while verifying, red when no tester is found. Colors only, set once. */
-#beta-lock[data-verify=checking]{--accent:#e0b26a;--clock-accent:#e0b26a}
-#beta-lock[data-verify=no]{--accent:#d93a3a;--clock-accent:#d93a3a}
-#beta-lock[data-verify=done]{--accent:#4fcf7a;--clock-accent:#4fcf7a}
-/* Sign up for the beta happens here, on the lock: the beta form sits in a frame over it (transparent, so the lock's video shows through) */
-#bl-signup{position:absolute;inset:0;z-index:3;display:flex;flex-direction:column}
-#bl-signup[hidden]{display:none}
-#beta-lock.bl-signing .bl-wrap{visibility:hidden}
-#bl-signup .bl-su-bar{display:flex;align-items:center;justify-content:space-between;padding:calc(14px + env(safe-area-inset-top,0px)) 16px 4px;max-width:560px;width:100%;margin:0 auto;box-sizing:border-box}
-#bl-signup .bl-su-bar img{height:18px}
-#bl-signup .bl-su-back{font:inherit;font-size:13px;letter-spacing:1.2px;text-transform:uppercase;color:#f2f2f2;background:none;border:0;padding:8px 0;cursor:pointer}
-#bl-signup iframe{flex:1;width:100%;border:0;background:transparent;color-scheme:dark}
-#beta-lock[data-verify] .bl-tint{transition-duration:600ms}
-#beta-lock .bl-wrap{max-width:560px;margin:0 auto;padding:calc(28px + env(safe-area-inset-top,0px)) 16px calc(24px + env(safe-area-inset-bottom,0px));transform-origin:top center}
-#beta-lock .bl-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:clamp(16px,6vh,56px)}
-#beta-lock .bl-top img{height:20px;width:auto;display:block}
-#beta-lock .bl-tag{font-size:11px;letter-spacing:1.6px;text-transform:uppercase;color:#9a9a9a}
-#beta-lock h1{font-size:clamp(34px,10vw,48px);font-weight:700;letter-spacing:-.01em;line-height:1.02;margin:0;text-transform:uppercase}
-#beta-lock .bl-rule{height:1px;background:var(--accent);margin:18px 0}
-#beta-lock p{color:#9a9a9a;margin:0 0 8px;max-width:46ch}
-#beta-lock .bl-btn{display:block;width:100%;text-align:center;font:inherit;font-weight:600;letter-spacing:1.2px;font-size:13px;
-  padding:13px 24px;border-radius:24px;border:1px solid rgba(255,255,255,.28);background:rgba(255,255,255,.06);color:#f2f2f2;text-decoration:none;cursor:pointer}
-#beta-lock .bl-btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent,#151107)}
-#beta-lock .bl-msg{min-height:1.5em;font-size:13px;color:#e0645e;margin:4px 0 0}
-#beta-lock .bl-msg.bl-working{color:#e0b26a;animation:blWork 1s ease-in-out infinite alternate}
-@keyframes blWork{from{opacity:.35}to{opacity:1}}
-#beta-lock .bl-or{margin:20px 0 10px;font-size:13px}
-#beta-lock .bl-google[hidden]{display:none}
-#beta-lock .bl-gbtn{min-height:40px;display:flex;justify-content:center}
-#beta-lock .bl-try{margin:28px 0 0;padding:17px 24px;font-size:15px;letter-spacing:1.6px}
-#beta-lock .bl-join{margin:12px 0 0;padding:15px 24px;font-size:14px;letter-spacing:1.4px}
-#beta-lock .bl-lede{color:#f2f2f2;font-size:18px;margin:0 0 8px}
-#beta-lock .bl-flow{display:flex;flex-wrap:wrap;gap:6px 0;list-style:none;margin:18px 0 0;padding:0;font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:#cfcfcf}
-#beta-lock .bl-flow li+li::before{content:"\2192";color:var(--accent);margin:0 10px}
-#beta-lock .bl-learn{margin:12px 0 0;padding:15px 24px;font-size:14px;letter-spacing:1.4px}
-#beta-lock .bl-learn:hover{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.5)}
-#beta-lock .bl-try{position:relative;overflow:hidden;isolation:isolate;animation:bl-breathe 3.2s ease-in-out infinite}
-#beta-lock .bl-try::after{content:"";position:absolute;top:0;bottom:0;left:-60%;width:45%;z-index:-1;pointer-events:none;
-  background:linear-gradient(100deg,transparent,rgba(255,255,255,.55),transparent);transform:skewX(-20deg);animation:bl-sheen 4.2s ease-in-out 1s infinite}
-@keyframes bl-breathe{0%,100%{box-shadow:0 0 0 0 rgba(255,255,255,0),0 0 14px rgba(255,255,255,.08);transform:scale(1)}
-  50%{box-shadow:0 0 0 6px rgba(255,255,255,.07),0 0 30px rgba(255,255,255,.22);transform:scale(1.025)}}
-@keyframes bl-sheen{0%,35%{left:-60%}75%,100%{left:130%}}
-@media (prefers-reduced-motion:reduce){#beta-lock .bl-try,#beta-lock .bl-try::after{animation:none}}
-#beta-lock .bl-btn{transition:transform .18s ease,background .18s ease,border-color .18s ease,box-shadow .18s ease,color .18s ease}
-@media (hover:hover){
-  #beta-lock .bl-btn:hover{transform:translateY(-2px) scale(1.02);box-shadow:0 8px 24px rgba(0,0,0,.45)}
-  #beta-lock .bl-btn.primary:hover{filter:brightness(1.12);box-shadow:0 0 0 6px rgba(255,255,255,.08),0 10px 30px rgba(0,0,0,.5)}
-  #beta-lock .bl-try:hover{animation:none}
-  #beta-lock .bl-join:hover{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.55)}
-}
-#beta-lock .bl-btn:active{transform:scale(.97);box-shadow:none}
-#beta-lock .bl-btn:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
-#beta-lock .bl-rule-soft{background:rgba(255,255,255,.12);margin:36px 0 20px}
-#beta-lock .bl-sub{color:#f2f2f2;font-weight:600;font-size:13px;letter-spacing:1.2px;text-transform:uppercase;margin:0 0 4px}
-#beta-lock .bl-small{font-size:13px;color:#6c6c6c;margin:20px 0 0}
-</style>
-<div id="beta-lock" role="dialog" aria-modal="true" aria-labelledby="bl-title">
-  <div class="bl-bg" aria-hidden="true"><div class="bl-poster"></div><video class="bl-video" muted loop playsinline preload="none" data-src="beta/media/bg-video-gray.mp4"></video><script>(function () { var v = document.currentScript.previousElementSibling, a = document.documentElement.classList.contains('ebb-android'), s = v.getAttribute('data-src'); if (!(a && document.documentElement.classList.contains('ebb-nsplash') && !v.classList.contains('bl-video'))) v.src = a ? s.replace('.mp4', '-alpha.webm') : s; if (a) { v.removeAttribute('poster');  v.addEventListener('playing', function () { v.classList.add('ebb-ready'); var sp = document.getElementById('splash'); if (sp && v.classList.contains('splash-video') && !sp.classList.contains('is-hidden')) sp.classList.add('is-active'); if (v.classList.contains('splash-video') && window.EbbNative) EbbNative.ready(); }); } })();</script><div class="bl-tint"></div><div class="bl-fade"></div></div>
-  <div class="bl-wrap">
-    <div class="bl-top"><img src="brand/assets/wordmark-white.png" alt="EBBLESS"><span class="bl-tag">Private beta</span></div>
-    <h1 id="bl-title">YOU’RE EARLY. THAT’S A GOOD THING.</h1>
-    <div class="bl-rule"></div>
-    <p class="bl-lede">Get in on EBBLESS.</p>
-    <p>Try it for 15 minutes, no sign-up. Or join the beta and, once approved, we'll email you your personal link to get in.</p>
-    <ol class="bl-flow" aria-label="How you get in">
-      <li>Join</li><li>Approval</li><li>Email</li><li>You're in</li>
-    </ol>
-    <a class="bl-btn primary bl-try" href="sample/">TRY THE 15 MINUTE TRIAL</a>
-    <a class="bl-btn bl-join" href="beta/#join" id="bl-join">SIGN UP FOR THE BETA</a>
-    <a class="bl-btn bl-learn" href="welcome/">SEE WHAT EBBLESS IS</a>
-    <div class="bl-rule bl-rule-soft"></div>
-    <!-- Tester way in: the invite link does it all (?t= below). The Google
-         button (rendered by the app once GSI loads) claims by the Google
-         account they signed up with or the invite's email address
-         (/beta/claim), for a home-screen app the link can't
-         reach. The script swaps the copy for an iPhone home-screen app. -->
-    <p class="bl-sub">Got your invite email?</p>
-    <p id="bl-how">Tap the link in it. That's it, you're in.</p>
-    <p class="bl-msg" id="bl-msg" role="status"></p>
-    <div class="bl-google" id="bl-google" hidden>
-      <p class="bl-or" id="bl-gnote">Or sign in with Google using the account you signed up with.</p>
-      <div class="bl-gbtn" id="bl-gbtn"></div>
-    </div>
-    <p class="bl-small" id="bl-ios" hidden>Signed up without Google? Delete this app, tap the link in your invite email, then add EBBLESS to your Home Screen again from Safari.</p>
-    <p class="bl-small"><a href="privacy.html" style="color:inherit">Privacy Policy</a> &middot; <a href="terms.html" style="color:inherit">Terms of Use</a></p>
-  </div>
-</div>
+<!-- ---- beta tester token (open beta) ----
+     EBBLESS is open to everyone: nothing here locks the app. Joining the
+     beta community is voluntary (BETA INVITE in the main script). A
+     tester's link (?t=<token>, from their invite email or beta/tester.html)
+     still ties this browser to their tester record, so their in-app
+     feedback, the feedback survey, their analytics counts and the
+     end-of-round recap keep working. /beta/me refreshes what the Sheet
+     knows about them (ebbless:betaMe); a token the worker rejects (tester
+     set Inactive in the Sheet) is just forgotten. Google sign-in gets a
+     tester's token back on a new device (betaAccountLink). localhost never
+     calls /beta/me. -->
 <script>
 (function(){
   'use strict';
-  const lock = document.getElementById('beta-lock');
   const host = location.hostname;
-  if (host === 'localhost' || host === '127.0.0.1' || host === '[::1]' || location.protocol === 'file:'){ lock.hidden = true; return; }
-  // the sample is open to everyone (see SAMPLE MODE in <head>)
-  if (window.__EBB_SAMPLE === true){ lock.hidden = true; return; }
-  // Owner's ?mal link skips the tester lock too (same session flag the mobile
-  // install gate reads), so he can test on any device without an invite.
-  try {
-    if (new URLSearchParams(location.search).has('mal')) sessionStorage.setItem('ebbless:gateSkip', '1');
-    if (sessionStorage.getItem('ebbless:gateSkip') === '1'){ lock.hidden = true; return; }
-  } catch(e){}
+  const local = host === 'localhost' || host === '127.0.0.1' || host === '[::1]' || location.protocol === 'file:';
+  // Owner's ?mal link: the mobile install gate reads this session flag.
+  try { if (new URLSearchParams(location.search).has('mal')) sessionStorage.setItem('ebbless:gateSkip', '1'); } catch(e){}
 
   const TOKEN_RE = /^t[0-9a-f]{12}-[0-9a-f]{32}$/;
   const LS_TOKEN = 'ebbless:betaToken';   // shared with beta/beta.js and the in-app feedback form
   const LS_OK = 'ebbless:betaOk';         // last time /beta/me accepted LS_TOKEN (ms)
-  const FRESH_MS = 7 * 24 * 3600 * 1000;  // unlock instantly within this; still re-checked every load
-  // A device unlocked by Google sign-in (/beta/claim) holds a lease, not a
-  // permanent unlock. Device-local, never profile-synced; invite-link
-  // unlocks clear it, so they're unaffected. Once it runs out the app gets
-  // RENEW_WAIT_MS for a silent One Tap claim to renew it, then re-locks.
-  const LS_LEASE = 'ebbless:betaLeaseUntil';
-  const BETA_LEASE_MS = 14 * 24 * 3600 * 1000;  // keep in sync with BETA_LEASE_MS in worker/src/beta.js
-  const RENEW_WAIT_MS = 10000;
+  const LS_LEASE = 'ebbless:betaLeaseUntil';   // old Google-claim lease; nothing is locked now, so it's only cleared
   // What /beta/me (or /beta/claim) said about this tester: first name, label
   // and when their window (7 days or 2 weeks, windowDays) ends (ms, absent until the feedback email
   // goes out). Read by the app's TESTER WEEK UP block; cleared with the token.
   const LS_ME = 'ebbless:betaMe';
-  const REFRESH_MSG = 'Your access on this device needs a quick refresh. Sign in with Google to continue.';
   const ls = {
     get(k){ try { return localStorage.getItem(k); } catch(e){ return null; } },
     set(k, v){ try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch(e){} },
   };
   let backend = 'https://spotify-youtube-search.malgriot.workers.dev';
   if (ls.get('ebbless_backend') === 'staging' || new URLSearchParams(location.search).get('backend') === 'staging') backend = 'https://spotify-youtube-search-staging.malgriot.workers.dev';
-
   const extract = (s) => { const m = /t[0-9a-f]{12}-[0-9a-f]{32}/.exec(String(s || '')); return m ? m[0] : ''; };
-  // No scrolling: shrink the content to fit whatever the screen height is.
-  const wrap = lock.querySelector('.bl-wrap');
-  const fit = () => {
-    if (lock.hidden) return;
-    wrap.style.transform = '';
-    const h = wrap.offsetHeight, vh = window.innerHeight;
-    if (h > vh) wrap.style.transform = 'scale(' + (vh / h) + ')';
-  };
-  window.addEventListener('resize', fit);
-  window.addEventListener('orientationchange', fit);
-  if (window.ResizeObserver) new ResizeObserver(fit).observe(wrap);
-  fit();
-  const video = lock.querySelector('.bl-video');
-  video.addEventListener('playing', () => video.classList.add('is-playing'));
-  const unlock = () => { lock.hidden = true; video.pause(); };
-  const relock = () => { document.documentElement.classList.add('ebb-relock'); if (window.EbbNative && EbbNative.lock) EbbNative.lock(); lock.hidden = false; fit(); const p = video.play(); if (p && p.catch) p.catch(() => {}); };
-  // SIGN UP FOR THE BETA opens the form right on the lock (no page change). The frame loads on first tap.
-  const su = document.createElement('div');
-  su.id = 'bl-signup'; su.hidden = true;
-  su.innerHTML = '<div class="bl-su-bar"><img src="brand/assets/wordmark-white.png" alt="EBBLESS"><button class="bl-su-back" type="button">Back</button></div>';
-  lock.append(su);
-  document.getElementById('bl-join').addEventListener('click', (e) => {
-    e.preventDefault();
-    if (!su.querySelector('iframe')){ const f = document.createElement('iframe'); f.title = 'Sign up for the EBBLESS beta'; f.src = 'beta/index.html?embed=1#join'; su.append(f); }
-    su.hidden = false; lock.classList.add('bl-signing');
-  });
-  su.querySelector('.bl-su-back').addEventListener('click', () => { su.hidden = true; lock.classList.remove('bl-signing'); verify(''); });
-  window.addEventListener('message', (e) => {
-    if (e.origin !== location.origin || !e.data || !('ebbBgState' in e.data)) return;
-    const m = { ok: 'checking', bad: 'no', done: 'done' }[e.data.ebbBgState];
-    verify(m || '');
-  });
-  const verify = (v) => { if (v) lock.dataset.verify = v; else delete lock.dataset.verify; };
-  const msg = (t) => { const m = document.getElementById('bl-msg'); m.textContent = t || ''; m.classList.toggle('bl-working', /\.\.\.$/.test(t || '')); };
-  // iPhone/iPad home-screen app: its storage is apart from Safari's and the
-  // invite link opens Safari, not this app, so Google sign-in is the way in.
-  const iosStandalone = navigator.standalone === true && (/iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1));
-  if (iosStandalone){
-    // Already signed up (that's how they got the app): no Join button here.
-    document.querySelector('#beta-lock .bl-join').hidden = true;
-    document.querySelector('#beta-lock .bl-try').hidden = true;
-    document.getElementById('bl-how').textContent = 'Sign in with Google using the account you signed up with.';
-    document.getElementById('bl-gnote').hidden = true;
-    document.getElementById('bl-ios').hidden = false;
-  }
+  ls.set(LS_LEASE, null);
 
-  // ?t=<token> on the app URL itself (e.g. an invite link pointed straight at the app)
+  // ?t=<token> on the app URL itself (the invite link points straight at the app)
   const q = new URLSearchParams(location.search);
   const qt = extract(q.get('t'));
-  if (qt && qt !== ls.get(LS_TOKEN)){ ls.set(LS_TOKEN, qt); ls.set(LS_OK, null); ls.set(LS_LEASE, null); ls.set(LS_ME, null); }
-  // Google redirect sign-in (worker /beta/google) came back with a message
+  if (qt && qt !== ls.get(LS_TOKEN)){ ls.set(LS_TOKEN, qt); ls.set(LS_OK, null); ls.set(LS_ME, null); }
+  // Google redirect sign-in (worker /beta/google) came back: a failure
+  // message (bl_err, nothing to show it on now) or a one-time code for the
+  // profile sync session (consumed by the main script).
   const be = q.get('bl_err');
-  if (be){ q.delete('bl_err'); msg(be.slice(0, 200)); }
-  // ...and a one-time code for the profile sync session (consumed by the main script)
   const bc = q.get('c');
   if (/^[0-9a-f]{32}$/.test(bc || '')){ window.ebblessGoogleCode = bc; }
-  if (qt || be || bc){ q.delete('t'); q.delete('c'); const s = q.toString(); try { history.replaceState(history.state, '', location.pathname + (s ? '?' + s : '') + location.hash); } catch(e){} }
+  if (qt || be || bc){ q.delete('t'); q.delete('c'); q.delete('bl_err'); const s = q.toString(); try { history.replaceState(history.state, '', location.pathname + (s ? '?' + s : '') + location.hash); } catch(e){} }
 
   // The playlist they pasted into the signup form (worker sends it only
   // while LS_PL_DONE is unset). Parked in LS_PL for the app to import as a
@@ -4686,66 +4478,38 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
     savePlaylist(d);
     saveMusic(d);
     ls.set(LS_ME, JSON.stringify({ name: String(d.name || ''), label: String(d.label || ''), windowEndsAt: Number(d.windowEndsAt) > 0 ? Number(d.windowEndsAt) : null,
-      // "Join the next beta" on the 2-weeks-up recap (absent when not set)
+      // "Join the next beta" on the end-of-round recap (absent when not set)
       rejoin: d.rejoin === 'requested' || d.rejoin === 'approved' ? d.rejoin : '', nextRoundAt: Number(d.nextRoundAt) > 0 ? Number(d.nextRoundAt) : null, nextRoundLabel: String(d.nextRoundLabel || ''),
       round: Number(d.round) > 0 ? Number(d.round) : null, nextRound: Number(d.nextRound) > 0 ? Number(d.nextRound) : null,
       feedbackGiven: typeof d.feedbackGiven === 'boolean' ? d.feedbackGiven : null,
       // 7 only for a new round-1 tester; absent = the usual 2 weeks
       windowDays: Number(d.windowDays) === 7 ? 7 : null }));
   }
-  // 'ok' | 'no' (rejected) | 'net' (couldn't ask)
-  async function check(token){
-    try {
-      const res = await fetch(backend + '/beta/me', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token, ...(wantPl() ? { playlist: true } : {}), ...(wantMu() ? { music: true } : {}) }) });
-      if (res.ok){ saveMe(await res.json().catch(() => null)); return 'ok'; }
-      return res.status === 404 ? 'no' : 'net';
-    } catch(e){ return 'net'; }
-  }
+  const forget = () => { ls.set(LS_OK, null); ls.set(LS_TOKEN, null); ls.set(LS_ME, null); };
 
   const token = ls.get(LS_TOKEN);
-  const okAt = +ls.get(LS_OK) || 0;
-  const leaseUntil = +ls.get(LS_LEASE) || 0;
-  // 'renewing': lease ran out, waiting on a silent claim. 'expired': that
-  // didn't happen, so the lock stays up until a Google sign-in or a link.
-  let lease = token && leaseUntil && Date.now() > leaseUntil ? 'renewing' : '';
-  function leaseFailed(){
-    if (lease !== 'renewing') return;
-    lease = 'expired'; relock(); msg(REFRESH_MSG);
-    window.dispatchEvent(new Event('ebbless:betarelock'));   // app re-renders the Google button
-  }
-  if (lease) setTimeout(leaseFailed, RENEW_WAIT_MS);
-  if (token && TOKEN_RE.test(token) && Date.now() - okAt < FRESH_MS) unlock();
-  if (!lock.hidden) relock();
-  if (token && TOKEN_RE.test(token)){
-    check(token).then((r) => {
-      if (lease === 'expired') return;
-      if (r === 'ok'){ ls.set(LS_OK, String(Date.now())); unlock(); }
-      else if (r === 'no'){ lease = ''; ls.set(LS_OK, null); ls.set(LS_TOKEN, null); ls.set(LS_LEASE, null); ls.set(LS_ME, null); relock(); msg('That tester link isn\'t active anymore.'); }
-      else if (lock.hidden === false) msg(okAt ? '' : 'Couldn\'t reach EBBLESS to check your link. Check your connection.');
-      if (r === 'net' && okAt) unlock();   // verified before, just offline now
-    });
+  if (token && !TOKEN_RE.test(token)) forget();
+  else if (token && !local){
+    fetch(backend + '/beta/me', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token, ...(wantPl() ? { playlist: true } : {}), ...(wantMu() ? { music: true } : {}) }) })
+      .then(async (res) => {
+        if (res.ok){ saveMe(await res.json().catch(() => null)); ls.set(LS_OK, String(Date.now())); }
+        else if (res.status === 404) forget();   // no longer an Active tester: a regular listener now
+      }).catch(() => {});
   }
 
-
-  // For the app's Google sign-in (PROFILE SYNC): a tester token the worker
-  // handed back for this Google account (/beta/claim) unlocks like a link,
-  // for the lease it came with (older workers send none: BETA_LEASE_MS).
+  // Used by the main script (PROFILE SYNC). Nothing is ever locked; the
+  // locked/renewing/verify/msg members stay so older callers keep working.
   window.ebblessBetaGate = {
-    locked: () => !lock.hidden,
-    renewing: () => lease === 'renewing',
-    leaseFailed,
-    verify,
+    locked: () => false,
+    renewing: () => false,
+    leaseFailed(){}, verify(){}, msg(){},
+    hasToken: () => TOKEN_RE.test(ls.get(LS_TOKEN) || ''),
+    // a tester token the worker handed back for this Google account (/beta/claim)
     unlockWith(t, until, me){
       if (!TOKEN_RE.test(String(t || ''))) return;
       saveMe(me);
-      const now = Date.now();
-      until = Number(until);
-      lease = '';
-      ls.set(LS_TOKEN, t); ls.set(LS_OK, String(now));
-      ls.set(LS_LEASE, String(until > now ? until : now + BETA_LEASE_MS));
-      msg(''); verify(''); unlock();
+      ls.set(LS_TOKEN, t); ls.set(LS_OK, String(Date.now()));
     },
-    msg,
   };
 })();
 </script>
@@ -4843,7 +4607,6 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
       <div class="import-err" id="importErr"></div>
     </form>
     <div class="tester-banner" id="testerBanner" role="status" hidden>
-      <span class="tb-text">Tester version</span>
       <button type="button" class="tb-send" id="testerBannerSend" aria-label="Send feedback"><svg class="tb-ico" viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H9l-5 4v-4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/></svg><span class="tb-lbl">Send feedback</span></button>
     </div>
     <button class="nav-btn" id="helpBtn" type="button" aria-label="Play tutorial" title="Play tutorial">
@@ -5567,7 +5330,14 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
             <div class="label">Send feedback</div>
             <div class="desc no-fold">Found a bug or have an idea? Tell us right here. No account, no GitHub, nothing to sign up for.</div>
           </div>
-          <span class="set-btns"><button class="btn-ghost" id="feedbackBtn">Feedback</button><button class="btn-ghost" id="testerFeedbackBtn" type="button">Beta report</button></span>
+          <span class="set-btns"><button class="btn-ghost" id="feedbackBtn">Feedback</button></span>
+        </div>
+        <div class="settings-row">
+          <div>
+            <div class="label">Beta community</div>
+            <div class="desc no-fold" id="betaCommunityDesc">EBBLESS is open and still evolving. Join the beta community to try new things first and help shape what comes next. Completely optional.</div>
+          </div>
+          <button class="btn-ghost" id="betaCommunityBtn" type="button">Join</button>
         </div>
         <div class="settings-row beta-hidden">
           <div>
@@ -6363,7 +6133,6 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
    flat 401 from YouTube. This small dedicated Cloudflare Worker does both
    fetches server-side and returns clean JSON. See worker/src/index.js.
    ========================================================================= */
-const EBB_SAMPLE = window.__EBB_SAMPLE === true;   // set by the SAMPLE MODE script in <head>
 const BACKEND_PROD = 'https://spotify-youtube-search.malgriot.workers.dev';
 const BACKEND_STAGING = 'https://spotify-youtube-search-staging.malgriot.workers.dev';
 // ?backend=staging routes this load (and every load after, via localStorage)
@@ -6447,11 +6216,10 @@ setTimeout(() => {
     });
   }
   if (document.documentElement.classList.contains('ebb-android')) {
-    const cvSplash = document.getElementById('splash'), cvLock = document.getElementById('beta-lock');
+    const cvSplash = document.getElementById('splash');
     const syncCovered = () => document.documentElement.classList.toggle('ebb-covered',
-      !!(cvSplash && !cvSplash.classList.contains('is-hidden')) || !!(cvLock && !cvLock.hidden));
+      !!(cvSplash && !cvSplash.classList.contains('is-hidden')));
     if (cvSplash) new MutationObserver(syncCovered).observe(cvSplash, { attributes: true, attributeFilter: ['class'] });
-    if (cvLock) new MutationObserver(syncCovered).observe(cvLock, { attributes: true, attributeFilter: ['hidden'] });
     syncCovered();
     // tell the app shell when Enter / Tutorial are wired up (it holds the visitor's tap until then), and which accent override to start on
     if (window.EbbNative) {
@@ -6481,17 +6249,12 @@ setTimeout(() => {
   if (splashVid){
     // pause only after the 420ms fade-out, or the splash flashes to its flat tint
     let splashPauseT = 0;
-    // the beta lock plays its own video over the splash: don't decode both
-    const lockBox = document.getElementById('beta-lock');
-    const lockUp = () => !!(lockBox && !lockBox.hidden);
     const syncSplash = () => {
       clearTimeout(splashPauseT);
-      if (lockUp()) { splashVid.pause(); return; }
       if (!splashBox.classList.contains('is-hidden')) { resume(splashVid); return; }
       splashPauseT = setTimeout(() => { if (splashBox.classList.contains('is-hidden')) splashVid.pause(); }, 600);
     };
     new MutationObserver(syncSplash).observe(splashBox, { attributes: true, attributeFilter: ['class'] });
-    if (lockBox) new MutationObserver(syncSplash).observe(lockBox, { attributes: true, attributeFilter: ['hidden'] });
     syncSplash();
   }
   const onbVid = document.querySelector('#onbDiscovery video');
@@ -6507,13 +6270,11 @@ setTimeout(() => {
     // on screen and not covered by fullscreen flow
     let libInView = false;
     // ...and not under the splash (IntersectionObserver ignores overlays; two decoders at once made the splash skip on budget Android phones)
-    const splashUp = () => !!(splashBox && !splashBox.classList.contains('is-hidden')) || !!(document.getElementById('beta-lock') && !document.getElementById('beta-lock').hidden);
+    const splashUp = () => !!(splashBox && !splashBox.classList.contains('is-hidden'));
     const syncLib = () => (libInView && !splashUp() && !(flowEl && flowEl.classList.contains('is-open'))) ? resume(libVid) : libVid.pause();
     new IntersectionObserver(es => es.forEach(e => { libInView = e.isIntersecting; syncLib(); })).observe(libVid);
     if (flowEl) new MutationObserver(syncLib).observe(flowEl, { attributes: true, attributeFilter: ['class'] });
     if (splashBox) new MutationObserver(syncLib).observe(splashBox, { attributes: true, attributeFilter: ['class'] });
-    const lockEl = document.getElementById('beta-lock');
-    if (lockEl) new MutationObserver(syncLib).observe(lockEl, { attributes: true, attributeFilter: ['hidden'] });
   }
 })();
 
@@ -6643,7 +6404,7 @@ const installGateSkip = (() => {
     return sessionStorage.getItem('ebbless:gateSkip') === '1';
   } catch(e){ return false; }
 })();
-const mobileInstallGate = !window.__EBB_SAMPLE && !installGateSkip && !isStandaloneDisplay() && (isMobileUA || isIOS ||
+const mobileInstallGate = !installGateSkip && !isStandaloneDisplay() && (isMobileUA || isIOS ||
   (!!window.matchMedia && matchMedia('(pointer: coarse)').matches && Math.min(screen.width, screen.height) < 820));
 const INSTALL_HINT_MENU = 'Open your browser menu and choose Install app or Add to Home Screen (in Safari on Mac: File, then Add to Dock).';
 // iPhone/iPad install steps (#314). iOS has no install API and not every
@@ -8269,7 +8030,7 @@ function restoreSession(){
   npSchedulePublish(2000);   // music already playing when the session comes back: go on air (#500)
   syncProfileNow({ force: true });
   const gate = window.ebblessBetaGate;
-  if (gate && s.sub && ((gate.locked && gate.locked()) || (gate.renewing && gate.renewing()))) betaAccountLink(s.t, s.sub);
+  if (gate && s.sub && gate.hasToken && !gate.hasToken()) betaAccountLink(s.t, s.sub);
 }
 // The worker said the session is no good (revoked, expired): forget it and
 // fall back to Google's silent sign-in, which mints a new one.
@@ -8314,7 +8075,7 @@ function handleGoogleCredential(response){
   mintSession(response.credential, sub);
 }
 
-// Redirect sign-in (installed iOS app, worker /beta/google): the beta lock
+// Redirect sign-in (installed iOS app, worker /beta/google): the beta token script
 // stashed a one-time code from the return URL; trade it for the Google ID
 // token and sign in for profile sync like the Settings button does.
 (async function(){
@@ -8327,34 +8088,30 @@ function handleGoogleCredential(response){
   } catch(e){}
 })();
 
-// One login, every device (#274): the beta lock (top of <body>) and Google
-// sign-in used to be two separate logins, so a tester's second device sat
-// locked until they dug out the invite link again. Now signing in with
-// Google on an unlocked device remembers the tester token against that
-// account (/beta/link, once per account + token), and signing in with the
-// same account on a locked device gets it back (/beta/claim) and unlocks.
-// No device cap: the tester link already works on any device, so a cap here
-// would only add friction (an iPhone's Safari and home-screen app count as
-// two), not security. The worker re-checks the token against the Sheet.
-// Instead a claimed device holds a 14-day lease (beta lock script): when
-// it runs out, a One Tap auto sign-in claims again here and renews it;
-// if that can't happen or the claim fails, the lock comes back.
-const LS_BETA_TOKEN = 'ebbless:betaToken';        // owned by the beta lock script
+// One login, every device (#274): signing in with Google on a device that
+// holds a tester token remembers it against that account (/beta/link, once
+// per account + token), and signing in with the same account on a device
+// with no token gets it back (/beta/claim), so a tester's feedback and
+// recap follow them. Nothing is locked (open beta): the claim is silent, a
+// listener who isn't a tester just gets a 404, and it's tried once per
+// account per device (LS_BETA_CLAIMED) so it never costs a Sheet read per
+// sign-in. The worker re-checks the token against the Sheet.
+const LS_BETA_TOKEN = 'ebbless:betaToken';        // owned by the beta tester token script (top of <body>)
 const LS_BETA_LINKED = 'ebbless:betaLinked';      // "<sub>:<token>" last linked - skips repeat /beta/link calls
+const LS_BETA_CLAIMED = 'ebbless:betaClaimed';    // "<sub>" last claim tried with no token here
 async function betaAccountLink(idToken, sub){
   const gate = window.ebblessBetaGate;
   const post = (path, body) => fetch(BACKEND + path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
   try{
-    const renewing = !!(gate && gate.renewing && gate.renewing());
-    if (gate && (gate.locked() || renewing)){
-      if (!renewing){ gate.msg('Checking your Google account...'); gate.verify('checking'); }
+    if (gate && gate.hasToken && !gate.hasToken()){
+      if (!sub || lsGet(LS_BETA_CLAIMED, '') === sub) return;
+      lsSet(LS_BETA_CLAIMED, sub);
       let wantPl = true; try { wantPl = !localStorage.getItem('ebbless:betaSignupPlaylistDone'); } catch(e){}
       let wantMu = true; try { wantMu = !localStorage.getItem('ebbless:betaSignupMusicDone'); } catch(e){}
       const res = await post('/beta/claim', { idToken, ...(wantPl ? { playlist: true } : {}), ...(wantMu ? { music: true } : {}) });
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.token){ gate.unlockWith(data.token, data.leaseUntil, data); lsSet(LS_BETA_LINKED, sub + ':' + data.token); }
-      else if (renewing) gate.leaseFailed();
-      else { gate.msg(data.error || "Couldn't reach EBBLESS. Check your connection and try again."); gate.verify(res.status === 404 || res.status === 401 || res.status === 403 ? 'no' : ''); }
+      else if (res.status >= 500 || res.status === 429) lsDel(LS_BETA_CLAIMED);   // try again next sign-in
       return;
     }
     let token = '';
@@ -8363,24 +8120,13 @@ async function betaAccountLink(idToken, sub){
     const res = await post('/beta/link', { idToken, token });
     if (res.ok) lsSet(LS_BETA_LINKED, sub + ':' + token);
   } catch(e){
-    if (gate && gate.renewing && gate.renewing()) gate.leaseFailed();
-    else if (gate && gate.locked()) gate.msg("Couldn't reach EBBLESS. Check your connection and try again.");
+    lsDel(LS_BETA_CLAIMED);
   }
-}
-// Google's own button on the beta lock, once GSI is ready (initGoogleOneTap).
-function renderBetaGateSignIn(){
-  const gate = window.ebblessBetaGate, wrap = document.getElementById('bl-google'), holder = document.getElementById('bl-gbtn');
-  if (!gate || !gate.locked() || !wrap || !holder || holder.childElementCount) return;
-  try{
-    google.accounts.id.renderButton(holder, { type: 'standard', theme: 'filled_black', size: 'large', shape: 'pill', text: 'signin_with' });
-    holder.addEventListener('click', () => lsDel(LS_PROFILE_SIGNED_OUT), true);
-    wrap.hidden = false;
-  } catch(e){}
 }
 // First-run nudge (least clicks): where One Tap can't show (Safari, blocked
 // third-party sign-in) put Google's own button in front once, so testers get
 // connected without finding the Settings row. Once per device, never when
-// signed in, signed out on purpose, or while the beta lock is up.
+// signed in or signed out on purpose.
 const LS_SIGNIN_NUDGED = 'ebbless:signinNudged';
 // Quiet first run: nobody is asked to sign in or install before their first
 // song has played. The sign-in card waits (without using up its once per
@@ -8389,9 +8135,8 @@ function hasEverPlayed(){ return !personalizeOn() || (lsGet(LS_PLAY_HISTORY, [])
 let signInNudgeWaiting = false;
 function showSignInNudge(){
   if (!hasEverPlayed()){ signInNudgeWaiting = true; return; }
-  const gate = window.ebblessBetaGate;
   if (profileIdToken || document.getElementById('signinNudge') || lsGet(LS_SIGNIN_NUDGED, false)) return;
-  if (lsGet(LS_PROFILE_SIGNED_OUT, false) === true || (gate && gate.locked())) return;
+  if (lsGet(LS_PROFILE_SIGNED_OUT, false) === true) return;
   lsSet(LS_SIGNIN_NUDGED, true);
   const card = document.createElement('div');
   card.className = 'signin-nudge'; card.id = 'signinNudge';
@@ -8404,7 +8149,6 @@ function showSignInNudge(){
   card.querySelector('.link-btn').addEventListener('click', () => card.remove());
   document.body.appendChild(card);
 }
-window.addEventListener('ebbless:betarelock', () => { if (gsiReady) renderBetaGateSignIn(); });
 
 // Local data stays put (it's this device's library too); its change stamps
 // do as well, so anything done while signed out still merges correctly on
@@ -8779,12 +8523,6 @@ function renderAccountRow(){
   const block = ensureAccountBlock();
   if (!block) return;
   const label = block.querySelector('#accountLabel'), desc = block.querySelector('#accountDesc'), actions = block.querySelector('#accountActions');
-  if (EBB_SAMPLE){
-    label.textContent = 'Sync across devices';
-    desc.textContent = 'Not in the sample. Join the beta to keep your library on every device.';
-    actions.innerHTML = '<a class="btn-ghost" href="beta/#join" style="text-decoration:none">Join the beta</a>';
-    return;
-  }
   const email = lsGet(LS_PROFILE_EMAIL, '');
   const signedIn = !!profileIdToken;
   const syncedAt = fmtSyncedAgo(lsGet(LS_PROFILE_SYNCED_AT, 0));
@@ -8842,7 +8580,6 @@ setInterval(() => { if (!document.hidden && profileIdToken) renderAccountRow(); 
 const LS_ONETAP_DISMISSED = 'ebbless:oneTapDismissedAt';
 const ONETAP_DISMISS_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 function initGoogleOneTap(attempt){
-  if (EBB_SAMPLE) return;   // no account in the sample
   if (!GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID.startsWith('REPLACE_')) return;
   if (window.google && window.google.accounts && window.google.accounts.id){
     try{
@@ -8857,21 +8594,15 @@ function initGoogleOneTap(attempt){
         : { client_id: GOOGLE_CLIENT_ID, callback: handleGoogleCredential, auto_select: true, cancel_on_tap_outside: false });
       gsiReady = true;
       renderAccountRow();
-      renderBetaGateSignIn();
       if (iosApp) return;   // no One Tap/auto sign-in in redirect mode
     } catch(e){ return; }
-    // An expired beta lease (beta lock script) can only renew through a
-    // silent sign-in: when that's off the table, re-lock now rather than
-    // waiting out the renewal window. The dismiss cooldown doesn't apply
-    // then - the alternative is the lock, not a quiet app.
-    const gate = window.ebblessBetaGate, renewing = !!(gate && gate.renewing && gate.renewing());
-    if (lsGet(LS_PROFILE_SIGNED_OUT, false) === true){ if (renewing) gate.leaseFailed(); return; }
-    // signed back in by the remembered session: no Google prompt (a beta lease renewal went through it too)
+    if (lsGet(LS_PROFILE_SIGNED_OUT, false) === true) return;
+    // signed back in by the remembered session: no Google prompt
     if (isOurSession(profileIdToken)) return;
     // A returning signed-in user (email remembered, never signed out) skips the
     // cooldown: their One Tap is the silent auto sign-in, not a prompt to nag.
     const returning = !!lsGet(LS_PROFILE_EMAIL, '');
-    if (!renewing && !returning && Date.now() - lsGet(LS_ONETAP_DISMISSED, 0) < ONETAP_DISMISS_COOLDOWN_MS) return;
+    if (!returning && Date.now() - lsGet(LS_ONETAP_DISMISSED, 0) < ONETAP_DISMISS_COOLDOWN_MS) return;
     try{
       google.accounts.id.prompt((notification) => {
         // Only a moment that didn't lead to sign-in (blocked, skipped, or
@@ -8885,7 +8616,6 @@ function initGoogleOneTap(attempt){
           )){
             lsSet(LS_ONETAP_DISMISSED, Date.now());
             if (!(notification.isDismissedMoment && notification.isDismissedMoment())) showSignInNudge();
-            if (gate && gate.renewing && gate.renewing()) gate.leaseFailed();
           }
         } catch(e){}
       });
@@ -16206,7 +15936,7 @@ function stageRelinkCandidates(candidates, plId, trackIdx, t){
 // public video info only: no user id, playlist name or link. Fire and forget;
 // owner reviews via GET /admin/linkfixes on the worker.
 function logLinkFix(plId, t, list, chosen, currentVideoId){
-  if (EBB_SAMPLE || !t || !t.title || isSoundCloudVideoId(chosen.videoId)) return;
+  if (!t || !t.title || isSoundCloudVideoId(chosen.videoId)) return;
   try{
     const pl = playlistById(plId) || getCachedPlaylist(plId);
     const kind = sourceKindForType(pl && pl.type);
@@ -21231,7 +20961,7 @@ function shouldShowPasteGuide(){
   if (!pasteGuideEl || lsGet(LS_PASTE_GUIDE_DISMISSED, false)) return false;
   const splashEl = $('splash');
   if (splashEl && !splashEl.classList.contains('is-hidden')) return false;
-  if (document.body.classList.contains('onb-active') || document.body.classList.contains('sample-intro')) return false;
+  if (document.body.classList.contains('onb-active')) return false;
   if (hasOwnPlaylists()) return false;
   return pasteBarVisible();
 }
@@ -21917,7 +21647,7 @@ window.ebbUpdateCta = updateCta;
   setTimeout(check, 4000);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') check(); });
 })();
-['reportBugBtn', 'suggestIdeaBtn', 'testerFeedbackBtn'].forEach(id => { const b = $(id); if (b) b.addEventListener('click', openFeedbackModal); });
+['reportBugBtn', 'suggestIdeaBtn'].forEach(id => { const b = $(id); if (b) b.addEventListener('click', openFeedbackModal); });
 fbCancelBtn.addEventListener('click', closeFeedbackModal);
 dangerScrim.addEventListener('click', closeFeedbackModal);
 
@@ -22176,6 +21906,12 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
+  { version: 499, date: '2026-11-09', items: [
+    'EBBLESS is open. We\'re still building. Anyone can open it and press play, no invite or approval needed.',
+    'Want to help shape what comes next? Settings > Feedback & support > Beta community. Totally optional.',
+    'Send feedback is there for everyone, on phones too.',
+    'Testers: when a feedback round ends you still get your recap, then close it and keep listening. Nothing stops.',
+  ]},
   { version: 498, date: '2026-11-09', items: [
     'Video: when the song changes, the new video fades in over the old one in step with the sound, instead of snapping.',
   ]},
@@ -22672,6 +22408,7 @@ function vibeCheckCalm(){
   if (lyricsFsLayer && lyricsFsLayer.classList.contains('is-open')) return false;
   if (dangerScrim.classList.contains('is-open')) return false;
   if (document.querySelector('[role="dialog"].is-open, [aria-modal="true"].is-open')) return false;
+  if (document.getElementById('betaJoin') || document.getElementById('weekUp')) return false;
   return true;
 }
 function openVibeCheck(force){
@@ -23010,24 +22747,27 @@ setInterval(playLogTick, PLAY_LOG_TICK_MS);
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden'){ playLogTick(); playLogStamp(false); } });
 
 /* ---------- TESTER WEEK UP ----------
-   A beta tester's window is 2 weeks from their feedback email (the worker's
-   /beta/me windowEndsAt, saved by the beta lock in ebbless:betaMe). Once it
-   has passed, the app still opens and works until one full song finishes
-   in that page session (playLogCompleted). Then every control freezes, the
-   app fades out, and this screen takes over: their first name, "Give
-   feedback" (beta/feedback.html?t=<token>), and a recap of their listening
-   from the PLAY LOG plus Liked Songs and the library. Nothing is deleted;
-   the log rides along with profile sync for the next beta.
+   A beta tester's feedback round is 7 days or 2 weeks from their feedback
+   email (the worker's /beta/me windowEndsAt, saved by the beta tester token
+   script in ebbless:betaMe). Open beta: nothing is ever frozen or locked.
+   Once the round has passed, after one full song (playLogCompleted) this
+   recap shows once per round (WEEK_UP_SEEN_KEY): their first name, "Give
+   feedback" (beta/feedback.html?t=<token>), "Join the next beta" and a
+   recap of their listening from the PLAY LOG plus Liked Songs and the
+   library. "Keep listening" closes it; the music never stops. Nothing is
+   deleted; the log rides along with profile sync for the next beta.
    Owner: ?wrapped=preview shows the screen now with this browser's own log
-   (demo data if it's empty), ?wrapped=demo always with demo data, both
-   closeable and nothing frozen. ?wrapped=gate acts like an expired window
-   for this tab session (one full song, then the real freeze and fade).
-   A browser opted out of analytics (ebblessStats.off()) or with
-   ebblessWrapped.bypass() never gets the gate. Console: ebblessWrapped()
-   opens the preview. */
+   (demo data if it's empty), ?wrapped=demo always with demo data; neither
+   sends anything. ?wrapped=gate acts like an ended round for this tab
+   session (one full song, then the real recap). A browser opted out of
+   analytics (ebblessStats.off()) or with ebblessWrapped.bypass() never gets
+   it. Console: ebblessWrapped() opens the preview. */
 const WEEK_UP_ME_KEY = 'ebbless:betaMe', WEEK_UP_BYPASS_KEY = 'ebbless:wrappedBypass';
+const WEEK_UP_SEEN_KEY = 'ebbless:weekUpSeen';   // windowEndsAt of the round whose recap already showed
 const WEEK_UP_FADE_MS = 2400;
-const weekUp = { shown: false, frozen: false, el: null, guard: 0, at: 0 };
+// frozen is never set since the open beta (nothing stops the music); the
+// weekUp.frozen checks in the playback code stay harmless until that code is next touched.
+const weekUp = { shown: false, frozen: false, el: null };
 const weekUpParam = (() => { try { return new URLSearchParams(location.search).get('wrapped') || ''; } catch(e){ return ''; } })();
 const weekUpSim = (() => {
   try {
@@ -23045,7 +22785,12 @@ function weekUpExpired(){
   const end = Number(weekUpMe().windowEndsAt);
   return end > 0 && Date.now() >= end;
 }
-function weekUpSongDone(){ if (!weekUp.shown && weekUpExpired()) showWeekUp({}); }
+function weekUpSongDone(){
+  if (weekUp.shown || !weekUpExpired()) return;
+  const end = String(Number(weekUpMe().windowEndsAt) || 'sim');
+  if (!weekUpSim){ try { if (localStorage.getItem(WEEK_UP_SEEN_KEY) === end) return; localStorage.setItem(WEEK_UP_SEEN_KEY, end); } catch(e){ return; } }
+  showWeekUp({});
+}
 
 function weekUpArtist(a){ return String(a || '').split(/\s*(?:,|\bfeat\.?\s|\bft\.?\s)\s*/i)[0].trim(); }
 function weekUpRecap(log){
@@ -23123,13 +22868,14 @@ function weekUpHtml(r, opts){
   const stat = (n, label) => '<div class="wu-stat"><span class="wu-num" data-n="' + n + '">' + (opts.instant ? n.toLocaleString() : '0') + '</span><span class="wu-stat-l">' + label + '</span></div>';
   let html = '<div class="wu-bg" aria-hidden="true"><div class="wu-poster"></div><div class="wu-tint"></div><div class="wu-fade"></div></div>' +
     '<div class="wu-wrap">' +
-    (opts.preview ? '<div class="wu-preview">Preview' + (opts.demo ? ' with demo data' : '') + '. Testers see this after one full song once their window (7 days or 2 weeks) is up.<button type="button" class="wu-close" id="wuClose">Close</button></div>' : '') +
+    (opts.preview ? '<div class="wu-preview">Preview' + (opts.demo ? ' with demo data' : '') + '. Testers see this once, after one full song, when their feedback round (7 days or 2 weeks) is over.<button type="button" class="wu-close" id="wuClose">Close</button></div>'
+      : '<div class="wu-preview">Your feedback round is over. EBBLESS is still yours to use.<button type="button" class="wu-close" id="wuClose">Keep listening</button></div>') +
     '<div class="wu-top wu-reveal"><img src="brand/assets/wordmark-white.png" alt="EBBLESS"><span class="wu-tag">' + escapeHtml(me.label || 'Beta tester') + '</span></div>' +
     '<h1 class="wu-reveal" id="wuTitle">THAT\'S YOUR ' + (me.windowDays === 7 ? '7 DAYS' : '2 WEEKS') + (first ? ', ' + escapeHtml(first.toUpperCase()) : '') + '.</h1>' +
     '<div class="wu-rule wu-reveal"></div>' +
     '<p class="wu-lead wu-reveal">' + (first ? escapeHtml(first) + ', your' : 'Your') + ' week in the EBBLESS beta is a wrap. Thank you for pressing play, poking around, and finding the rough edges.</p>' +
-    '<p class="wu-lead wu-reveal">One last thing before the music stops: tell us how it really felt. The good, the bad, the weird. All of it helps.</p>' +
-    '<a class="wu-btn primary wu-reveal" id="wuFeedback" href="' + escapeHtml(fbHref) + '"' + (opts.preview ? ' target="_blank" rel="noopener"' : '') + '>GIVE FEEDBACK</a>' +
+    '<p class="wu-lead wu-reveal">One thing before you get back to it: tell us how it really felt. The good, the bad, the weird. All of it helps.</p>' +
+    '<a class="wu-btn primary wu-reveal" id="wuFeedback" href="' + escapeHtml(fbHref) + '" target="_blank" rel="noopener">GIVE FEEDBACK</a>' +
     '<h2 class="wu-h2 wu-reveal">YOUR WEEK, WRAPPED.</h2>';
   if (!r.songs && !r.minutes && !r.pods.length){
     html += '<section class="wu-card wu-reveal"><p class="wu-quiet">A quiet week on the meter. Whatever you did play is still saved, and next time the recap fills in as you go.</p></section>';
@@ -23183,44 +22929,6 @@ function weekUpCountUp(el){
     requestAnimationFrame(step);
   });
 }
-function weekUpKeyGuard(e){
-  // The app's own shortcuts listen on document/body; nothing reaches them.
-  // Defaults (Tab, Enter on a link) still work inside the screen.
-  e.stopPropagation();
-  if (!(e.target && e.target.closest && e.target.closest('#weekUp'))) e.preventDefault();
-}
-// Stops everything that could still be sounding: the active deck fades out
-// (pausePlayback), and a crossfade's incoming deck (or anything else left
-// playing) is cut. The UI is set to paused too, so no stall watchdog
-// "rescues" a deck that sits ended. Past the fade, anything playing is cut.
-function weekUpHalt(){
-  const hard = Date.now() - weekUp.at > 2500;
-  try { cancelCrossfade(); } catch(e){}
-  try {
-    const ad = activeDeck();
-    if (ad.player && ad.player.getPlayerState ? ad.player.getPlayerState() === 1 : artworkWrap.classList.contains('is-playing')) pausePlayback();
-  } catch(e){}
-  decks.forEach(d => {
-    try {
-      if (!hard && d === activeDeck() && isFadingOut(d)) return;
-      if (d.player && d.player.getPlayerState && d.player.getPlayerState() === 1 && d.player.pauseVideo) d.player.pauseVideo();
-    } catch(e){}
-  });
-}
-function weekUpFreeze(){
-  weekUp.frozen = true;
-  weekUp.at = Date.now();
-  weekUpHalt();
-  try { setPlayingUI(false); } catch(e){}
-  Array.from(document.body.children).forEach(c => { if (c.id !== 'weekUp' && c.tagName !== 'SCRIPT') c.inert = true; });
-  ['keydown', 'keyup', 'keypress'].forEach(ev => window.addEventListener(ev, weekUpKeyGuard, true));
-  if ('mediaSession' in navigator){
-    ['play', 'pause', 'previoustrack', 'nexttrack', 'seekto', 'seekbackward', 'seekforward', 'stop'].forEach(a => { try { navigator.mediaSession.setActionHandler(a, null); } catch(e){} });
-  }
-  // The track that just ended may already be handing off to the next one
-  // (crossfade, or an auto-advance in flight): keep it stopped.
-  weekUp.guard = setInterval(weekUpHalt, 800);
-}
 function showWeekUp(opts){
   if (weekUp.shown) return;
   weekUp.shown = true;
@@ -23233,7 +22941,6 @@ function showWeekUp(opts){
   el.setAttribute('aria-labelledby', 'wuTitle');
   el.innerHTML = weekUpHtml(weekUpRecap(log), { preview, demo: !!opts.demo });
   weekUp.el = el;
-  if (!preview) weekUpFreeze();
   document.body.classList.add('week-up-fading');
   const reveal = () => {
     document.body.appendChild(el);
@@ -23247,6 +22954,9 @@ function showWeekUp(opts){
     const close = el.querySelector('#wuClose');
     if (close) close.addEventListener('click', hideWeekUpPreview);
     weekUpJoinInit(el, preview);
+    // the survey opens over the recap, in the app (a new tab goes nowhere in the Android app)
+    const fbLink = el.querySelector('#wuFeedback');
+    if (fbLink) fbLink.addEventListener('click', (e) => { e.preventDefault(); weekUpOpenFeedback(el, preview); });
   };
   setTimeout(reveal, opts.instant ? 0 : WEEK_UP_FADE_MS - 600);
 }
@@ -23256,8 +22966,8 @@ function showWeekUp(opts){
 // date, same token, history untouched. State comes from /beta/me (saved in
 // ebbless:betaMe), so a repeat tap or another device shows "on the list".
 // Feedback unlocks it: until /beta/me says feedbackGiven (a beta feedback
-// form sent this round), the button opens the feedback form in a new tab,
-// and coming back to this tab re-checks. Preview mode never sends anything.
+// form sent this round), the button opens the feedback form over the recap,
+// and closing it re-checks. Preview mode never sends anything.
 function weekUpJoinSet(btn, note, me){
   const now = Date.now();
   const date = Number(me.nextRoundAt) > now && me.nextRoundLabel ? String(me.nextRoundLabel) : '';
@@ -23292,20 +23002,24 @@ async function weekUpJoinRefresh(btn, note){
     weekUpJoinSet(btn, note, weekUpJoinSave(me));
   } catch(e){}
 }
+// Back from the survey (overlay closed), the rejoin button re-checks whether feedback is in.
+function weekUpOpenFeedback(el, preview){
+  const fb = el.querySelector('#wuFeedback');
+  const btn = el.querySelector('#wuJoin'), note = el.querySelector('#wuJoinNote');
+  openBetaFrame(fb ? fb.getAttribute('href') : 'beta/feedback.html', 'EBBLESS beta feedback survey', () => {
+    if (!preview && btn && note && btn.dataset.gate === '1') weekUpJoinRefresh(btn, note);
+  });
+}
 function weekUpJoinInit(el, preview){
   const btn = el.querySelector('#wuJoin'), note = el.querySelector('#wuJoinNote');
   if (!btn || !note) return;
   weekUpJoinSet(btn, note, weekUpMe());
-  if (!preview){
-    weekUpJoinRefresh(btn, note);
-    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && btn.dataset.gate === '1') weekUpJoinRefresh(btn, note); });
-  }
+  if (!preview) weekUpJoinRefresh(btn, note);
   btn.addEventListener('click', async () => {
     if (btn.disabled) return;
     if (btn.dataset.gate === '1'){
-      const fb = el.querySelector('#wuFeedback');
       if (preview){ weekUpJoinSet(btn, note, Object.assign({}, weekUpMe(), { feedbackGiven: true })); note.textContent += ' (Preview, feedback assumed.)'; return; }
-      window.open(fb ? fb.href : 'beta/feedback.html', '_blank', 'noopener');
+      weekUpOpenFeedback(el, preview);
       return;
     }
     if (preview){ weekUpJoinSet(btn, note, Object.assign({}, weekUpMe(), { rejoin: 'requested' })); note.textContent += ' (Preview, nothing sent.)'; return; }
@@ -23326,10 +23040,10 @@ function weekUpJoinInit(el, preview){
       return;
     }
     if (d.rejoined && Number(d.windowEndsAt) > Date.now()){
-      // Auto-accepted: a fresh window is already running. Save it and reload out of the recap.
+      // Auto-accepted: a fresh window is already running. Save it and close the recap (no reload: the music keeps going).
       weekUpJoinSave(Object.assign(weekUpMe(), { windowEndsAt: Number(d.windowEndsAt), rejoin: '', feedbackGiven: null }));
       btn.textContent = 'YOU\'RE BACK IN'; note.textContent = 'Fresh 2 weeks, starting now.';
-      setTimeout(() => location.reload(), 1200);
+      setTimeout(hideWeekUpPreview, 1600);
       return;
     }
     const me = Object.assign(weekUpMe(), { rejoin: 'requested', feedbackGiven: true, nextRoundAt: Number(d.nextRoundAt) || null, nextRoundLabel: String(d.nextRoundLabel || '') });
@@ -23338,7 +23052,7 @@ function weekUpJoinInit(el, preview){
   });
 }
 function hideWeekUpPreview(){
-  if (weekUp.frozen || !weekUp.el) return;
+  if (!weekUp.el) return;
   weekUp.el.remove(); weekUp.el = null; weekUp.shown = false;
   document.body.classList.remove('week-up-fading', 'week-up-on');
 }
@@ -23349,8 +23063,9 @@ if (weekUpParam === 'preview' || weekUpParam === 'demo'){
   setTimeout(() => showWeekUp({ preview: true, demo: weekUpParam === 'demo' || !playLog.n }), 600);
 }
 
-/* ---- tester-version banner (issue #236) ----
-   Beta testers only (a tester token stored by the beta lock / tester link).
+/* ---- phone feedback button (was the tester-version banner, issue #236) ----
+   For everyone since the open beta: bug reports and ideas are not a tester
+   perk (desktop has had the top-nav Feedback button for all since #580).
    Shows once 3 days have passed since the vibe check's first-seen stamp
    (vibeState().first), and never in a session where the vibe check is
    queued. It never hides or snoozes; "Send feedback" opens the same form
@@ -23359,10 +23074,7 @@ if (weekUpParam === 'preview' || weekUpParam === 'demo'){
 const TESTER_BANNER_MIN_MS = 3 * 86400000;
 const testerBanner = $('testerBanner');
 function initTesterBanner(){
-  $('navFeedbackBtn').hidden = false;   // Geethub #580: the top-nav Feedback button is for everyone; only the tester banner stays gated
-  let token = null;
-  try { token = localStorage.getItem('ebbless:betaToken'); } catch(e){}
-  if (!token || !/^t[0-9a-f]{12}-[0-9a-f]{32}$/.test(token)) return;
+  $('navFeedbackBtn').hidden = false;   // Geethub #580: the top-nav Feedback button is for everyone
   if (vibeCheckPending) return;
   const now = Date.now();
   if (now - (vibeState().first || now) < TESTER_BANNER_MIN_MS) return;
@@ -23370,6 +23082,133 @@ function initTesterBanner(){
 }
 $('testerBannerSend').addEventListener('click', () => { openFeedbackModal(); });
 $('navFeedbackBtn').addEventListener('click', () => { openFeedbackModal(); });
+
+/* ---------- BETA INVITE ----------
+   Open beta: anyone can use EBBLESS, and joining the beta community is
+   voluntary. A small card (the sign-in nudge's look) asks once, from the
+   2nd day of use (vibeState().days), after a song has played, at a calm
+   moment (vibeCheckCalm: no splash, tutorial, fullscreen or dialog), never
+   in a session the vibe check is queued and never for a tester (a tester
+   token on this device). "Maybe later" re-asks no sooner than 30 days
+   later and gives up after 2; "Join the beta community" opens the beta
+   signup in an overlay (beta/ in embed mode, the music keeps playing) and
+   it never asks again. Settings > Feedback & support > Beta community
+   opens the same overlay any time. Nothing leaves the browser until the
+   visitor submits the signup form; the card itself sends nothing.
+   Dev: ?betainvite shows it a few seconds after load (stores nothing);
+   console ebblessBetaInvite() shows it now, .state() / .reset(). */
+const BETA_INVITE_KEY = 'ebbless:betaInvite';
+const BETA_INVITE_MIN_DAYS = 2, BETA_INVITE_REASK_MS = 30 * 86400000, BETA_INVITE_MAX_DISMISSALS = 2;
+const BETA_INVITE_FIRST_DELAY_MS = 90000, BETA_INVITE_RETRY_MS = 30000, BETA_INVITE_MAX_TRIES = 10;
+function betaInviteState(){
+  const v = lsGet(BETA_INVITE_KEY, null);
+  return (v && typeof v === 'object') ? v : { joined: false, dismissals: 0, lastAsked: 0 };
+}
+function betaInviteSave(patch){ lsSet(BETA_INVITE_KEY, Object.assign(betaInviteState(), patch)); }
+// Signed up on this device already (beta/index.html: sent, or saved to send when back online), not a tester yet.
+function betaSignupSent(){ return !!(lsGet('ebbless:betaRequested', null) || lsGet('ebbless:betaPendingSignup', null)); }
+function betaInviteEligible(){
+  const v = betaInviteState();
+  if (v.joined || statsToken() || betaSignupSent() || (v.dismissals || 0) >= BETA_INVITE_MAX_DISMISSALS) return false;
+  if (v.lastAsked && Date.now() - v.lastAsked < BETA_INVITE_REASK_MS) return false;
+  return (vibeState().days || 0) >= BETA_INVITE_MIN_DAYS && hasEverPlayed();
+}
+function betaInviteCalm(){
+  return vibeCheckCalm() && !document.getElementById('signinNudge') && !document.getElementById('weekUp') && !document.getElementById('betaJoin');
+}
+// The beta pages (signup, feedback survey) inside the app, over everything,
+// while the music keeps playing. The covered app stops painting (body.beta-join-on).
+// A link back to the app inside the frame closes it (beta/beta.js, embed mode).
+function openBetaFrame(src, label, onClose){
+  if (document.getElementById('betaJoin')) return;
+  const el = document.createElement('div');
+  el.id = 'betaJoin';
+  el.setAttribute('role', 'dialog');
+  el.setAttribute('aria-modal', 'true');
+  el.setAttribute('aria-label', label);
+  el.innerHTML = '<div class="bj-bar"><img src="brand/assets/wordmark-white.png" alt="EBBLESS"><button class="bj-back" type="button">Back to EBBLESS</button></div>';
+  const f = document.createElement('iframe');
+  f.title = label;
+  const u = new URL(src, location.href);
+  u.searchParams.set('embed', '1');   // before the #hash, or the beta page never sees it
+  f.src = u.href;
+  el.append(f);
+  const close = () => {
+    el.remove();
+    document.body.classList.remove('beta-join-on');
+    window.removeEventListener('message', onMsg);
+    document.removeEventListener('keydown', onKey, true);
+    if (onClose) try { onClose(); } catch(e){}
+  };
+  const onMsg = (e) => { if (e.origin === location.origin && e.source === f.contentWindow && e.data && e.data.ebbClose) close(); };
+  const onKey = (e) => { if (e.key === 'Escape'){ e.stopPropagation(); close(); } };
+  el.querySelector('.bj-back').addEventListener('click', close);
+  window.addEventListener('message', onMsg);
+  document.addEventListener('keydown', onKey, true);
+  document.body.appendChild(el);
+  document.body.classList.add('beta-join-on');
+  try { el.querySelector('.bj-back').focus({ preventScroll: true }); } catch(e){}
+}
+function openBetaJoin(){
+  betaInviteSave({ joined: true });   // they chose to look: the card never asks again (Settings keeps the way in)
+  const card = document.getElementById('betaInvite'); if (card) card.remove();
+  openBetaFrame('beta/index.html#join', 'Join the EBBLESS beta community');
+}
+function showBetaInvite(force){
+  if (document.getElementById('betaInvite')) return;
+  if (!force) betaInviteSave({ lastAsked: Date.now() });
+  const card = document.createElement('div');
+  card.className = 'signin-nudge beta-invite';
+  card.id = 'betaInvite';
+  card.setAttribute('role', 'region');
+  card.setAttribute('aria-label', 'Help shape EBBLESS');
+  card.innerHTML = '<div class="bi-title">Help shape EBBLESS.</div>' +
+    '<div class="bi-text">EBBLESS is still evolving. Want to be part of making it better?</div>' +
+    '<button type="button" class="btn-ghost bi-join">Join the beta community</button>' +
+    '<button type="button" class="link-btn bi-later">Maybe later</button>';
+  card.querySelector('.bi-join').addEventListener('click', () => {
+    if (force){ card.remove(); openBetaFrame('beta/index.html#join', 'Join the EBBLESS beta community'); return; }
+    openBetaJoin();
+  });
+  card.querySelector('.bi-later').addEventListener('click', () => {
+    if (!force) betaInviteSave({ dismissals: (betaInviteState().dismissals || 0) + 1 });
+    card.remove();
+  });
+  document.body.appendChild(card);
+}
+function scheduleBetaInvite(){
+  let force = false;
+  try { force = new URLSearchParams(location.search).has('betainvite'); } catch(e){}
+  if (!force && (vibeCheckPending || !betaInviteEligible())) return;
+  let tries = 0;
+  const attempt = () => {
+    if (betaInviteCalm()){ if (force || betaInviteEligible()) showBetaInvite(force); }
+    else if (++tries < BETA_INVITE_MAX_TRIES) setTimeout(attempt, BETA_INVITE_RETRY_MS);
+  };
+  setTimeout(attempt, force ? 4000 : BETA_INVITE_FIRST_DELAY_MS);
+}
+window.ebblessBetaInvite = function(){ showBetaInvite(true); };
+window.ebblessBetaInvite.state = function(){ return lsGet(BETA_INVITE_KEY, null); };
+window.ebblessBetaInvite.reset = function(){ lsDel(BETA_INVITE_KEY); };
+// Settings > Feedback & support > Beta community. A tester gets their feedback
+// survey instead; someone who already signed up sees where their signup is.
+function initBetaCommunityRow(){
+  const btn = $('betaCommunityBtn'), desc = $('betaCommunityDesc');
+  if (!btn || !desc) return;
+  if (statsToken()){
+    desc.textContent = 'You\'re in the beta community. Thank you for helping shape EBBLESS.';
+    btn.textContent = 'Feedback survey';
+  } else if (betaSignupSent()){
+    desc.textContent = 'Your signup is in. Your tester link comes by email. Keep listening in the meantime.';
+    btn.textContent = 'View signup';
+  }
+  btn.addEventListener('click', () => {
+    const t = statsToken();
+    if (t) openBetaFrame('beta/feedback.html?t=' + encodeURIComponent(t), 'EBBLESS beta feedback survey');
+    else if (betaSignupSent()) openBetaFrame('beta/index.html', 'Your EBBLESS beta community signup');
+    else openBetaJoin();
+  });
+}
 
 replayTutorialBtn.addEventListener('click', () => {
   // stop any real track first - the intro has its own theme music and
@@ -24378,7 +24217,7 @@ async function fetchThisIsPlaylist(artist){
 // Fire-and-forget: pooling is a bonus signal, never something playback
 // should wait on or fail over.
 function postPoolSignal(tags, weight){
-  if (EBB_SAMPLE || !tags || tags.length < 2 || !weight) return;
+  if (!tags || tags.length < 2 || !weight) return;
   try{
     fetch(BACKEND + '/pool/signal', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -36495,7 +36334,7 @@ function installBannerBlocked(){
   return !!(pasteGuideEl && !pasteGuideEl.hidden);
 }
 function scheduleInstallBanner(){
-  if (!installBanner || isStandaloneDisplay() || isDesktopApp || mobileInstallGate || EBB_SAMPLE) return;
+  if (!installBanner || isStandaloneDisplay() || isDesktopApp || mobileInstallGate) return;
   try { if (sessionStorage.getItem(INSTALL_BANNER_CLOSED_KEY)) return; } catch(e){}
   let clearSince = 0;
   const tick = () => {
@@ -39279,9 +39118,9 @@ function flagWrongTrack(){
   saveWrongTrackLog(log);
   flaggedTrackKeys.add(wrongTrackKey(t));
   syncWrongTrackFlagUI(t);
-  showToast(EBB_SAMPLE ? 'Noted for this session. Reports go to us once you join the beta.' : 'Thanks, we\'ll find a better match.');
+  showToast('Thanks, we\'ll find a better match.');
 
-  if (t.videoId && !EBB_SAMPLE){
+  if (t.videoId){
     fetch(BACKEND + '/report', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -39721,6 +39560,8 @@ function startApp(){
   try{ scheduleCapPrefetch(); } catch(e){}
   try{ scheduleVibeCheck(); } catch(e){}
   try{ initTesterBanner(); } catch(e){}
+  try{ scheduleBetaInvite(); } catch(e){}
+  try{ initBetaCommunityRow(); } catch(e){}
   // the Android app always has the feedback button, tester or not, trial or not
   if (document.documentElement.classList.contains('ebb-android')){ const fbNav = $('navFeedbackBtn'); if (fbNav) fbNav.hidden = false; if (testerBanner) testerBanner.hidden = false; }   // desktop nav button + the phone header icon
   try{ scheduleInstallBanner(); } catch(e){}
@@ -41408,266 +41249,6 @@ function showSplashChoice(){
 // renders and plays fine on a touch/mobile viewport; only the eligibility
 // check was wrong.
 const isTouchDevice = !!(window.matchMedia && matchMedia('(hover: none), (pointer: coarse)').matches);
-/* ---------- SAMPLE MODE ----------
-   The 15-minute try-out (docs/SAMPLE-SPLASH-PLAN.md). Storage isolation and
-   the network backstop live in the <head> script; this adds the pieces that
-   need the finished app: the "start here" intro, the countdown, the 2-minute
-   warning and the expiry screen.
-   The clock starts the first time a real queue track is playing (not the
-   tutorial's own music, not an import or a paused queue). The record is
-   ebbless:sampleTrial in real localStorage, mirrored to a cookie, so refresh,
-   reopening and a casual "clear cookies" all keep the same clock. It is a
-   soft limit: private windows, clearing all site data, another browser or an
-   edited system clock start a fresh trial. */
-(function sampleMode(){
-  if (!EBB_SAMPLE) return;
-  const KEY = 'ebbless:sampleTrial', COOKIE = 'ebbless_sample2';
-  const TOTAL_MS = 15 * 60 * 1000, WARN_MS = 2 * 60 * 1000;
-  const INTRO_DONE_KEY = 'ebbless:sampleIntroDone';
-  const byId = (id) => document.getElementById(id);
-  const root = new URL(document.baseURI);
-  const cookiePath = root.pathname.replace(/[^/]*$/, '') || '/';
-  let rec = null, timer = 0, ended = false, pill = null;
-
-  // The record holds `used`: milliseconds of real playback. Wall-clock time
-  // (loading, pauses, browsing) is not counted. The cookie mirrors `used`.
-  const readCookie = () => { const m = document.cookie.match(new RegExp('(?:^|; )' + COOKIE + '=(\\d+)(?:x(\\d))?')); return m ? { used: +m[1], expired: m[2] === '1' } : null; };
-  const writeCookie = (r) => { try { document.cookie = COOKIE + '=' + Math.round(r.used) + (r.expired ? 'x1' : 'x0') + '; max-age=2592000; path=' + cookiePath + '; SameSite=Lax'; } catch(e){} };
-  function load(){
-    let r = null;
-    try { r = JSON.parse(localStorage.getItem(KEY)); } catch(e){}
-    const c = readCookie();
-    if (r && r.v !== 2 && r.start > 0) r = { v: 2, id: r.id, used: Math.min(TOTAL_MS, Math.max(0, Date.now() - r.start)), expired: !!r.expired, warned: !!r.warned };   // first release counted wall-clock time
-    if (!(r && r.used >= 0)) r = c ? { v: 2, used: c.used, expired: c.expired } : null;
-    else if (c && c.used > r.used) r = Object.assign({}, r, { used: c.used, expired: r.expired || c.expired });   // the larger of the two
-    if (r && (r.expired || r.used >= TOTAL_MS)) r.expired = true;
-    return r;
-  }
-  function save(){ try { localStorage.setItem(KEY, JSON.stringify(rec)); } catch(e){} writeCookie(rec); }
-  const remaining = () => rec ? Math.max(0, TOTAL_MS - rec.used) : TOTAL_MS;
-  const fmt = (ms) => { const s = Math.ceil(ms / 1000); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
-
-  function render(){
-    if (!pill) return;
-    const left = remaining();
-    pill.querySelector('.sc-time').textContent = fmt(left);
-    pill.classList.toggle('is-warn', !!rec && !ended && left <= WARN_MS);
-    pill.classList.toggle('is-paused', !!rec && !ended && !counting());
-    pill.title = rec ? 'Time left in the sample. It only runs while music plays. Tap to end the sample.' : 'Your 15 minutes start when you press play. Tap to end the sample.';
-    pill.setAttribute('aria-label', (rec ? fmt(left) + ' left in the sample.' : '15 minute sample, starts when you press play.') + ' Opens the end sample choice.');
-  }
-
-  // ---- start: the first real track playing
-  function playingNow(){
-    return artworkWrap.classList.contains('is-playing') && !document.body.classList.contains('onb-active')
-      && !!(state.queue && state.queue[state.queuePos]);
-  }
-  // time only runs while a track is really playing: not while it loads
-  // (activeLoadProgress covers the load spinner and the ad-wait), not paused
-  function counting(){
-    let loading = false;
-    try { loading = activeLoadProgress() !== null; } catch(e){}
-    return playingNow() && !loading;
-  }
-  function maybeStart(){
-    if (rec || ended || !playingNow()) return;
-    rec = { v: 2, id: Math.random().toString(36).slice(2), used: 0 };
-    lastTick = Date.now(); lastSave = lastTick;
-    save(); dismissIntro(); render(); startTicking();
-  }
-
-  // ---- ticking, warning, expiry
-  let lastTick = 0, lastSave = 0, wasCounting = false;
-  function startTicking(){ if (!timer) timer = setInterval(tick, 500); }
-  function tick(){
-    if (!rec) return;
-    const now = Date.now();
-    // a background tab only ticks about once a minute, so allow a longer gap there
-    const dt = lastTick ? Math.min(now - lastTick, document.hidden ? 70000 : 2500) : 0;
-    lastTick = now;
-    if (ended){ if (artworkWrap.classList.contains('is-playing')) try { pausePlayback(); } catch(e){} render(); return; }
-    const c = counting();
-    if (c) rec.used += dt;
-    if ((c && now - lastSave > 5000) || (wasCounting && !c)){ save(); lastSave = now; }
-    wasCounting = c;
-    const left = remaining();
-    render();
-    if (left <= 0){ expire(); return; }
-    if (left <= WARN_MS && !rec.warned){
-      rec.warned = true; save();
-      try { showToast('2 minutes left in the sample'); } catch(e){}
-    }
-  }
-  function expire(){
-    if (ended) return;
-    ended = true;
-    if (rec){ rec.expired = true; rec.used = Math.max(rec.used, TOTAL_MS); save(); }
-    dismissIntro(); closeConfirm();
-    try { if (typeof cancelPrevIntro === 'function' && cancelPrevIntro){ cancelPrevIntro(); } } catch(e){}
-    try { pausePlayback(); } catch(e){}
-    try { if (typeof castActive === 'function' && castActive()) castStop(); } catch(e){}
-    try { if (typeof pipWindow !== 'undefined' && pipWindow) pipWindow.close(); } catch(e){}
-    try {
-      if (navigator.mediaSession) ['play','pause','previoustrack','nexttrack','seekbackward','seekforward','seekto','stop'].forEach(a => { try { navigator.mediaSession.setActionHandler(a, null); } catch(e){} });
-    } catch(e){}
-    // backstop: nothing can start a track once the sample is over
-    try { playIndex = function(){ return undefined; }; } catch(e){}
-    const app = byId('app'); if (app) app.inert = true;
-    showEnd();
-    render();
-  }
-  function showEnd(){
-    let el = byId('sampleEnd');
-    if (!el){
-      el = document.createElement('div');
-      el.id = 'sampleEnd'; el.className = 'sample-modal'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-labelledby', 'seTitle');
-      el.innerHTML = '<div class="se-card"><img src="brand/assets/wordmark-white.png" alt="EBBLESS">'
-        + '<h2 id="seTitle">You’ve reached the edge of the sample.</h2><div class="se-rule"></div>'
-        + '<p class="se-lede">You’ve had a taste of EBBLESS. The full experience is waiting for you.</p>'
-        + '<p>Join the beta to keep listening, explore your music and make EBBLESS your own.</p>'
-        + '<a class="se-cta" id="seJoin" href="beta/#join">Join the beta</a>'
-        + '<a class="se-alt" href="./">Already approved? Open EBBLESS</a></div>';
-      document.body.appendChild(el);
-      // beta full: same switch the welcome page makes
-      fetch(BACKEND + '/beta/status').then(r => r.ok ? r.json() : Promise.reject()).then(st => {
-        if (st && st.open === false) byId('seJoin').textContent = 'Join the waitlist';
-      }).catch(() => {});
-    }
-    el.hidden = false;
-    const j = byId('seJoin'); if (j) j.focus({ preventScroll: true });
-  }
-
-  // ---- tapping the pill: end the sample and try the real thing?
-  function closeConfirm(){ const c = byId('sampleConfirm'); if (c) c.remove(); document.removeEventListener('keydown', confirmKey, true); }
-  function confirmKey(e){ if (e.key === 'Escape') closeConfirm(); }
-  function showConfirm(){
-    if (ended || byId('sampleConfirm')) return;
-    dismissIntro();
-    const el = document.createElement('div');
-    el.id = 'sampleConfirm'; el.className = 'sample-modal'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-labelledby', 'scTitle');
-    el.style.zIndex = '20001';
-    el.innerHTML = '<div class="se-card"><h2 id="scTitle">End the sample?</h2><div class="se-rule"></div>'
-      + '<p class="se-lede">Ready for the real thing?</p>'
-      + '<p>Ending the sample takes you to the beta signup. ' + (rec ? 'You have ' + fmt(remaining()) + ' of listening left, and it won\u2019t carry over.' : 'Your 15 minutes haven\u2019t started yet.') + '</p>'
-      + '<button type="button" class="se-cta" id="scEnd">End sample and join the beta</button>'
-      + '<a class="se-alt" href="./">Already approved? Open EBBLESS</a>'
-      + '<button type="button" class="se-alt" id="scKeep" style="margin-top:10px">Keep exploring</button></div>';
-    document.body.appendChild(el);
-    el.querySelector('#scKeep').addEventListener('click', closeConfirm);
-    el.addEventListener('click', (e) => { if (e.target === el) closeConfirm(); });
-    el.querySelector('#scEnd').addEventListener('click', () => {
-      if (!rec) rec = { v: 2, id: Math.random().toString(36).slice(2), used: 0 };
-      rec.used = TOTAL_MS; rec.expired = true; save();
-      try { pausePlayback(); } catch(e){}
-      location.href = 'beta/#join';
-    });
-    document.addEventListener('keydown', confirmKey, true);
-    el.querySelector('#scKeep').focus({ preventScroll: true });
-  }
-
-  // ---- intro: dim everything, blink the tutorial button, one clear next step
-  let dim = null, spot = null, bubble = null, introPlacer = 0;
-  function placeIntro(){
-    const btn = byId('helpBtn');
-    if (!spot || !btn) return;
-    const r = btn.getBoundingClientRect();
-    if (!r.width){ return; }
-    const pad = 6;
-    Object.assign(spot.style, { left: (r.left - pad) + 'px', top: (r.top - pad) + 'px', width: (r.width + pad * 2) + 'px', height: (r.height + pad * 2) + 'px' });
-    const bw = bubble.offsetWidth || 280, bh = bubble.offsetHeight || 140;
-    let left = Math.min(window.innerWidth - bw - 16, Math.max(16, r.right - bw));
-    let top = r.bottom + 16;
-    if (top + bh > window.innerHeight - 16) top = Math.max(16, r.top - bh - 16);
-    bubble.style.left = left + 'px'; bubble.style.top = top + 'px';
-  }
-  function dismissIntro(markDone){
-    if (!dim) return;
-    [dim, spot, bubble].forEach(e => e && e.remove());
-    dim = spot = bubble = null;
-    document.body.classList.remove('sample-intro');
-    clearInterval(introPlacer);
-    window.removeEventListener('resize', placeIntro);
-    document.removeEventListener('keydown', introKey, true);
-    if (markDone !== false) try { localStorage.setItem(INTRO_DONE_KEY, '1'); } catch(e){}
-    try { refreshPasteGuide(); } catch(e){}
-  }
-  function introKey(e){ if (e.key === 'Escape') dismissIntro(); }
-  function showIntro(){
-    const btn = byId('helpBtn');
-    if (!btn || dim || ended) return;
-    dim = document.createElement('div'); dim.id = 'sampleDim';
-    spot = document.createElement('div'); spot.id = 'sampleSpot';
-    bubble = document.createElement('div'); bubble.id = 'sampleBubble'; bubble.setAttribute('role', 'dialog'); bubble.setAttribute('aria-label', 'You should start here');
-    bubble.innerHTML = '<b>You should start here.</b><p>A quick tour of what EBBLESS does. Your 15 minutes only start when you press play.</p>'
-      + '<div class="sb-row"><button type="button" class="sb-go">Start the tutorial</button><button type="button" class="sb-skip">Explore on my own</button></div>';
-    document.body.append(dim, spot, bubble);
-    document.body.classList.add('sample-intro');
-    bubble.querySelector('.sb-go').addEventListener('click', () => { dismissIntro(); btn.click(); });
-    bubble.querySelector('.sb-skip').addEventListener('click', () => dismissIntro());
-    dim.addEventListener('click', (e) => {
-      const r = btn.getBoundingClientRect();
-      const hit = e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
-      dismissIntro(); if (hit) btn.click();
-    });
-    window.addEventListener('resize', placeIntro);
-    document.addEventListener('keydown', introKey, true);
-    placeIntro();
-    introPlacer = setInterval(placeIntro, 400);   // the top bar settles after fonts and the pill land
-    bubble.querySelector('.sb-go').focus({ preventScroll: true });
-  }
-
-  window.ebbSampleBoot = function(){
-    document.body.classList.add('is-sample');
-    // controls that would reach an account, feedback or the install flow
-    // (the Android app keeps its feedback button in the trial too)
-    ['installBlock', 'installBanner'].concat(/EBBLESS-Android/.test(navigator.userAgent) ? [] : ['navFeedbackBtn', 'testerBanner']).forEach(id => { const e = byId(id); if (e) e.style.display = 'none'; });
-    const fb = byId('feedbackBtn'); if (fb){ const row = fb.closest('.settings-row'); if (row) row.style.display = 'none'; }
-    // keep the tutorial replayable and, until it has been watched, blinking
-    const help = byId('helpBtn');
-    let watched = false; try { watched = localStorage.getItem('ebbless:tutorialWatched') === 'true'; } catch(e){}
-    if (help && !watched) help.classList.add('is-nudge');
-    if (help) help.addEventListener('click', () => help.classList.remove('is-nudge'));
-    // countdown pill, right after the tutorial button
-    pill = document.createElement('button');
-    pill.id = 'sampleClock'; pill.type = 'button';
-    pill.addEventListener('click', showConfirm);
-    pill.innerHTML = '<span class="sc-tag">Sample</span><span class="sc-time">15:00</span>';
-    if (help && help.parentNode) help.parentNode.insertBefore(pill, help.nextSibling); else byId('topbar').appendChild(pill);
-
-    rec = load();
-    if (rec && rec.expired){ expire(); return; }
-    if (rec){ lastTick = Date.now(); lastSave = lastTick; startTicking(); tick(); }
-    render();
-    new MutationObserver(maybeStart).observe(artworkWrap, { attributes: true, attributeFilter: ['class'] });
-    document.addEventListener('visibilitychange', () => { tick(); if (rec && !ended) save(); });
-    window.addEventListener('pagehide', () => { if (rec && !ended){ tick(); save(); } });
-    window.addEventListener('pageshow', tick);
-    let introDone = false; try { introDone = localStorage.getItem(INTRO_DONE_KEY) === '1'; } catch(e){}
-    if (!rec && !introDone){
-      // wait for the splash to clear and the tutorial button to be on screen, then give 7 s
-      const t0 = Date.now(); let seen = 0;
-      const wait = setInterval(() => {
-        if (rec || ended || Date.now() - t0 > 90000){ clearInterval(wait); return; }
-        const sp = byId('splash'), h = byId('helpBtn');
-        const cs = sp ? getComputedStyle(sp) : null;
-        const spShown = !!sp && !sp.classList.contains('is-hidden') && cs.display !== 'none' && cs.visibility !== 'hidden' && +cs.opacity > 0.05;
-        const hr = h ? h.getBoundingClientRect() : null;
-        const ready = !spShown && hr && hr.width > 0 && hr.right > 0 && !document.body.classList.contains('onb-active');
-        if (!ready){ seen = 0; return; }
-        if (!seen) seen = Date.now();
-        if (Date.now() - seen >= 7000){ clearInterval(wait); if (!rec && !ended && !document.body.classList.contains('onb-active')) showIntro(); }
-      }, 250);
-    }
-  };
-
-  // test and owner helpers, in the style of ebblessStats
-  window.ebblessSample = {
-    status: () => ({ started: !!rec, expired: ended, counting: !!rec && counting(), remainingMs: remaining() }),
-    expireNow(){ if (!rec) rec = { v: 2, id: 'dev', used: 0 }; rec.used = TOTAL_MS; save(); startTicking(); tick(); },
-    skipTo(ms){ if (!rec) rec = { v: 2, id: 'dev', used: 0 }; rec.used = TOTAL_MS - ms; lastTick = Date.now(); save(); startTicking(); tick(); },
-    reset(){ try { localStorage.removeItem(KEY); } catch(e){} try { document.cookie = COOKIE + '=; max-age=0; path=' + cookiePath; } catch(e){} try { sessionStorage.clear(); } catch(e){} location.reload(); }
-  };
-})();
 
 const introEligibleNow = true;
 
@@ -41968,13 +41549,6 @@ if (introBeatCapture){
   // the forced gold set earlier with the real time-of-day color again
   document.documentElement.style.setProperty('--clock-accent', '#e0b26a');
 } else if (forceIntroPreview) runIntro(true);
-else if (EBB_SAMPLE){
-  // Sample: straight into the real app, then the sample intro (SAMPLE MODE
-  // module above). No splash choice, no install gate.
-  discardIntroChrome(); startApp();
-  const go = () => { if (window.ebbSampleBoot) window.ebbSampleBoot(); };
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', go); else go();
-}
 else if (mobileInstallGate && !isIPhone) showInstallGate();
 else if (onboardingComplete && !tutorialWatched && inviteDueToday(TUTORIAL_INVITE_DAY_KEY)){
   // Took "Enter" without ever watching - offer the choice again, once a day.
@@ -41985,43 +41559,6 @@ else if (onboardingComplete || !introEligibleNow){ discardIntroChrome(); startAp
 else { markInviteShown(TUTORIAL_INVITE_DAY_KEY); showSplashChoice(); }
 })();
 </script>
-<style>
-/* SAMPLE MODE styles (logic: "SAMPLE MODE" in the main script). Inert unless the page is a sample. */
-#sampleClock{order:3;display:none;align-items:center;gap:6px;flex:none;cursor:pointer;background:none;font-family:inherit;padding:5px 11px;border-radius:999px;border:1px solid var(--accent-dim,rgba(224,178,106,.4));color:var(--accent);font-size:12px;font-weight:600;letter-spacing:.6px;font-variant-numeric:tabular-nums;white-space:nowrap}
-body.is-sample #sampleClock{display:inline-flex}
-#sampleClock .sc-tag{opacity:.7;font-weight:500;text-transform:uppercase;letter-spacing:1.2px;font-size:10px}
-#sampleClock.is-paused{opacity:.6}
-#sampleClock.is-warn{background:var(--accent);color:var(--on-accent,#151107);animation:sampleWarn 1.2s ease-in-out infinite}
-@keyframes sampleWarn{50%{opacity:.6}}
-@media (max-width:640px){#sampleClock{padding:4px 9px;font-size:11px}#sampleClock .sc-tag{display:none}}
-/* the pill sits in the right cluster: widen the room the search field leaves for it */
-@media (max-width:859.98px){body.is-sample #topbar{--tb-r:160px}}
-@media (min-width:860px){body.is-sample #topbar{--tb-r:560px}}
-@media (min-width:860px) and (max-width:1149.98px){body.is-sample #topbar{--tb-r:360px}}
-body.is-sample.split-desktop #topbar{--tb-r:272px}
-#sampleDim{position:fixed;inset:0;z-index:10005;cursor:default}
-#sampleSpot{position:fixed;z-index:10005;pointer-events:none;border-radius:50%;box-shadow:0 0 0 200vmax rgba(10,10,10,.78),0 0 0 2px var(--accent);transition:opacity 300ms}
-#sampleBubble{position:fixed;z-index:10006;width:min(280px,calc(100vw - 32px));padding:16px 18px;border-radius:16px;background:#1c1c1c;color:#f2f2f2;border:1px solid var(--accent-dim,rgba(224,178,106,.4));box-shadow:0 14px 40px rgba(0,0,0,.55);font-size:15px;line-height:1.45}
-#sampleBubble b{display:block;font-size:17px;margin-bottom:4px}
-#sampleBubble p{margin:0 0 12px;color:#bdbdbd;font-size:13px}
-#sampleBubble .sb-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-#sampleBubble button{font:inherit;font-size:13px;font-weight:600;letter-spacing:.8px;border-radius:999px;padding:9px 16px;cursor:pointer}
-#sampleBubble .sb-go{background:var(--accent);color:var(--on-accent,#151107);border:1px solid var(--accent)}
-#sampleBubble .sb-skip{background:none;color:#bdbdbd;border:0;padding:9px 4px;text-decoration:underline;text-underline-offset:3px}
-@media (prefers-reduced-motion:reduce){#helpBtn.is-nudge{color:var(--accent)}#sampleClock.is-warn{animation:none}}
-.sample-modal{position:fixed;inset:0;z-index:20000;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(14,14,14,.72);-webkit-backdrop-filter:blur(7px);backdrop-filter:blur(7px);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#f2f2f2}
-.sample-modal[hidden]{display:none}
-.sample-modal .se-card{width:min(520px,100%);padding:30px 26px 24px;border-radius:20px;background:#161616;border:1px solid rgba(255,255,255,.1);box-shadow:0 24px 70px rgba(0,0,0,.6)}
-.sample-modal img{height:20px;display:block;margin-bottom:26px}
-.sample-modal h2{margin:0;font-size:clamp(26px,7vw,36px);line-height:1.05;letter-spacing:-.01em;text-transform:uppercase}
-.sample-modal .se-rule{height:1px;background:var(--accent);margin:16px 0}
-.sample-modal p{margin:0 0 10px;color:#a8a8a8;font-size:15px;line-height:1.5}
-.sample-modal p.se-lede{color:#f2f2f2;font-size:17px}
-.sample-modal .se-cta{display:block;text-align:center;margin-top:22px;padding:16px 24px;border-radius:999px;background:var(--accent);color:var(--on-accent,#151107);font-weight:700;letter-spacing:1.6px;font-size:14px;text-transform:uppercase;text-decoration:none}
-.sample-modal .se-alt{display:block;text-align:center;margin-top:14px;font-size:13px;color:#9a9a9a;text-decoration:underline;text-underline-offset:3px}
-button.se-alt{display:block;width:100%;background:none;border:0;font:inherit;font-size:13px;color:#9a9a9a;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
-.sample-modal .se-cta{border:0;font-family:inherit;cursor:pointer;width:100%}
-</style>
 <script>
 /* Hover expand for every button (#395). Web Animations on the independent
    'scale' property, so it never fights a button's own transition/transform.

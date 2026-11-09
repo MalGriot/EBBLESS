@@ -13,7 +13,6 @@
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const wide = matchMedia('(min-width:1100px)');
   const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
-  const BACKEND = 'https://spotify-youtube-search.malgriot.workers.dev';
 
   const steps = qa('.step'), page = $('page');
   page.style.setProperty('--n', steps.length);
@@ -249,18 +248,6 @@
     show(cur, { noHash: true, force: false });
     if (!wide.matches) onScroll();
   }
-
-  // ---------------------------------------------------------- the beta, live: spots left
-  fetch(BACKEND + '/beta/status').then(r => r.ok ? r.json() : Promise.reject()).then(s => {
-    if (!s || typeof s.cap !== 'number') return;
-    const left = Math.max(0, s.cap - s.filled);
-    $('meterCount').textContent = s.filled + ' / ' + s.cap + ' testers';
-    $('meterLeft').textContent = left ? left + (left === 1 ? ' spot left' : ' spots left') : 'Full';
-    $('meter').hidden = false;
-    requestAnimationFrame(() => { $('meterFill').style.width = clamp(s.filled / s.cap * 100, 0, 100) + '%'; });
-    const hs = $('heroSpots'); if (hs){ hs.textContent = left ? s.filled + ' of ' + s.cap + ' beta spots taken.' : 'The beta is full. Join the waitlist.'; hs.hidden = false; }
-    if (!s.open) qa('a[href$="beta/#join"]').forEach(a => { if (/Get beta access|Join the beta/.test(a.textContent)) a.textContent = 'Join the waitlist'; });
-  }).catch(() => {});
 
   // ---------------------------------------------------------- start
   loadFrame();

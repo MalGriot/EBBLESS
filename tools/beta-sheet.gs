@@ -196,10 +196,10 @@ function accessLink_(token) { return APP_URL + '?t=' + encodeURIComponent(token)
 function inviteText_(t) {
   const tok = encodeURIComponent(t.access_token);
   return 'Peace. You\'re one of the 50 people testing EBBLESS. You\'re ' + t.tester_number + '.\n\n' +
-    'Tap this to get in:\n' + accessLink_(t.access_token) + '\n\n' +
+    'Your tester link. Tap it on each device you use, it ties your feedback to you:\n' + accessLink_(t.access_token) + '\n\n' +
     'iPhone: once it opens in Safari, tap Share, then Add to Home Screen.\n' +
     'Android: tap Install.\n' +
-    'Sign in with Google on any device to get back in.\n\n' +
+    'Or sign in with Google in EBBLESS (Settings) with the account you signed up with.\n\n' +
     'Throw one of your playlists into it (Spotify, YouTube, Apple Music, SoundCloud) and fuck around with it.\n' +
     'Try the different visual modes, lyrics, YouTube, etc.\n\n' +
     'The point of this beta isn\'t to be nice to me. If something is confusing, broken, slow, ugly, unnecessary, or just doesn\'t make sense, tell me.\n\n' +
@@ -498,9 +498,9 @@ function signup_(a) {
   res.full = activeCount_() >= CAP;
   const first = String(a.name || '').split(/\s+/)[0];
   if (res.full) {
-    sendMail_(email, 'EBBLESS BETA: you\'re on the waitlist', 'Peace ' + first + ',\n\nThe 50 EBBLESS beta spots are filled right now, so you\'re on the waitlist. If a spot opens up, you\'ll hear from me here.\n\nMAL GRIOT');
+    sendMail_(email, 'EBBLESS BETA: you\'re on the waitlist', 'Peace ' + first + ',\n\nThanks for wanting to help shape EBBLESS. This feedback round is full right now, so you\'re first in line for the next one. You\'ll hear from me here.\n\nEBBLESS is open to everyone in the meantime, no link needed:\n' + APP_URL + '\n\nMAL GRIOT');
   } else {
-    sendMail_(email, 'EBBLESS BETA: you\'re on the list', 'Peace ' + first + ',\n\nGot your signup for the EBBLESS beta. I\'m going through everyone by hand, so give me a little time. If you\'re in, your tester link comes to this address.\n\nMAL GRIOT');
+    sendMail_(email, 'EBBLESS BETA: you\'re on the list', 'Peace ' + first + ',\n\nGot your signup for the EBBLESS beta community. I\'m going through everyone by hand, so give me a little time. Your tester link comes to this address.\n\nEBBLESS is open to everyone in the meantime, no link needed:\n' + APP_URL + '\n\nMAL GRIOT');
   }
   return res;
 }
