@@ -28250,6 +28250,9 @@ function schedulePreload(afterPos){
   // The next track will play on the cast/AirPlay target, not this device -
   // a warm local standby deck would only be promoted by mistake.
   if (routeLocked()) return;
+  // #745: the standby deck is still sounding the song a skip is leaving -
+  // the skip preloads once it lands
+  if (swapInProgress && skipFade && standbyDeck() === skipFade.old) return;
   schedulePrevWarm(afterPos);
   const deck = standbyDeck();
   const pos = computeNextPos(afterPos, true);
@@ -32721,6 +32724,7 @@ function reflectCurrentTrackUI(pos, opts){
 function cancelCrossfade(){
   if (!swapInProgress) return false;
   swapInProgress = false;
+  skipFade = null;
   const ad = activeDeck(), nd = standbyDeck();
   if (ad.fadeTimer){ clearInterval(ad.fadeTimer); ad.fadeTimer = null; }
   if (ad.player && ad.player.setVolume) ad.player.setVolume(effectiveVolume(ad));
@@ -32857,37 +32861,104 @@ function finishCrossfade(old, nd, nextPos){
   schedulePreload(nextPos);
 }
 
-/* ---------- manual-skip crossfade (crossfade-manual-skip) ----------
-   With crossfade on, a manual next/prev fades into the new track instead of
-   cutting. Unlike runCrossfade() (which leaves queuePos on the old track
-   until the fade lands), the switch happens right away - UI, queuePos,
-   decks - so a second skip mid-fade counts from the new track, and the
-   outgoing track fades out underneath on what is now the standby deck. The
-   incoming deck fades up from silence once it's confirmed clean: a track
-   that wasn't preloaded (e.g. "previous") still sits out the pre-roll ad
-   check muted, and the old track fades out over that wait instead of
-   stopping dead. swapInProgress is held for the whole fade so the existing
-   crossfade guards (track-end, pause fade, the SC standby safety net) treat
-   it like one, and cancelCrossfade() - clear the active deck's fadeTimer,
-   restore it to full volume, silence the standby - is already the right
-   bail-out for this orientation. Returns false (caller cuts as before) when
-   there's nothing audible to fade from, or for SC-to-SC (can't overlap -
-   see maybeStartCrossfade), or while an automatic crossfade is running. */
+/* ---------- manual-skip crossfade (crossfade-manual-skip, #745) ----------
+   A manual next/prev never stops the song that's playing: it keeps going
+   until the new song is actually sounding on the other deck, then the two
+   fade across (over the crossfade length with crossfade on, SKIP_FADE_MS
+   with it off). Unlike runCrossfade() (which leaves queuePos on the old
+   track until the fade lands), the switch happens right away - UI, media
+   session, queuePos, decks - so the press shows at once (the play button's
+   loading ring covers the wait) and a second skip counts from the new
+   track; the outgoing track plays on underneath on what is now the standby
+   deck. A track that wasn't preloaded (e.g. "previous") sits out its
+   pre-roll ad check muted on the active deck, with the usual ad, reload and
+   link-swap handling, while the old song covers the wait (capped at
+   SKIP_WAIT_MAX_MS, then it fades across anyway). swapInProgress is held
+   for the wait and the fade so the existing crossfade guards (track-end,
+   pause fade, the SC standby safety net, ad dodge) treat it like one, and
+   cancelCrossfade() - clear the active deck's fadeTimer, restore it to full
+   volume, silence the standby - is already the right bail-out for this
+   orientation. Skipping again while the new song is still loading keeps
+   the old song playing and re-aims the loading deck (latest wins); going
+   straight back to the song that's playing calls the skip off. Returns
+   false (caller cuts as before) when nothing is audibly playing (a skip
+   while paused), for SC-to-SC (can't overlap - see maybeStartCrossfade), on
+   iPhone with crossfade off (iOS ignores setVolume, so the two songs would
+   overlap at full volume), or while an automatic crossfade is running. */
 let skipFade = null;
-// Shortest fade-in for an incoming deck that confirms late (crossfade-next-
-// muted-gap, #294) - see the inDur note in startSkipCrossfade.
-const SKIP_LATE_FADE_IN_MS = 1000;
+// #745: how long a manual skip fades across with crossfade off
+const SKIP_FADE_MS = 1000;
+// longest the old song covers for a new one that never starts sounding
+const SKIP_WAIT_MAX_MS = UNMUTE_MAX_WAIT_MS + UNMUTE_DELAY_MS;
+// Is a skip still holding the old song while the new one loads?
+function skipWaiting(){ return !!(skipFade && swapInProgress && !skipFade.fadeStart && activeDeck() === skipFade.nd); }
+// The new song is really playing with sound: past its ad check, not held
+// silent for an ad, and its player reports playing.
+function skipIncomingSounds(nd){
+  if (!nd.player || !nd.confirmed || nd.adMutedAt || nd.gateHeld) return false;
+  return !nd.player.getPlayerState || nd.player.getPlayerState() === 1;
+}
+function skipSwapArt(t, ms){
+  swapPlayerArt(t, ms);
+  swapFlowArt(t, ms);
+  crossfadeAltArt(t, ms);
+}
 function startSkipCrossfade(pos, t){
+  const sf = skipFade && swapInProgress && activeDeck() === skipFade.nd ? skipFade : null;
+  const fadeMs = crossfadePrefs.on ? crossfadePrefs.ms : SKIP_FADE_MS;
+  // Skipping again before the last skip's song started: the old song is
+  // still the one sounding, on the standby deck. Keep it, and point the
+  // loading deck at this song instead (its earlier load is dropped).
+  if (sf && !sf.fadeStart){
+    const old = sf.old, nd = sf.nd;
+    if (old !== standbyDeck() || (old.kind === 'sc' && isSoundCloudVideoId(t.videoId))) return false;
+    if (pos === old.pos && old.videoId === t.videoId){
+      // straight back to the song that's playing: call the skip off
+      clearInterval(sf.timer);
+      nd.fadeTimer = null;
+      skipFade = null;
+      swapInProgress = false;
+      resetDeck(nd);
+      activeIdx = 1 - activeIdx;
+      state.queuePos = pos;
+      lastTrackStartTs = sf.oldTs;
+      if (old.player && old.player.setVolume) old.player.setVolume(effectiveVolume(old));
+      reflectCurrentTrackUI(pos, { skipArtSwap: true });
+      skipSwapArt(t, fadeMs);
+      setPlayingUI(true);
+      schedulePreload(pos);
+      return true;
+    }
+    if (nd.pos !== pos || nd.videoId !== t.videoId || !(nd.player || nd.pendingVideoId)){
+      nd.fadeTimer = null;   // resetDeck would stop the skip's own timer
+      resetDeck(nd);
+      nd.fadeTimer = sf.timer;
+      nd.pos = pos;
+      loadIntoDeck(nd, t.videoId, true);
+    }
+    sf.waitStart = Date.now();   // the wait cap counts from this song
+    state.queuePos = pos;
+    lastTrackStartTs = Date.now();
+    try { vibeOnTrackLoad(); } catch(e){}
+    scPromoted(nd);
+    reflectCurrentTrackUI(pos, { skipArtSwap: true });
+    skipSwapArt(t, fadeMs);
+    setPlayingUI(true);
+    return true;
+  }
   const old = activeDeck(), nd = standbyDeck();
-  if (!crossfadePrefs.on || !old.player || !old.confirmed || isFadingOut(old) || routeLocked()) return false;
+  if (!old.player || !old.confirmed || isFadingOut(old) || routeLocked()) return false;
+  if (!crossfadePrefs.on && isIOS) return false;
   if (!old.player.getPlayerState || old.player.getPlayerState() !== 1) return false;
   if (old.kind === 'sc' && isSoundCloudVideoId(t.videoId)) return false;
-  // Skipping again mid skip-fade: pick the outgoing ramp up from wherever
-  // the previous fade had the (now outgoing) track, so nothing jumps or stacks.
-  const chaining = swapInProgress && skipFade && skipFade.nd === old && old.fadeTimer && old.fadeTimer === skipFade.timer;
+  // Skipping again mid-fade: the song fading in becomes the outgoing one,
+  // picked up from wherever the fade had it, so nothing jumps or stacks.
+  const chaining = !!sf && !!old.fadeTimer && old.fadeTimer === sf.timer;
   if (swapInProgress && !chaining) return false;
-  const fromGain = chaining ? skipFade.gain : 1;
+  const fromGain = chaining ? sf.inGain : 1;
+  const oldTs = lastTrackStartTs;
   cancelCrossfade();
+  skipFade = null;
   if (old.player.setVolume) old.player.setVolume(Math.round(effectiveVolume(old) * fromGain));
 
   if (nd.pos !== pos || nd.videoId !== t.videoId || !(nd.player || nd.pendingVideoId)){
@@ -32911,46 +32982,62 @@ function startSkipCrossfade(pos, t){
     if (nd.player.unMute) nd.player.unMute();
     if (nd.player.playVideo) nd.player.playVideo();
   }
-  const durationMs = crossfadePrefs.ms;
   reflectCurrentTrackUI(pos, { skipArtSwap: true });
-  swapPlayerArt(t, durationMs);
-  swapFlowArt(t, durationMs);
-  crossfadeAltArt(t, durationMs);
+  skipSwapArt(t, fadeMs);
   setPlayingUI(true);
 
-  const start = Date.now();
-  let inStart = nd.confirmed ? start : 0, inDur = durationMs;
-  const f = skipFade = { nd, gain: 0, timer: null, oldPaused: false };
+  const now = Date.now();
+  const f = skipFade = { old, nd, fadeMs, oldTs, waitStart: now, rampStart: now, fromGain, outGain: fromGain, outFrom: 0, inGain: 0, fadeStart: 0, timer: null };
+  const vol = (d, g) => { if (d.player && d.player.setVolume) d.player.setVolume(Math.round(effectiveVolume(d) * g)); };
   f.timer = nd.fadeTimer = setInterval(() => {
-    if (activeDeck() !== nd || nd.fadeTimer !== f.timer){ clearInterval(f.timer); return; }
-    const now = Date.now();
-    const outP = Math.min(1, (now - start) / durationMs);
-    if (old.player && old.player.setVolume) old.player.setVolume(Math.round(effectiveVolume(old) * fromGain * (1 - outP)));
-    if (outP >= 1 && !f.oldPaused){ f.oldPaused = true; if (old.player && old.player.pauseVideo) old.player.pauseVideo(); }
-    if (!inStart && nd.confirmed){
-      inStart = now;
-      // Confirmed late (a cold or still-ad-checking deck - a quick second
-      // skip, or one right after a track started): the outgoing track has
-      // already faded part or all of the way out, so ramp in over whatever
-      // is left of that fade-out rather than the full crossfade length -
-      // otherwise the new track sat near-silent for the ad wait plus a whole
-      // crossfade (#294).
-      inDur = Math.max(SKIP_LATE_FADE_IN_MS, durationMs - (now - start));
+    if (skipFade !== f || activeDeck() !== nd || nd.fadeTimer !== f.timer){ clearInterval(f.timer); if (skipFade === f) skipFade = null; return; }
+    const t1 = Date.now();
+    if (!f.fadeStart){
+      // hold the old song (back up to full if a skip caught it mid-fade)
+      // until the new one is really playing
+      f.outGain = Math.min(1, f.fromGain + (t1 - f.rampStart) / f.fadeMs);
+      vol(old, f.outGain);
+      vol(nd, 0);
+      if (!skipIncomingSounds(nd) && t1 - f.waitStart < SKIP_WAIT_MAX_MS) return;
+      f.fadeStart = t1;
+      f.outFrom = f.outGain;
     }
-    // incoming never cleared its ad check (dead video etc.) - don't hold
-    // swapInProgress forever; onDeckConfirmed unmutes it at full if it ever does
-    if (!inStart && now - start > UNMUTE_MAX_WAIT_MS + UNMUTE_DELAY_MS) inStart = now - inDur;
-    f.gain = inStart ? Math.min(1, (now - inStart) / inDur) : 0;
-    if (nd.player && nd.player.setVolume) nd.player.setVolume(Math.round(effectiveVolume(nd) * f.gain));
-    if (outP < 1 || f.gain < 1) return;
+    const p = Math.min(1, (t1 - f.fadeStart) / f.fadeMs);
+    f.outGain = f.outFrom * (1 - p);
+    f.inGain = p;
+    vol(old, f.outGain);
+    vol(nd, f.inGain);
+    if (p < 1) return;
     clearInterval(f.timer);
     nd.fadeTimer = null;
     swapInProgress = false;
     skipFade = null;
+    if (old.player && old.player.pauseVideo) old.player.pauseVideo();
     resetDeck(old);
     schedulePreload(state.queuePos);
   }, 100);
   return true;
+}
+// #745: paused while a skip still has the old song sounding - fade that song
+// out like any pause (#706) instead of cutting it. The new song is paused by
+// the caller's own pause fade, and resumes from there.
+function skipPauseOld(sf){
+  clearInterval(sf.timer);
+  sf.nd.fadeTimer = null;
+  skipFade = null;
+  swapInProgress = false;
+  if (sf.nd.player && sf.nd.player.setVolume) sf.nd.player.setVolume(effectiveVolume(sf.nd));
+  const old = sf.old, vid = old.videoId, from = sf.outGain, ms = pauseFadeOutMs(), t0 = Date.now();
+  const iv = setInterval(() => {
+    // the deck was handed another song meanwhile: leave it alone
+    if (old.videoId !== vid || standbyDeck() !== old){ clearInterval(iv); return; }
+    const p = Math.min(1, (Date.now() - t0) / ms);
+    if (old.player && old.player.setVolume) old.player.setVolume(Math.round(effectiveVolume(old) * from * (1 - p) * (1 - p)));
+    if (p < 1) return;
+    clearInterval(iv);
+    resetDeck(old);
+    schedulePreload(state.queuePos);
+  }, PAUSE_FADE_TICK_MS);
 }
 
 function loadIndex(pos, autoplay, opts){
@@ -32973,7 +33060,9 @@ function loadIndex(pos, autoplay, opts){
     if (pd.confirmed && pd.ready && pd.player && deckHolds(pd, pos) && !routeLocked() && !castActive()) swapDeckSlots(1 - activeIdx, 2);
   }
 
-  if (opts && opts.crossfade && autoplay !== false && startSkipCrossfade(pos, t)){
+  // #745: a relink of the song a skip is still loading (ad link swap, broken
+  // link repair) goes the same way, so the old song keeps covering for it
+  if (autoplay !== false && ((opts && opts.crossfade) || (skipWaiting() && pos === state.queuePos)) && startSkipCrossfade(pos, t)){
     maybeExtendDiscoverQueue();
     return;
   }
@@ -33214,8 +33303,11 @@ function fadeOutAndPause(deck){
   // Pausing mid-fade (crossfade-start-and-preload): a skip fade's standby
   // deck still holds the outgoing track, so re-aim the preload at the next
   // one - otherwise the next Next is a cold load. No-op after an automatic
-  // crossfade, whose standby deck already holds the next track.
-  if (cancelCrossfade()) schedulePreload(state.queuePos);
+  // crossfade, whose standby deck already holds the next track. A manual
+  // skip's outgoing song fades out first (skipPauseOld), then re-aims it.
+  const sf = skipFade && swapInProgress && skipFade.nd === deck ? skipFade : null;
+  if (sf) skipPauseOld(sf);
+  else if (cancelCrossfade()) schedulePreload(state.queuePos);
   if (deck === activeDeck()) pausedAtInfo = { pos: state.queuePos, ts: Date.now() };
   setPlayingUI(false);
   runPlayFade(deck, 'out');
@@ -33570,7 +33662,8 @@ function playPrev(){
     syncMediaPositionState(true, 0);
   };
   const canSeek = !!(ad.player && ad.player.getCurrentTime && ad.player.seekTo);
-  if (canSeek && ad.player.getCurrentTime() > 3){ restart(); return; }
+  // a skip still loading its song (#745) is at its start, whatever its muted clock says
+  if (canSeek && !skipWaiting() && ad.player.getCurrentTime() > 3){ restart(); return; }
   let pos = state.queuePos - 1;
   if (pos < 0){ if (state.repeat === 'all') pos = state.queue.length - 1; else { if (canSeek && state.queuePos >= 0) restart(); return; } }
   // a one-track queue on repeat-all wraps back onto the same song: a restart
