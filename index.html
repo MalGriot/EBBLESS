@@ -2309,6 +2309,9 @@ body.queue-open #bottom-nav button[data-view].is-active{color:var(--faint-2)}
 @media (prefers-reduced-motion:reduce){.queue-head .discover-toggle.is-active svg{animation:none;filter:drop-shadow(0 0 4px rgba(255,200,61,.8))}}
 .queue-head .qh-icon{display:flex;align-items:center;justify-content:center;width:26px;height:26px}
 .queue-head .qh-icon svg{width:17px;height:17px}
+.queue-head .bubble-toggle[hidden]{display:none}
+.queue-head .bubble-toggle{opacity:.5}
+.queue-head .bubble-toggle.is-active{opacity:1;color:var(--text)}
 .q-arrows{display:flex;align-items:center;justify-content:center;gap:6px;padding:6px 2px 0}
 .q-arrows .qh-arrow{flex:none;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--faint)}
 .q-arrows .qh-arrow svg{width:16px;height:16px}
@@ -5616,6 +5619,13 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
         </div>
         <div class="settings-row">
           <div>
+            <div class="label">Break my bubble</div>
+            <div class="desc">Mixes in songs outside your usual taste that still sound like what you like.</div>
+          </div>
+          <button type="button" class="switch" id="bubbleBtn" role="switch" aria-checked="false" aria-label="Break my bubble"><span class="switch-knob"></span></button>
+        </div>
+        <div class="settings-row">
+          <div>
             <div class="label">Skip ads automatically</div>
             <div class="desc">Podcast episodes and long YouTube audio: ad reads, sponsor plugs, reminders, intros and outros are skipped as they begin, with a note and Undo. Ads are found from the episode's captions, so it is a good guess, not a promise: when it skips something real, tap Undo. Off, you get a Skip button instead.</div>
           </div>
@@ -6128,6 +6138,7 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
         <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a7 7 0 00-4 12.74V17a1 1 0 001 1h6a1 1 0 001-1v-2.26A7 7 0 0012 2zm-2 18h4v1a1 1 0 01-1 1h-2a1 1 0 01-1-1v-1z"/></svg>
         Discover
       </button>
+      <button class="re qh-icon bubble-toggle" id="bubbleToggleBtn" title="Break my bubble: mix in songs outside your usual taste that still sound like what you like" aria-label="Break my bubble" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M8.5 10a4 4 0 012.5-2.6"/></svg></button>
       <button class="re qh-icon" id="queueReverseBtn" title="Play this queue the other way" aria-label="Reverse queue direction"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4v16M7 20l-3-3M7 20l3-3M17 20V4M17 4l-3 3M17 4l3 3"/></svg></button>
       <button class="re qh-icon" id="queueSaveBtn" title="Save this queue as a new playlist in your library" aria-label="Save"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h11l4 4v13a1 1 0 01-1 1H5a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M7 3v5h8V3"/><rect x="7" y="13" width="10" height="8"/></svg></button>
       <button class="clear qh-icon" id="queueClearBtn" title="Clear" aria-label="Clear"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 3h4M6 7l1 13a1 1 0 001 1h8a1 1 0 001-1l1-13M10 11v6M14 11v6"/></svg></button>
@@ -7534,6 +7545,7 @@ const PL_ART_VIDEO = {
   [NP_ID]:    { src: 'brand/assets/onair-art.mp4',  poster: 'brand/assets/onair-art-poster.jpg', xfade: true }  // xfade: two stacked clips fade into each other at the end instead of a hard restart (#455)
 };
 const LS_DISCOVER = (id) => 'ebbless:discover:' + id;  // per-playlist "keep playing similar songs" flag
+const LS_BUBBLE = 'ebbless:bubble';  // true = "Break my bubble" is on: Discover and vibes mix in songs outside the listener's history (profile-synced; default off)
 const LS_PERSONALIZE = 'ebbless:personalize';  // false = "Personalized listening" is off: nothing new is learned from plays, and what was learned is not used (profile-synced; default on)
 function personalizeOn(){ return lsGet(LS_PERSONALIZE, true) !== false; }
 // Recent plays the seed/"already heard" logic may read: nothing while personalization is off (the list is kept, just unused)
@@ -7622,7 +7634,7 @@ const LS_SYNC_META = 'ebbless:syncMeta'; // { k: { lsKey: at }, lib/pin: { id: {
 // Durable preferences worth following a person between devices. String
 // literals, not the LS_* constants, where the constant is declared further
 // down the file (lsSet can run before those lines have).
-const PROFILE_SETTING_KEYS = [LS_CROSSFADE, LS_LEVEL, LS_VIZ, LS_VIZ_HOLD, LS_VIZ_SPEED, LS_VIZ_ROTATE, 'ebbless:artstyle', LS_LIB_VIEW, LS_LIB_SORT, LS_LIB_FILTER, 'ebbless:likeStreak', 'ebbless:declined', 'ebbless:playLog', 'ebbless:personalize'];
+const PROFILE_SETTING_KEYS = [LS_CROSSFADE, LS_LEVEL, LS_VIZ, LS_VIZ_HOLD, LS_VIZ_SPEED, LS_VIZ_ROTATE, 'ebbless:artstyle', LS_LIB_VIEW, LS_LIB_SORT, LS_LIB_FILTER, 'ebbless:likeStreak', 'ebbless:declined', 'ebbless:playLog', 'ebbless:personalize', LS_BUBBLE];
 const LS_PLAY_LOG = 'ebbless:playLog';   // see PLAY LOG
 const PROFILE_SETTING_PREFIXES = ['ebbless:discover:'];   // per-playlist, only for ids in the library
 const PROFILE_PUSH_DEBOUNCE_MS = 20000;  // bursts of edits (a playlist resolving) become one push - KV's free tier caps daily writes
@@ -8124,6 +8136,7 @@ function refreshSyncedSettings(){
     () => { crossfadePrefs = Object.assign({ on: false, ms: 4000 }, lsGet(LS_CROSSFADE, {})); if (!crossfadePrefs.on && cancelCrossfade()) schedulePreload(state.queuePos); renderCrossfadeUI(); },
     () => { levelOn = lsGet(LS_LEVEL, true) !== false; renderLevelUI(); reapplyLevel(); },
     () => { tasteMemo = null; renderPersonalizeUI(); },
+    () => { bubbleHistMemo = null; renderBubbleUI(); },
     () => vizSetHoldMode(lsGet(LS_VIZ_HOLD, false) === true),
     () => vizSetRotate(lsGet(LS_VIZ_ROTATE, false) === true),
     () => { const v = lsGet(LS_VIZ_SPEED, 1); vizSetSpeed(VIZ_SPEEDS.includes(v) ? v : 1); },
@@ -10743,7 +10756,7 @@ const miniBar = $('mini-bar'), miniArt = $('miniArt'), miniTitle = $('miniTitle'
       miniRepeatBtn = $('miniRepeatBtn'), miniRepeatOneBadge = $('miniRepeatOneBadge'), miniLikeBtn = $('miniLikeBtn');
 const bottomNav = $('bottom-nav');
 const queueScrim = $('queue-scrim'), queuePanel = $('queue-panel'), queueBody = $('queueBody'), queueArrowsRow = $('queueArrowsRow'), queueHistBackBtn = $('queueHistBack'), queueHistFwdBtn = $('queueHistFwd'), queueHistFirstBtn = $('queueHistFirst'), queueHistLastBtn = $('queueHistLast'), queueClearBtn = $('queueClearBtn');
-const discoverToggleBtn = $('discoverToggleBtn');
+const discoverToggleBtn = $('discoverToggleBtn'), bubbleToggleBtn = $('bubbleToggleBtn');
 const libplScrim = $('libpl-scrim'), libplPanel = $('libpl-panel'), libplTitle = $('libplTitle'), libplBody = $('libplBody'), libplPlayBtn = $('libplPlayBtn'), libplCloseBtn = $('libplCloseBtn'), libplArtWrap = $('libplArtWrap'), libplArt = $('libplArt'), libplArtPlayBtn = $('libplArtPlayBtn'), libplAddBar = $('libplAddBar'), libplAddBtn = $('libplAddBtn'), libplVibeBar = $('libplVibeBar');
 const libCtxMenu = $('libCtxMenu');
 const trackCtxMenu = $('trackCtxMenu');
@@ -19868,14 +19881,26 @@ async function rankVibeTracks(interp, onStep){
     const fit = i < metrics.length ? vibeMetricFit(metrics[i], interp) : null;
     const base = t.from === 'seed' ? 0.75 : 0.5;
     const played = interp.avoid && interp.avoid.has(tagCacheKey(t)) ? 0.4 : 0;
-    return { t, s: base + (fit == null ? 0 : (fit - 0.5) * 0.5) - i * 0.004 - played + (interp.taste ? vibeTasteAdjust(t, interp.taste, prof) : 0) };
+    return { t, fit, s: base + (fit == null ? 0 : (fit - 0.5) * 0.5) - i * 0.004 - played + (interp.taste ? vibeTasteAdjust(t, interp.taste, prof) : 0) };
   }).filter(x => x.s !== -Infinity).sort((a, b) => b.s - a.s);
-  const perArtist = new Map();
+  // Break my bubble: about a third of the list from artists the listener has
+  // no history with (vibe songs carry no play counts, so that is the only
+  // "obscure" signal here). Their tag is the Last.fm list they came from.
+  const tagMemo = lsGet(LS_TAG_CACHE, {}) || {};
+  const bb = bubbleOn() ? bubbleBreakOrder(Object.assign(bubbleBase((interp.tags || []).map(x => String(x).toLowerCase()), [], (interp.tags || []).join(',')), {
+    order: scored, count: VIBE_PLAYLIST_SIZE,
+    keyOf: x => tagCacheKey(x.t), artistOf: x => primaryArtistKey(x.t.artist),
+    tagsOf: x => tagNameList(/^tag:/.test(x.t.from || '') ? [x.t.from.slice(4)] : tagMemo[tagCacheKey(x.t)]),
+    fitOf: x => x.fit,
+  })) : null;
+  const perArtist = new Map(), slotsFilled = new Set();
   const picked = [];
-  scored.forEach(x => {
+  (bb ? bb.order : scored).forEach(x => {
     const a = String(x.t.artist).toLowerCase();
-    if ((perArtist.get(a) || 0) >= 2 || picked.length >= VIBE_PLAYLIST_SIZE) return;
+    const slot = bb ? bb.slotOf(tagCacheKey(x.t)) : undefined;
+    if ((slot !== undefined && slotsFilled.has(slot)) || (perArtist.get(a) || 0) >= 2 || picked.length >= VIBE_PLAYLIST_SIZE) return;
     perArtist.set(a, (perArtist.get(a) || 0) + 1);
+    if (slot !== undefined) slotsFilled.add(slot);
     picked.push(x.t);
   });
   return vibeSpreadArtists(picked);
@@ -23454,6 +23479,25 @@ levelBtn.addEventListener('click', () => {
   reapplyLevel();
 });
 renderLevelUI();
+/* ---------- Break my bubble (GitHub #744): the switch here and the small one beside Discover in the queue ---------- */
+const bubbleBtn = $('bubbleBtn');
+function renderBubbleUI(){
+  const on = bubbleOn();
+  bubbleBtn.setAttribute('aria-checked', String(on));
+  bubbleBtn.classList.toggle('is-active', on);
+  bubbleToggleBtn.setAttribute('aria-pressed', String(on));
+  bubbleToggleBtn.classList.toggle('is-active', on);
+}
+function setBubble(on){
+  lsSet(LS_BUBBLE, on);
+  bubbleHistMemo = null;
+  discoverPrefetch = null;   // a batch fetched under the old setting is not reused
+  renderBubbleUI();
+  showToast(on ? 'Break my bubble is on. New Discover songs now mix in music outside your usual taste.' : 'Break my bubble is off');
+}
+bubbleBtn.addEventListener('click', () => setBubble(!bubbleOn()));
+bubbleToggleBtn.addEventListener('click', () => setBubble(!bubbleOn()));
+renderBubbleUI();
 /* ---------- personalized listening + listening profile reset ----------
    personalizeOn() (near LS_GRAPH) gates every place a play teaches EBBLESS
    something (recordListenSignal, noteTaste, recordLatestPlayed) and every
@@ -24521,6 +24565,143 @@ function libraryVideoIdSet(){
   return ids;
 }
 
+/* BREAK-MY-BUBBLE:BEGIN (tools/bubble-break.test.js loads this block)
+   Break my bubble (GitHub #744). A setting, off by default. On, about one in
+   three of the songs Discover and a typed vibe add come from artists the
+   listener has no history with, picked because they still sound like the
+   seed: they share at least one (non-blacklisted) tag with it and, where
+   /metrics knows them, sit inside its tempo/energy/key fit. Among those it
+   prefers lower play counts (Last.fm's playcount on /similar candidates; vibe
+   songs carry none, so there "not in your library or history" is the only
+   signal) and a different genre family than the seed's top tag. Thumbs-down
+   songs and artists, blacklisted tags and tags of music languages the
+   listener did not pick never qualify. Pure: everything comes in through o,
+   so the same input (seed string included) always gives the same order.
+   o: { on, order, count, seed,
+        keyOf(x), artistOf(x), tagsOf(x) -> [tags], playsOf(x) -> n, fitOf(x) -> 0..1|null,
+        seedTags: [top tag first], blacklist, langBlocked: Sets of tags,
+        historyArtists, historyKeys, declinedKeys, declinedArtists: Sets, recentKeys: Set }
+   -> { order, quota, slotOf(key) -> slot|undefined }
+   Off: order comes back untouched. On: each third place holds a "slot" of up to
+   three interchangeable bubble songs; the caller takes the first that resolves
+   to a playable source and skips the rest of that slot (slotOf), so a miss
+   never leaves the mix short or lets bubble songs pass a third. */
+const BUBBLE_FIT_MIN = 0.55;    // below this /metrics fit a song is not "close in sound"
+const BUBBLE_SPARES = 2;        // stand-ins per slot, used only when the first does not resolve
+function bubbleQuota(count){ return count < 3 ? 0 : Math.max(1, Math.round(count / 3)); }
+function bubbleHash(s){
+  let h = 2166136261;
+  for (const ch of String(s)){ h ^= ch.codePointAt(0); h = Math.imul(h, 16777619); }
+  h = (h + 0x6D2B79F5) | 0;
+  let t = Math.imul(h ^ (h >>> 15), 1 | h);
+  t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+}
+function bubbleBreakOrder(o){
+  const none = { order: o && o.order, quota: 0, slotOf: () => undefined };
+  if (!o || !o.on || !o.order || !o.order.length) return none;
+  const quota = bubbleQuota(o.count);
+  const empty = new Set();
+  const bl = o.blacklist || empty, lang = o.langBlocked || empty;
+  const hArt = o.historyArtists || empty, hKey = o.historyKeys || empty;
+  const dKey = o.declinedKeys || empty, dArt = o.declinedArtists || empty, recent = o.recentKeys || empty;
+  const clean = tags => Array.from(new Set((tags || []).map(t => String(t).toLowerCase()).filter(t => t && !bl.has(t))));
+  const seedTags = clean(o.seedTags), seedSet = new Set(seedTags);
+  const kept = o.order.filter(x => !dKey.has(o.keyOf(x)) && !dArt.has(o.artistOf(x)));
+  if (!quota) return { order: kept.length === o.order.length ? o.order : kept, quota: 0, slotOf: () => undefined };
+  const n = kept.length, picks = [];
+  kept.forEach((x, i) => {
+    const key = o.keyOf(x), artist = o.artistOf(x);
+    if (!artist || hArt.has(artist) || hKey.has(key)) return;   // in the listener's history: not a bubble breaker
+    const tags = clean(o.tagsOf(x));
+    if (!tags.some(t => seedSet.has(t)) || tags.some(t => lang.has(t))) return;
+    const fit = o.fitOf ? o.fitOf(x) : null;
+    if (typeof fit === 'number' && fit < BUBBLE_FIT_MIN) return;
+    const plays = o.playsOf ? o.playsOf(x) : 0;
+    let s = 0.4 * (1 - i / Math.max(1, n));                                   // stay near the strongest matches
+    s += plays > 0 ? 0.5 * (1 - Math.max(0, Math.min(1, (Math.log10(plays) - 3) / 4))) : 0.25;   // ~1k plays 0.5 ... ~10M plays 0
+    if (tags[0] !== seedTags[0]) s += 0.3;                                    // a different genre family than the seed's top tag
+    if (typeof fit === 'number') s += 0.3 * fit;
+    if (recent.has(key)) s -= 0.5;
+    s += 0.15 * bubbleHash(o.seed + '|' + key);                               // varies by seed and day, not by call
+    picks.push({ x, key, artist, s });
+  });
+  picks.sort((a, b) => b.s - a.s || (a.key < b.key ? -1 : 1));
+  const used = new Set(), chosen = [];
+  picks.forEach(p => {
+    if (used.has(p.artist) || chosen.length >= quota * (1 + BUBBLE_SPARES)) return;
+    used.add(p.artist);
+    chosen.push(p);
+  });
+  const m = Math.min(quota, chosen.length);
+  if (!m) return { order: kept, quota: 0, slotOf: () => undefined };
+  const slots = [];
+  for (let s = 0; s < m; s++) slots.push([chosen[s], chosen[m + s], chosen[2 * m + s]].filter(Boolean));
+  const slotOf = new Map(), inSlot = new Set();
+  slots.forEach((g, s) => g.forEach(p => { slotOf.set(p.key, s); inSlot.add(p.key); }));
+  const main = kept.filter(x => !inSlot.has(o.keyOf(x)));
+  const out = [];
+  let p = 0, mi = 0, s = 0;
+  while (mi < main.length || s < slots.length){
+    if (s < slots.length && (p % 3 === 2 || mi >= main.length)) slots[s++].forEach(q => out.push(q.x));
+    else out.push(main[mi++]);
+    p++;
+  }
+  return { order: out, quota: m, slotOf: key => slotOf.get(key) };
+}
+/* BREAK-MY-BUBBLE:END */
+/* The app's side of bubbleBreakOrder. No network here except the one extra
+   /metrics call in fetchDiscoverCandidates (see bubbleLookupSet). */
+function bubbleOn(){ return lsGet(LS_BUBBLE, false) === true; }
+// The tags of the music languages Home offers (the worker's vibe-locale.js has
+// the same lists): the ones the listener did not pick never qualify.
+const BUBBLE_LANG_TAGS = { hi: ['bollywood', 'hindi'], pa: ['punjabi', 'bhangra'], ta: ['tamil', 'kollywood'], te: ['telugu', 'tollywood'], bn: ['bengali', 'bangla'], mr: ['marathi'], ml: ['malayalam'] };
+function bubbleLangBlocked(){
+  const picked = musicLangs(), out = new Set();
+  Object.keys(BUBBLE_LANG_TAGS).forEach(l => { if (!picked.includes(l)) BUBBLE_LANG_TAGS[l].forEach(t => out.add(t)); });
+  return out;
+}
+// Everything the listener has history with: liked, played, saved songs and
+// the artists they return to. Rebuilt at most every 30 seconds.
+let bubbleHistMemo = null;
+function bubbleHistory(){
+  const now = Date.now();
+  if (bubbleHistMemo && now - bubbleHistMemo.at < 30000) return bubbleHistMemo;
+  const artists = new Set(), keys = new Set();
+  vibeKnownTracks('', null).forEach((e, k) => { keys.add(k); const a = primaryArtistKey(e.track.artist); if (a) artists.add(a); });
+  tasteProfile().artists.forEach((w, a) => { if (w > 0) artists.add(a); });
+  bubbleHistMemo = { at: now, artists, keys };
+  return bubbleHistMemo;
+}
+function bubbleBase(seedTags, seedTracks, seedKey){
+  const h = bubbleHistory(), dv = tasteProfile().declined;
+  const artists = new Set(h.artists);
+  seedTracks.forEach(t => { const a = primaryArtistKey(t.artist); if (a) artists.add(a); });
+  return {
+    on: true, seed: seedKey + '|' + localDayKey(Date.now()), seedTags,
+    blacklist: DISCOVER_TAG_BLACKLIST, langBlocked: bubbleLangBlocked(),
+    historyArtists: artists, historyKeys: h.keys,
+    declinedKeys: dv.keys, declinedArtists: new Set(Object.keys(dv.a).filter(a => dv.a[a] > 0)),
+  };
+}
+// 0..1 how close a song's /metrics sit to the seed's (null when unknown).
+function bubbleMetricFit(refs, cm){
+  if (!cm || !refs) return null;
+  let sim = 0, w = 0;
+  refs.forEach(r => { if (!r.m) return; const s = metricSimilarity(r.m, cm); if (s){ sim += s.sim * r.w; w += r.w; } });
+  return w ? sim / w : null;
+}
+// Up to 8 outside-history candidates that share a seed tag, lowest play
+// counts first, whose tempo/energy get looked up so the band check can run.
+// Costs one /metrics request per Discover batch while the setting is on.
+const BUBBLE_LOOKUPS = 8;
+function bubbleLookupSet(pool, base){
+  const seedSet = new Set(base.seedTags.filter(t => !DISCOVER_TAG_BLACKLIST.has(t)));
+  return pool
+    .filter(c => c.title && c.artist && !base.historyArtists.has(primaryArtistKey(c.artist)) && !base.declinedArtists.has(primaryArtistKey(c.artist)) && tagNameList(c.tags).some(t => seedSet.has(t)))
+    .sort((a, b) => (a.plays > 0 ? a.plays : 1e6) - (b.plays > 0 ? b.plays : 1e6))
+    .slice(0, BUBBLE_LOOKUPS);
+}
 /* seedTracks: most-recently-played first. excludeVideoIds: Set already in
    the library/queue, so Discover never resurfaces something the listener
    already has. Returns resolved, playable track objects (same shape
@@ -24577,9 +24758,13 @@ async function fetchDiscoverCandidates(seedTracks, excludeVideoIds, count, allow
 
   // Tempo/key/energy lookup (see applyMetricPreference) runs alongside the
   // pooled-affinity fetch, so it adds no wait of its own in the usual case.
+  // Break my bubble (BREAK-MY-BUBBLE above): off, nothing below changes.
+  const seedKey = discoverSeedKey(seed);
+  const bubble = bubbleOn() && steer !== 'popular' ? bubbleBase(Array.from(seedTagVec.keys()), seedTracks, seedKey) : null;
   const [crowd, mood] = await Promise.all([
     fetchPoolAffinity(Array.from(seedTagVec.keys())),
     fetchMoodMetrics(seedTracks, pool, seedTagVec).catch(() => null),
+    bubble ? fetchTrackMetrics(bubbleLookupSet(pool, bubble)).catch(() => null) : null,
   ]);
   let ranked = pool
     .filter(c => c.title && c.artist)
@@ -24602,8 +24787,16 @@ async function fetchDiscoverCandidates(seedTracks, excludeVideoIds, count, allow
   // Random, score-weighted walk order (see discoverSampleOrder). `rank`
   // stays the true score rank, so the long-track strong-match rule is
   // unaffected by where the draw happened to place a candidate.
-  const seedKey = discoverSeedKey(seed);
-  const order = discoverSampleOrder(ranked, getDiscoverRecent(seedKey));
+  const recentKeys = getDiscoverRecent(seedKey);
+  let order = discoverSampleOrder(ranked, recentKeys);
+  const bb = bubble ? bubbleBreakOrder(Object.assign(bubble, {
+    order, count, recentKeys,
+    keyOf: x => tagCacheKey(x.c), artistOf: x => primaryArtistKey(x.c.artist),
+    tagsOf: x => tagNameList(x.c.tags), playsOf: x => x.c.plays || 0,
+    fitOf: x => bubbleMetricFit(mood && mood.refs, metricMemo.get(tagCacheKey(x.c))),
+  })) : null;
+  if (bb) order = bb.order;
+  const slotsFilled = new Set();
 
   const resolved = [];
   const pickedKeys = [];
@@ -24614,8 +24807,11 @@ async function fetchDiscoverCandidates(seedTracks, excludeVideoIds, count, allow
     const dupeKey = (c.title + '|' + c.artist).toLowerCase();
     if (seenTitles.has(dupeKey)) continue;
     seenTitles.add(dupeKey);
+    const slot = bb ? bb.slotOf(dupeKey) : undefined;   // a bubble song whose slot is already filled is skipped
+    if (slot !== undefined && slotsFilled.has(slot)) continue;
     if (skipArtists && skipArtists.has(primaryArtistKey(c.artist))) continue;
     const tagNames = (c.tags || []).map(t => t.name);
+    const took = () => { if (slot !== undefined){ slotsFilled.add(slot); resolved[resolved.length - 1].bubble = true; } };
     if (c.videoId){
       if (excludeVideoIds.has(c.videoId) || declinedV[c.videoId]) continue;
       if (!discoverLongTrackOk(c.duration || 0, rank, allowLong)) continue;
@@ -24625,6 +24821,7 @@ async function fetchDiscoverCandidates(seedTracks, excludeVideoIds, count, allow
       const meta = await resolveDiscoverMetadata(c.title, c.artist);
       resolved.push({ title: meta.title, artist: meta.artist, videoId: c.videoId, matchedTitle: c.title, channel: c.artist, plays: 0, art: meta.art, duration: c.duration || 0, tags: tagNames });
       pickedKeys.push(dupeKey);
+      took();
       continue;
     }
     try{
@@ -24634,6 +24831,7 @@ async function fetchDiscoverCandidates(seedTracks, excludeVideoIds, count, allow
       const meta = await resolveDiscoverMetadata(c.title, c.artist);
       resolved.push({ title: meta.title, artist: meta.artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '', plays: 0, art: meta.art, duration: match.duration || 0, tags: tagNames });
       pickedKeys.push(dupeKey);
+      took();
     } catch(e){ /* discover is best-effort - a miss here never blocks playback */ }
   }
   rememberDiscoverPicks(seedKey, pickedKeys);
@@ -25464,6 +25662,7 @@ function renderDiscoverToggle(){
   const on = originPlId ? isDiscoverOn(originPlId) : true;
   discoverToggleBtn.classList.toggle('is-active', on);
   discoverToggleBtn.setAttribute('aria-pressed', String(on));
+  bubbleToggleBtn.hidden = !on;   // it only acts while Discover runs
   renderRadioSteer();
 }
 
