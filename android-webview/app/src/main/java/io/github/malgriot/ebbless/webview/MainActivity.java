@@ -41,6 +41,8 @@ public class MainActivity extends Activity {
 
     private WebView web;
     private volatile WavePeaks wavePeaks;
+    /** #755: pauses the page for calls, other apps' audio and a headphone or Bluetooth disconnect. */
+    private volatile AudioInterrupts interrupts;
     /** Handle of the registered ad-skip document-start script, so a kill-switch flip can remove or re-add it. */
     private androidx.webkit.ScriptHandler adScript;
     /** version:hash of the rules the registered script was built from; a new live pair rebuilds the handler. */
@@ -245,6 +247,7 @@ public class MainActivity extends Activity {
     @Override protected void onDestroy() {
         voiceTeardown(false);
         PlaybackService.sink = null;
+        if (interrupts != null) { interrupts.release(); interrupts = null; }
         try { unregisterReceiver(screenReceiver); } catch (Exception ignored) {}
         super.onDestroy();
     }
@@ -548,6 +551,8 @@ public class MainActivity extends Activity {
                 getSharedPreferences("ebb", MODE_PRIVATE).edit().putBoolean("playing", on).apply();
                 pagePlaying = on;
                 tellWatchdog(on);
+                AudioInterrupts ai = interrupts;
+                if (ai != null) ai.pagePlaying(on);
                 if (on) runOnUiThread(() -> askBatteryExemption());
             }
             /** The page: a video song is (not) playing right now, so leaving the app should (not) open Picture-in-Picture. */
@@ -651,6 +656,7 @@ public class MainActivity extends Activity {
         PlaybackService.sink = action -> runOnUiThread(() -> {
             if (web != null) web.evaluateJavascript("window.__ebbMediaAction&&__ebbMediaAction(" + JSONObject.quote(action) + ")", null);
         });
+        if (interrupts == null) interrupts = new AudioInterrupts(this, PlaybackService::control);
         if (Build.VERSION.SDK_INT >= 33) requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 1);
         startForegroundService(new Intent(this, PlaybackService.class));
 
