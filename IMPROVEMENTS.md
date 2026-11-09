@@ -12316,7 +12316,7 @@ Add entries in this shape:
 - **Notes:** One-tap reason chips after thumbs down (9s, skippable); reason code stored in LS_DECLINED entry (.r, allowlisted); artist/genre reasons weigh double; undo reverses.
 
 ### pause-on-interruptions-755: Mobile: music pauses when Bluetooth disconnects, a call comes in, or another app plays media (Geethub #755)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Bug, Geethub issue #755. Playback must pause when the Bluetooth output disconnects, an incoming call starts, or another app takes audio focus.
 - **Touches:** index.html (playback), android-webview/ (audio focus)
@@ -12324,7 +12324,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #755. Built: Android AudioInterrupts.java (audio focus + becoming-noisy) drives the page pause via PlaybackService.control/__ebbMediaAction; rules in InterruptPolicy.java with tests; page __ebbMediaAction gains stop; browser: podcast/local songs no longer auto-resume after a system pause. NOT compiled (no JDK here), no device test. YouTube/SoundCloud browser path left alone (#458).
 
 ### artist-name-prominent-754: Album and song pages: artist name bigger and easier to click (Geethub #754)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #754. Make the artist name on album and song pages more prominent so it reads as clickable, not plain text above the play button.
 - **Touches:** index.html (album/song page UI)
@@ -12332,7 +12332,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #754. Related: album-page-721 (merged). Built: pageArtistRow() makes one 44px accent artist button per artist (person icon, aria-label) on the album preview, library album panel and song page; artist removed from the plain meta text. Player artist link unchanged. Verified at 375-1280px in Browser pane.
 
 ### album-song-actions-753: Album page songs: like heart, draggable to queue/player, prettier action menu (Geethub #753)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #753. In the album window add a heart beside the plus; every song, album or playlist shown anywhere is draggable to the queue or player. In the menu that opens, order is Play now > Play next > Add to queue > Add to playlist, with symbols and a nicer look.
 - **Touches:** index.html (album page, song action menu, drag)
@@ -12340,7 +12340,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #753. Related: album-page-721 (merged). Built: heart beside plus on album-window rows (liked state by name/artist, matches then likes); album, recents and artist-page library album rows drag to queue and new drop-on-player (song plays now keeping the queue, list plays); song action window shows art header and four tiles Play now/Play next/Add to queue/Add to playlist. Skipped: non-library artist albums, touch drag. Seen, not from this change: mobile album Add to library button looks clipped; desktop album window closes when the action window opens.
 
 ### album-add-hover-shake-752: Desktop: album page add-to-library button grows and shakes the window on hover (Geethub #752)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Bug, Geethub issue #752. The add-to-library button on the desktop album page expands on hover and shakes the whole window. Hover must not change its layout size.
 - **Touches:** index.html (album page CSS)
@@ -12348,7 +12348,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #752. Built: .queue-scroll gets overflow-x:hidden so the 1.07 hover scale on the full-width Add to library button no longer adds a sideways scrollbar (also fixes artist page and queue). Verified with a rebuilt button in the Browser pane, not on the live album page.
 
 ### video-mode-shortcuts-751: Video mode: keyboard shortcuts work for the video and the rest of the UI (Geethub #751)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #751. In video mode, keys should control the video (0 restarts, left arrow rewinds) and still work for the rest of the UI.
 - **Touches:** index.html (keyboard shortcuts, video mode)
@@ -12364,7 +12364,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #750. GPU budget: one extra video layer only during the fade, paused/removed after.
 
 ### video-art-outline-749: Desktop video mode still shows the empty album-art square behind the video (Geethub #749)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Bug, Geethub issue #749. In desktop video mode, the empty outline of the album art box shows behind the video. Hide it while the video is shown.
 - **Touches:** index.html (player, video mode CSS)
@@ -12372,7 +12372,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #749. Likely from video-in-player-668 (review). Built: the #668 video-mode rule lost to the default look shadow and missed the #583 bevel ::after ring. Now #artworkWrap.yt-video (id selector) clears shadow, ::after hidden, hidden art animations paused. Verified computed styles with the class forced; not checked with a real video on screen.
 
 ### bg-slower-748: Background moves too fast and distracts (Geethub #748)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #748. Slow down the moving background so it stops pulling attention.
 - **Touches:** index.html (#ambient animation timing)
@@ -12380,7 +12380,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #748. Built: all background drift durations doubled (#ambient 16/21s to 32/42s, veil 32s, vibe-breathe 44s to 20s, flow and mini-player copies matched). No keyframe edits. Verified computed durations in Browser pane, no gpu-watchdog warnings.
 
 ### cinema-mode-747: Video cinema mode darkens the rest of the page (Geethub #747)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #747. Add a cinema mode for video that dims everything around the video.
 - **Touches:** index.html (video mode)
@@ -12388,7 +12388,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #747. Static dim layer only; no backdrop-filter over the video (GPU budget). Built: Cinema tab (moon icon) in the visual tabs row while a video shows; static 86% black dim inside #view-player, video/tabs/transport stay lit; #ambient paused while on; exits on dim click, Esc, T or tab; ends when video goes; choice saved in ebbless:cinema. Shortcut T (C is Lyrics). Verified with a stand-in box, not a real video or phone.
 
 ### spotify-links-android-746: Android: open.spotify.com links offer to open in EBBLESS (Geethub #746)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #746. Shared or tapped open.spotify.com links on Android should show EBBLESS as an app to open them in.
 - **Touches:** android-webview/ (intent filters), index.html (link handling)
@@ -12396,7 +12396,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #746. Related: open-music-links-in-ebbless and music-links-open-in-ebbless (both merged; share target exists). This asks for link-open, not share. Built: native app had no SEND/VIEW handling. Manifest VIEW filters for open.spotify.com (incl. /intl-*), music.apple.com, music.youtube.com plus SEND text/plain; MusicLinks.java allowlist; MainActivity.takeLink/deliverLink to window.__ebbOpenLink (held until startApp); JS allowlist recheck + tools/native-link.test.js. NOT compiled (no JDK), no device test. Android 12+: unverified domains need Settings > Open by default; share sheet works without setup. spotify.link short links unsupported. Follow-up idea: button to ACTION_APP_OPEN_BY_DEFAULT_SETTINGS.
 
 ### skip-no-silence-745: Skipping keeps the current song playing until the next is ready, then fades (Geethub #745)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #745. On skip forward or back, keep playing the current song until the next one is ready, then fade it in. No silence unless the user pauses.
 - **Touches:** index.html (deck engine, crossfade)
@@ -12412,7 +12412,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #744. Large; likely split into three entries before building. Check against mission statement.
 
 ### skinny-love-first-743: Almost every generated playlist starts with Bon Iver's Skinny Love (Geethub #743)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Bug, Geethub issue #743. Generated playlists on mobile and desktop nearly always open with Skinny Love. Find why one song wins the first slot and fix the ordering/seed logic.
 - **Touches:** worker/ (vibe generation), index.html
@@ -12428,7 +12428,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #742.
 
 ### recents-open-not-play-741: Tapping a recent in the library opens it instead of playing (Geethub #741)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #741. Clicking an item in the library's recents opens it; it does not start playing.
 - **Touches:** index.html (library recents)
@@ -12436,7 +12436,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #741. Related: recents-label-678 (merged). Built: Library Recents shelf (#libShelf) tap opens the page via toggleLibraryPlaylistPanel; label Open X. Player empty-state shelf (#homeShelf) and Home Recently played (#724) still play: one-line changes each if wanted. Verified in Browser pane with seeded recents.
 
 ### swirl-daily-arc-740: Swirl: daily one-hour playlist from liked songs with an energy arc (Geethub #740)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #740. Swirl builds from Liked Songs and similar library music, picks an unannounced vibe of the day, runs about an hour with energy mid > high > mid > low > mid finale, and generates once per day on first load, shaped by time of day (Rosicrucian clock).
 - **Touches:** index.html (Swirl), worker/
@@ -12444,7 +12444,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #740. Related: swirl-intelligence (merged, #368). Built: swirlDailyPick() pure function (SWIRL-DAILY block): liked songs first then similar library songs, silent vibe of the day leaning on the Rosicrucian period, 5-part arc 20/25/20/20/15 mid>high>mid>low>mid, 60-70 min, date-seeded, built once per day by refreshBlendIfStale, manual regenerate still reshuffles, declined songs/artists excluded, fewer than 5 liked falls back to old Swirl. No new network/model calls. 7 tests in tools/swirl-daily.test.js pass. Browser-checked with seeded likes; gpu-watchdog not specifically checked.
 
 ### unliked-playlist-739: An Unliked playlist holds every thumbs-down song and artist (Geethub #739)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #739. Add a recycle-style Unliked playlist with all thumbs-down songs, artists and so on, kept in the library but excluded from Swirl and Currents analytics.
 - **Touches:** index.html (library, thumbs down, Swirl/Currents)
