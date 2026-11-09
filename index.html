@@ -3748,37 +3748,11 @@ body.split-desktop .install-banner{padding-left:24px;padding-right:12px}
 .splash-choice-btn-primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent,#151107);font-weight:600}
 .splash-choice{flex-wrap:wrap;justify-content:center;max-width:320px}.splash-bring{flex:1 0 100%;height:48px;font-size:15px}
 .splash-choice-btn-primary:hover,.splash-choice-btn-primary:focus-visible{background:var(--accent);filter:brightness(1.08)}
-/* mobile install gate (#262): phones/tablets in a browser tab get only an
-   Install button here (no Tutorial/Enter) plus platform directions beneath
-   it - see showInstallGate(). Same "video, logo, then buttons" timing as
-   .splash-choice; is-gate-in lands a frame after is-gate so it fades. */
-.splash-gate{position:relative;z-index:1;display:none;flex-direction:column;align-items:center;gap:14px;width:min(340px,calc(100vw - 32px));
-  opacity:0;transform:translateY(10px);transition:opacity 500ms var(--ease-out) 2700ms,transform 500ms var(--ease-out) 2700ms}
-#splash.is-gate .splash-gate{display:flex}
-#splash.is-gate .splash-choice{display:none}
-#splash.is-gate.is-gate-in .splash-gate{opacity:1;transform:translateY(0)}
-#splashInstallBtn{min-width:190px;padding:13px 28px;font-size:15px}
-#splashInstallBtn:disabled{opacity:.6;cursor:default;filter:none}
-.splash-gate .splash-choice-btn{width:100%;height:48px;display:flex;align-items:center;justify-content:center;padding:0;font-size:14px;letter-spacing:.2px}
-.splash-gate #splashInstallBtn{min-width:unset;padding:0}
-.splash-gate-help{width:100%;font-size:13.5px;line-height:1.5;color:var(--text);text-align:left;background:rgba(18,18,18,.82);
-  border:1px solid rgba(255,255,255,.18);border-radius:14px;padding:12px 16px;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);overflow-wrap:anywhere}
-.splash-gate-help[hidden]{display:none}
-.splash-gate-links{display:flex;justify-content:center;gap:22px}
-.splash-gate-link{font:inherit;font-size:13.5px;background:none;border:0;padding:6px 2px;color:rgba(255,255,255,.78);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
-.splash-gate-link:hover,.splash-gate-link:focus-visible{color:#fff}
 /* donate (#640): quiet link under the splash buttons; fades in with them, no motion of its own */
 .splash-support{position:relative;z-index:1;font-size:13px;padding:10px 8px;color:rgba(255,255,255,.7);text-decoration:underline;text-underline-offset:3px;
   opacity:0;pointer-events:none;transition:opacity 500ms var(--ease-out) 2700ms}
 .splash-support:hover,.splash-support:focus-visible{color:#fff}
-#splash.is-choice .splash-support,#splash.is-gate-in .splash-support{opacity:1;pointer-events:auto}
-.splash-gate-help ol{margin:0;padding-left:20px}
-.splash-gate-help li+li{margin-top:4px}
-.splash-gate-help b{font-weight:600}
-.splash-gate-help .sg-share{display:inline-block;width:16px;height:16px;vertical-align:-3px;color:var(--accent)}
-.splash-gate-help.is-flash{animation:sg-flash 1200ms var(--ease-out)}
-@keyframes sg-flash{0%,60%{border-color:var(--accent);box-shadow:0 0 0 3px rgba(255,255,255,.12)}100%{border-color:rgba(255,255,255,.18);box-shadow:none}}
-@media (prefers-reduced-motion:reduce){.splash-gate{transition:opacity 300ms linear;transform:none}.splash-gate-help.is-flash{animation:none;border-color:var(--accent)}}
+#splash.is-choice .splash-support{opacity:1;pointer-events:auto}
 
 /* ---------- first-launch intro: one continuous flowing sequence that
    reveals EBBLESS's mental model (bring music -> listen -> touch the
@@ -4422,8 +4396,6 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
   'use strict';
   const host = location.hostname;
   const local = host === 'localhost' || host === '127.0.0.1' || host === '[::1]' || location.protocol === 'file:';
-  // Owner's ?mal link: the mobile install gate reads this session flag.
-  try { if (new URLSearchParams(location.search).has('mal')) sessionStorage.setItem('ebbless:gateSkip', '1'); } catch(e){}
 
   const TOKEN_RE = /^t[0-9a-f]{12}-[0-9a-f]{32}$/;
   const LS_TOKEN = 'ebbless:betaToken';   // shared with beta/beta.js and the in-app feedback form
@@ -4564,14 +4536,6 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
     <button id="splashBringMusic" type="button" class="splash-choice-btn splash-choice-btn-primary splash-bring">Bring your music</button>
     <button id="splashPlayTutorial" type="button" class="splash-choice-btn">Tutorial</button>
     <button id="splashSkipTutorial" type="button" class="splash-choice-btn">Enter</button>
-  </div>
-  <div id="splashGate" class="splash-gate">
-    <button id="splashInstallBtn" type="button" class="splash-choice-btn splash-choice-btn-primary">Install EBBLESS</button>
-    <div id="splashGateHelp" class="splash-gate-help" aria-live="polite" hidden></div>
-    <div class="splash-gate-links">
-      <button id="splashGateTutorial" type="button" class="splash-gate-link">Watch a quick tour</button>
-      <button id="splashGateEnter" type="button" class="splash-gate-link">Skip for now</button>
-    </div>
   </div>
   <a class="splash-support" href="https://www.patreon.com/cw/EBBLESS" target="_blank" rel="noopener">Support EBBLESS</a>
 </div>
@@ -6176,7 +6140,7 @@ try { if (localStorage.getItem('ebbless_backend') === 'staging') BACKEND = BACKE
 setTimeout(() => {
   try{
     const splashSafetyEl = document.getElementById('splash');
-    if (splashSafetyEl && !splashSafetyEl.classList.contains('is-hidden') && !splashSafetyEl.classList.contains('is-return') && !splashSafetyEl.classList.contains('is-gate') && !(document.documentElement.classList.contains('ebb-android') && splashSafetyEl.classList.contains('is-choice'))){
+    if (splashSafetyEl && !splashSafetyEl.classList.contains('is-hidden') && !splashSafetyEl.classList.contains('is-return') && !(document.documentElement.classList.contains('ebb-android') && splashSafetyEl.classList.contains('is-choice'))){
       splashSafetyEl.classList.add('is-hidden');
     }
   }catch(e){}
@@ -6404,19 +6368,9 @@ function waitForInstallPrompt(ms){
 // Manual-install instructions for browsers with no programmatic prompt
 // (always iOS Safari) - shared by the Settings install row and the banner.
 const INSTALL_HINT_IOS = 'Tap Share, then Add to Home Screen.';
-// Phones/tablets in a browser tab never get past the splash: they get the
-// install gate instead (showInstallGate). Coarse pointer + small screen
-// catches tablets/phones whose UA doesn't say so.
-// Owner's skip: .../EBBLESS/?mal opens the app in a mobile browser tab, for
-// testing on other devices. Lasts for the tab session.
-const installGateSkip = (() => {
-  try {
-    if (new URLSearchParams(location.search).has('mal')) sessionStorage.setItem('ebbless:gateSkip', '1');
-    return sessionStorage.getItem('ebbless:gateSkip') === '1';
-  } catch(e){ return false; }
-})();
-const mobileInstallGate = !installGateSkip && !isStandaloneDisplay() && (isMobileUA || isIOS ||
-  (!!window.matchMedia && matchMedia('(pointer: coarse)').matches && Math.min(screen.width, screen.height) < 820));
+// Open beta: phones and tablets in a browser tab get the same splash as
+// everyone else (the install gate, #262, is gone); the install banner
+// offers installing after the first song.
 const INSTALL_HINT_MENU = 'Open your browser menu and choose Install app or Add to Home Screen (in Safari on Mac: File, then Add to Dock).';
 // iPhone/iPad install steps (#314). iOS has no install API and not every
 // share list shows Add to Home Screen, so every install button on iOS opens
@@ -21931,6 +21885,9 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
+  { version: 501, date: '2026-11-09', items: [
+    'Phones: EBBLESS opens in your browser like everywhere else, no install step first. Installing is still one tap away when you want it.',
+  ]},
   { version: 500, date: '2026-11-09', items: [
     'Break my bubble: a new switch in Settings (and beside Discover in the queue) that mixes in songs outside your usual taste that still sound like what you like. Off until you turn it on.',
   ]},
@@ -36536,7 +36493,7 @@ function installBannerBlocked(){
   return !!(pasteGuideEl && !pasteGuideEl.hidden);
 }
 function scheduleInstallBanner(){
-  if (!installBanner || isStandaloneDisplay() || isDesktopApp || mobileInstallGate) return;
+  if (!installBanner || isStandaloneDisplay() || isDesktopApp) return;
   try { if (sessionStorage.getItem(INSTALL_BANNER_CLOSED_KEY)) return; } catch(e){}
   let clearSince = 0;
   const tick = () => {
@@ -41241,7 +41198,6 @@ function discardIntroChrome(){
 //   share sheet (navigator.share) and highlights the steps.
 // - openout: in-app browsers (Instagram, Facebook, TikTok...) and older
 //   non-Safari iOS browsers can't install - copy the link to open elsewhere.
-const INSTALL_SHARE_ICON = '<svg class="sg-share" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M12 3v12M8 7l4-4 4 4M7 10H5v11h14V10h-2"/></svg>';
 function installGateMode(){
   const ua = navigator.userAgent;
   if (/FBAN|FBAV|FB_IAB|Instagram|TikTok|musical_ly|Bytedance|Snapchat|LinkedInApp|Pinterest|Line\/|GSA\/|; wv\)/i.test(ua)) return 'openout';
@@ -41291,79 +41247,6 @@ function carryTesterTokenForInstall(){
     (m.icons || []).forEach(i => { i.src = abs(i.src); });
     link.href = 'data:application/manifest+json,' + encodeURIComponent(JSON.stringify(m));
   }).catch(() => {});
-}
-function showInstallGate(){
-  const splashEl = $('splash');
-  const btn = $('splashInstallBtn'), help = $('splashGateHelp');
-  if (!splashEl || !btn || !help){ discardIntroChrome(); startApp(); return; }
-  // same static-intro-chrome handling as showSplashChoice() below
-  ['onbSkip', 'onbCapture'].forEach(id => { const el = $(id); if (el) el.style.display = 'none'; });
-  const setHelp = (html) => { help.innerHTML = html; help.hidden = !html; };
-  const flashHelp = () => { help.classList.remove('is-flash'); void help.offsetWidth; help.classList.add('is-flash'); };
-  const mode = installGateMode();
-  if (mode === 'ios'){
-    carryTesterTokenForInstall();
-    setHelp('<ol><li>Tap <b>Install EBBLESS</b> (or the Share button ' + INSTALL_SHARE_ICON + ')</li><li>Choose <b>Add to Home Screen</b></li><li>Open <b>EBBLESS</b> from your home screen</li></ol>');
-    btn.addEventListener('click', async () => {
-      flashHelp();
-      if (navigator.share){
-        try { await navigator.share({ title: 'EBBLESS', url: urlWithTesterToken(location.href, '') }); } catch (e) { /* AbortError: sheet closed */ }
-      }
-    });
-  } else if (mode === 'openout'){
-    setHelp('Open this page in <b>Safari</b> (or <b>Chrome</b>) to install EBBLESS.');
-    btn.textContent = 'Copy link';
-    // The copied link keeps the tester's invite so Safari opens unlocked
-    // (the in-app browser's storage doesn't carry over); it's their own
-    // clipboard, pasted into their own browser.
-    const openUrl = urlWithTesterToken(location.href, installTesterToken());
-    btn.addEventListener('click', () => {
-      const done = () => { btn.textContent = 'Link copied'; setHelp('Link copied. Paste it into <b>Safari</b> (or <b>Chrome</b>) to install EBBLESS.'); };
-      const fail = () => { setHelp('Open this page in <b>Safari</b> (or <b>Chrome</b>) to install:<br>' + openUrl.replace(/[<>&"]/g, '')); flashHelp(); };
-      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(openUrl).then(done, fail);
-      else fail();
-    });
-  } else {
-    const MENU_HELP = 'Tap <b>&#8942;</b> (your browser menu), then <b>Install app</b> or <b>Add to Home screen</b>.';
-    const setReady = () => { btn.disabled = false; btn.textContent = 'Install EBBLESS'; };
-    if (deferredInstallPrompt) setReady();
-    else {
-      btn.disabled = true;
-      btn.textContent = 'Getting ready\u2026';
-      // never fired (Firefox, some Samsung builds, or already dismissed)
-      setTimeout(() => { if (!deferredInstallPrompt && btn.disabled && !btn.hidden){ setReady(); setHelp(MENU_HELP); } }, 4000);
-    }
-    document.addEventListener('ebbless:install-available', () => { if (!btn.hidden){ setReady(); setHelp(''); } });
-    btn.addEventListener('click', async () => {
-      btn.disabled = true;
-      if (!(await waitForInstallPrompt(2000))){ btn.disabled = false; setHelp(MENU_HELP); flashHelp(); return; }
-      const accepted = await runInstallPrompt();
-      if (!accepted){ setReady(); setHelp(MENU_HELP); }
-    });
-    window.addEventListener('appinstalled', () => {
-      btn.hidden = true;
-      setHelp('<b>Installed!</b> Open EBBLESS from your home screen.');
-    });
-  }
-  // Add event listeners for Tutorial/Enter buttons in the gate
-  const tutorialBtn = $('splashGateTutorial'), enterBtn = $('splashGateEnter');
-  const gateDismiss = () => splashEl.classList.add('is-hidden');
-  if (tutorialBtn) tutorialBtn.addEventListener('click', () => {
-    gateDismiss();
-    runIntro(false);
-  }, { once: true });
-  if (enterBtn) enterBtn.addEventListener('click', () => {
-    try{ localStorage.setItem(ONB_KEY, 'true'); }catch(e){}
-    gateDismiss();
-    startApp();
-  }, { once: true });
-  // brand beat, then the splash reveal - same lead-in as showSplashChoice()
-  setTimeout(() => {
-    discardIntroChrome();
-    splashEl.classList.add('is-active', 'is-gate');
-    void splashEl.offsetWidth; // commit display:flex first so the fade-in runs
-    splashEl.classList.add('is-gate-in');
-  }, 1300);
 }
 
 // First-time visitor: offer an explicit choice on the splash screen instead
@@ -41466,10 +41349,10 @@ let forceIntroPreview = false;
 try{ forceIntroPreview = new URLSearchParams(location.search).has('intro'); }catch(e){}
 
 // ---- capture-only debug entry point --------------------------------------
-// iPhone skips the install gate (and its carry-over above), but Add to Home
-// Screen from Safari still makes an app with its own storage: carry the
-// tester token into it the same way, so it opens unlocked.
-if (mobileInstallGate && isIPhone) carryTesterTokenForInstall();
+// iPhone/iPad in a browser tab: Add to Home Screen from Safari makes an app
+// with its own storage, so carry the tester token into it (the tester
+// record follows them; nothing is locked either way).
+if (isIOS && !isStandaloneDisplay()) carryTesterTokenForInstall();
 
 // ?introBeat=<name> jumps straight to one named beat's finished DOM state,
 // with no timers running, so it can be screenshotted cleanly (headless
@@ -41751,7 +41634,6 @@ if (introBeatCapture){
   // the forced gold set earlier with the real time-of-day color again
   document.documentElement.style.setProperty('--clock-accent', '#e0b26a');
 } else if (forceIntroPreview) runIntro(true);
-else if (mobileInstallGate && !isIPhone) showInstallGate();
 else if (onboardingComplete && !tutorialWatched && inviteDueToday(TUTORIAL_INVITE_DAY_KEY)){
   // Took "Enter" without ever watching - offer the choice again, once a day.
   markInviteShown(TUTORIAL_INVITE_DAY_KEY);
