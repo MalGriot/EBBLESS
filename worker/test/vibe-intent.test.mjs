@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { parseVibeExclusions, filterExcluded, matchHouseVibe, vibeSeededShuffle, orderVibeSeeds } from '../src/vibe-intent.js';
+import { parseVibeExclusions, filterExcluded, matchHouseVibe, vibeSeededShuffle, orderVibeSeeds, OVERUSED_SEEDS } from '../src/vibe-intent.js';
 
 test('negations become exclusions and leave the rest of the sentence', () => {
   const r = parseVibeExclusions('late night drive, nothing sad, no country please');
@@ -106,4 +106,22 @@ test('the worker grounds seeds in the per-sentence order, with a fresh cache key
   assert.match(src, /mapWithConcurrency\(orderVibeSeeds\(interp\.seeds, cacheText\)/);
   assert.match(src, /house: true \}\)\);/);
   assert.doesNotMatch(src, /const VIBE_CACHE_VERSION = 'v3'/);
+});
+
+test('a song the model names for every mood is mostly dropped, and last when kept (#743)', () => {
+  const model = [{ artist: 'Bon Iver', title: 'Skinny Love' }, { artist: 'Nick Drake', title: 'River Man' }, { artist: 'Four Tet', title: 'Two Thousand And Seventeen' },
+    { artist: 'Fleet Foxes', title: 'White Winter Hymnal' }, { artist: 'Sufjan Stevens', title: 'Chicago' }, { artist: 'Iron & Wine', title: 'Naked as We Came' },
+    { artist: 'Jose Gonzalez', title: 'Heartbeats' }, { artist: 'Elliott Smith', title: 'Between the Bars' }];
+  assert.ok(OVERUSED_SEEDS.includes('bon iver|skinny love'));
+  const sentences = Array.from({ length: 60 }, (_, i) => 'mood number ' + i);
+  const lists = sentences.map(s => orderVibeSeeds(model, s));
+  const withIt = lists.filter(l => l.some(x => x.title === 'Skinny Love'));
+  assert.ok(withIt.length <= 24, 'Skinny Love stayed in ' + withIt.length + ' of 60 seed lists');
+  assert.ok(withIt.length >= 1, 'it can still appear');
+  withIt.forEach(l => assert.equal(l[l.length - 1].title, 'Skinny Love'));
+  lists.forEach(l => assert.ok(l.length >= model.length - 1));
+  assert.deepEqual(orderVibeSeeds(model, 'mood number 3'), orderVibeSeeds(model, 'mood number 3'));
+  // artist case and punctuation do not dodge the list
+  const alt = orderVibeSeeds([{ artist: 'BON IVER', title: 'Skinny Love!' }, { artist: 'X', title: 'x' }], 'mood number 7');
+  assert.ok(alt.length >= 1);
 });

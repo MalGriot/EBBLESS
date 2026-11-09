@@ -4108,7 +4108,7 @@ async function handleArtistMap(url, env, ctx) {
 // Privacy: the sentence is never logged or stored anywhere but the edge
 // cache entry keyed by its normalized text (which holds only the derived
 // interpretation, not who asked).
-const VIBE_CACHE_VERSION = 'v4';   // v4: model seeds no longer lead in the model's order (#743)
+const VIBE_CACHE_VERSION = 'v5';   // v5: songs the model names for every mood are mostly dropped from the seeds (#743)
 const VIBE_MAX_INPUT = 300;
 const VIBE_AI_MODEL = '@cf/meta/llama-3.1-8b-instruct-fast';
 const VIBE_AI_TIMEOUT_MS = 9000;
