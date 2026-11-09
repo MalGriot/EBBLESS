@@ -1,12 +1,9 @@
 [
-  "bl-breathe:box-shadow",
-  "bl-sheen:left",
   "onb-next-glow:box-shadow",
   "onb-next-shine:left",
   "onb-outro-blink-in:filter",
   "onb-outro-blink:filter",
   "onb-paste-flash:box-shadow",
   "paste-guide-ring:box-shadow",
-  "play-nudge-breathe:box-shadow",
-  "sg-flash:box-shadow"
+  "play-nudge-breathe:box-shadow"
 ]

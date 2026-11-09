@@ -143,7 +143,9 @@ sample; both are gone (`sample/` now just redirects to the app;
   per device). A token the worker rejects is forgotten, nothing locks.
 - Send feedback is for everyone (Settings, the desktop nav button, and the
   phone header icon after 3 days).
-- The mobile install gate (#262) is a separate platform rule and is unchanged.
+- No install gate either: phones and tablets in a browser tab get the same
+  splash as everyone (the #262 gate is gone, and with it the owner's `?mal`
+  skip). The install banner offers installing after the first song.
 
 ## Reading tester feedback
 
