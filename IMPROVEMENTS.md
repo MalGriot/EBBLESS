@@ -12403,13 +12403,29 @@ Add entries in this shape:
 - **Branch:** agent/skip-no-silence-745
 - **Notes:** Synced from Geethub #745. Built: startSkipCrossfade runs on every manual skip; old song plays at full volume until the new deck really sounds, then fades (SKIP_FADE_MS 1s when crossfade off, the crossfade setting when on), capped at 25s. Rapid skips: latest wins. Pause while waiting fades the old song. Falls back to a cut for skip while paused, SC to SC, cast, iPhone with crossfade off. Verified YT volume commands in Browser pane; not verified: SC/podcast, 25s cap, lock screen, app builds.
 
-### three-big-features-744: Vibe slider, picture-to-playlist, and Break My Bubble button (Geethub #744)
-- **Status:** ready
+### break-my-bubble-744c: Break My Bubble: a toggle that adds songs outside your usual taste but close in sound (Geethub #744)
+- **Status:** draft
 - **Priority:** medium
-- **Description:** Idea, Geethub issue #744. Three ideas: a slider that shifts a vibe's mood live (more melancholy / more electronic); upload a photo, movie frame or poem and turn its feel into a playlist; a Break My Bubble toggle that adds obscure songs that share the vibe's sound.
-- **Touches:** index.html (vibe generation), worker/
+- **Description:** Idea, Geethub issue #744 part 3 of 3. A "Break My Bubble" toggle on a vibe or Swirl that mixes in lesser-known or different-genre songs that still share the sound of what you like (tags, energy, tempo), so discovery does not stay inside your own history.
+- **Touches:** index.html (vibe and Swirl builders, existing discover logic: isDiscoverOn, DISCOVER_TAG_BLACKLIST), worker/ only if a new lookup is needed
 - **Branch:**
-- **Notes:** Synced from Geethub #744. Large; likely split into three entries before building. Check against mission statement.
+- **Notes:** Split from #744. Fits the mission (effortless discovery). Cheapest of the three: the app already has discover toggles and tag data. "Zero-stream" songs cannot be checked for a playable link, so aim for low-listener songs that still match to a playable source. Respect thumbs-downs and the Unliked list. Recommended first.
+
+### vibe-slider-744a: Vibe slider: nudge a vibe's mood live (Geethub #744)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #744 part 1 of 3. On a vibe, one or two sliders (for example more melancholy / more electronic) re-shape the playlist as you move them, swapping songs, not just reordering.
+- **Touches:** index.html (vibe UI and generation), worker/ (/vibe-interpret)
+- **Branch:**
+- **Notes:** Split from #744. The app has no per-song mood vectors, only energy estimates and tags, so build it as tag and energy shifts on the vibe (re-pull and re-rank), not "real-time vector adjustments". Debounce slider moves so a drag costs one worker call at most; reuse cached answers. Keep the surface simple (least clicks): the sliders hide until asked for.
+
+### picture-to-playlist-744b: Picture, movie frame or poem becomes a playlist (Geethub #744)
+- **Status:** draft
+- **Priority:** low
+- **Description:** Idea, Geethub issue #744 part 2 of 3. Pick a photo, a movie screenshot or a poem and get a playlist that matches its feel (light, color, mood).
+- **Touches:** index.html (new input on Home), worker/ (new route, image model call)
+- **Branch:**
+- **Notes:** Split from #744. The poem half already works: typing or pasting it into "What's the vibe?" goes through /vibe-interpret, so that part is a small copy and UI change. The photo half needs an image-understanding model call in the worker. That spends from the shared free Workers AI allowance (10,000 neurons a day) and sends the user's picture off the device, so it needs a per-IP throttle, a size cap, no storing the image, and a clear one-line notice. Largest and riskiest of the three; recommended last.
 
 ### skinny-love-first-743: Almost every generated playlist starts with Bon Iver's Skinny Love (Geethub #743)
 - **Status:** merged
