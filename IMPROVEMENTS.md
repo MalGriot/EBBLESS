@@ -12404,7 +12404,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #745. Built: startSkipCrossfade runs on every manual skip; old song plays at full volume until the new deck really sounds, then fades (SKIP_FADE_MS 1s when crossfade off, the crossfade setting when on), capped at 25s. Rapid skips: latest wins. Pause while waiting fades the old song. Falls back to a cut for skip while paused, SC to SC, cast, iPhone with crossfade off. Verified YT volume commands in Browser pane; not verified: SC/podcast, 25s cap, lock screen, app builds.
 
 ### break-my-bubble-744c: Break My Bubble: a toggle that adds songs outside your usual taste but close in sound (Geethub #744)
-- **Status:** in-progress
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #744 part 3 of 3. A "Break My Bubble" toggle on a vibe or Swirl that mixes in lesser-known or different-genre songs that still share the sound of what you like (tags, energy, tempo), so discovery does not stay inside your own history.
 - **Touches:** index.html (vibe and Swirl builders, existing discover logic: isDiscoverOn, DISCOVER_TAG_BLACKLIST), worker/ only if a new lookup is needed
