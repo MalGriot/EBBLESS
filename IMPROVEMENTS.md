@@ -12356,12 +12356,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #751. Related: video-open-shortcuts (merged, #421), video-in-player-668 (review). Built: 0/Home restart in video mode (kbSkipBy); existing #421 keys kept; J/L/K not added (L=Library, K=Shuffle); focus handed back to page after clicking into the yt-host iframe (skipped after Tab or when window loses focus); Settings list row added. Verified with an instrumented copy; real YouTube playback not tested.
 
 ### video-crossfade-750: Videos fade visually into the next video (Geethub #750)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #750. When one song's video ends and the next starts, crossfade the picture instead of a hard cut.
 - **Touches:** index.html (video mode)
-- **Branch:**
-- **Notes:** Synced from Geethub #750. GPU budget: one extra video layer only during the fade, paused/removed after.
+- **Branch:** agent/video-crossfade-750
+- **Notes:** Synced from Geethub #750. GPU budget: one extra video layer only during the fade, paused/removed after. Built: ytFade state dissolves the incoming deck video over the outgoing one (opacity only, one animated layer, classes cleared after) for auto-advance crossfade, manual skip (#745 fade start) and a 300ms plain-cut dissolve; reduced motion swaps instantly. Verified manual skip and 6s auto crossfade in the Browser pane (opacity stepped about once a second in the auto run, start/end right). Not verified: 300ms cut path, reduced motion, skip with crossfade on, cinema mode with video.
 
 ### video-art-outline-749: Desktop video mode still shows the empty album-art square behind the video (Geethub #749)
 - **Status:** merged
