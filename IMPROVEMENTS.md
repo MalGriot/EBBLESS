@@ -12404,12 +12404,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #745. Built: startSkipCrossfade runs on every manual skip; old song plays at full volume until the new deck really sounds, then fades (SKIP_FADE_MS 1s when crossfade off, the crossfade setting when on), capped at 25s. Rapid skips: latest wins. Pause while waiting fades the old song. Falls back to a cut for skip while paused, SC to SC, cast, iPhone with crossfade off. Verified YT volume commands in Browser pane; not verified: SC/podcast, 25s cap, lock screen, app builds.
 
 ### break-my-bubble-744c: Break My Bubble: a toggle that adds songs outside your usual taste but close in sound (Geethub #744)
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #744 part 3 of 3. A "Break My Bubble" toggle on a vibe or Swirl that mixes in lesser-known or different-genre songs that still share the sound of what you like (tags, energy, tempo), so discovery does not stay inside your own history.
 - **Touches:** index.html (vibe and Swirl builders, existing discover logic: isDiscoverOn, DISCOVER_TAG_BLACKLIST), worker/ only if a new lookup is needed
-- **Branch:**
-- **Notes:** Split from #744. Fits the mission (effortless discovery). Cheapest of the three: the app already has discover toggles and tag data. "Zero-stream" songs cannot be checked for a playable link, so aim for low-listener songs that still match to a playable source. Respect thumbs-downs and the Unliked list. Recommended first.
+- **Branch:** agent/break-my-bubble-744c
+- **Notes:** Split from #744. Fits the mission (effortless discovery). Cheapest of the three: the app already has discover toggles and tag data. "Zero-stream" songs cannot be checked for a playable link, so aim for low-listener songs that still match to a playable source. Respect thumbs-downs and the Unliked list. Recommended first. Built: setting "Break my bubble" (Settings > Playback, plus a small icon beside Discover in the queue), default off, synced with the profile. On, about a third of Discover batches and typed-vibe lists come from artists with no history, sharing a seed tag and sound band, lower Last.fm play counts and a different top tag preferred; thumbs-downs, blacklisted tags and unpicked languages stay out. Logic in the BREAK-MY-BUBBLE block, tools/bubble-break.test.js. Cost: one extra /metrics request (up to 8 songs) per Discover batch while on; no new worker route. Swirl is built from the library only, so it is untouched; CuRRentSSsss slots pick one song each, so no bubble share there.
 
 ### vibe-slider-744a: Vibe slider: nudge a vibe's mood live (Geethub #744)
 - **Status:** draft
