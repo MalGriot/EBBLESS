@@ -2609,6 +2609,9 @@ body:has(#artworkWrap.is-playing) #libpl-panel.is-open .np-bars i{animation-play
 #yt-host.is-shown{position:fixed;z-index:40;opacity:1;pointer-events:auto;border-radius:var(--r-md);background:#000}
 #yt-host.is-shown > *{position:absolute;left:0;top:0;width:100%;height:100%;border:0}
 #yt-host.is-shown > .yt-on{z-index:1}
+/* #750: song change with the video showing. The outgoing deck's frame stays under, the incoming one fades in over it (opacity only, see ytFadeStart); both layers exist only for the fade */
+#yt-host.is-shown > .yt-out{z-index:1}
+#yt-host.is-shown > .yt-on.yt-in{z-index:2}
 /* #523: covers the live player while an ad is held silent (card and F fullscreen) */
 #yt-host.is-shown > .yt-ad-cover:not([hidden]){z-index:2;display:flex;align-items:center;justify-content:center;padding:16px;
   text-align:center;background:#000;color:var(--faint);font-size:13px;line-height:1.5}
@@ -21996,21 +21999,66 @@ function ytPanelBtnSync(){
   if (!ok && ytOn) closeYtPanel(true);
   return ok;
 }
+// #750: cross-dissolve of the video when the song changes. ytFade holds the two
+// iframes while it runs; the incoming one (on top) fades 0 to 1 over the outgoing
+// one (full, beneath), so the picture never dips dark. Opacity only, on one
+// layer, for the length of the audio fade. Not started with nothing showing,
+// with reduced motion, or when either frame is not a YouTube iframe (a hard
+// swap, as before). Self-expires, and cancelCrossfade/finish clear it.
+let ytFade = null;
+function ytFadeLive(){
+  if (!ytFade) return null;
+  if (Date.now() > ytFade.until || !ytFade.out.isConnected || !ytFade.inn.isConnected){ ytFadeEnd(); return null; }
+  return ytFade;
+}
+function ytFadeEnd(sync){
+  if (!ytFade) return;
+  try { if (ytFade.anim) ytFade.anim.cancel(); } catch(e){}
+  ytFade = null;
+  if (sync && (ytPanelOpen() || document.documentElement.classList.contains('ebb-pip'))) ytPanelSync();
+}
+function ytFadeStart(outDeck, inDeck, ms){
+  ytFadeEnd();
+  try {
+    if (!ytHost.classList.contains('is-shown') || !outDeck || !inDeck || outDeck === inDeck) return;
+    if (outDeck.kind !== 'yt' || inDeck.kind !== 'yt' || !(ms > 0)) return;
+    if (window.matchMedia('(prefers-reduced-motion:reduce)').matches || !msMotionOk()) return;
+    const o = document.getElementById(outDeck.id), i = document.getElementById(inDeck.id);
+    if (!o || !i || o.tagName !== 'IFRAME' || i.tagName !== 'IFRAME' || !i.animate) return;
+    ytFade = { out: o, inn: i, until: Date.now() + ms + 300, anim: null };
+    ytPanelSync();
+    if (ytFade) ytFade.anim = i.animate([{ opacity: 0 }, { opacity: 1 }], { duration: ms, easing: 'linear', fill: 'backwards' });
+  } catch(e){ ytFade = null; }
+}
 function ytPanelSync(){
   if (ytPanelOpen() && !ytPanelBtnSync()) return;
   const pip = document.documentElement.classList.contains('ebb-pip');
   const open = ytPanelOpen() || pip;
   const deck = activeDeck(), t = trackAt(state.queuePos);
-  const el = deck && deck.kind === 'yt' && deck.player && t && deck.videoId === t.videoId ? document.getElementById(deck.id) : null;
+  let el = deck && deck.kind === 'yt' && deck.player && t && deck.videoId === t.videoId ? document.getElementById(deck.id) : null;
+  // #750: a manual skip keeps the old song sounding until the new one does: keep its picture up too, then dissolve
+  let held = null;
+  try {
+    const sf = skipWaiting() ? skipFade : null;
+    if (sf && sf.old.kind === 'yt' && sf.old.player) held = document.getElementById(sf.old.id);
+    if (held && held.tagName !== 'IFRAME') held = null;
+  } catch(e){}
+  const fz = held ? null : ytFadeLive();
+  if (held) el = held;
+  else if (fz) el = fz.inn;
   const show = open && !!el && el.tagName === 'IFRAME';
   // #523: an ad held silent is covered by a note saying what's happening. A
   // cover inside #yt-host, not hiding the player, so F fullscreen gets it too.
   // the first seconds of a load are the muted ad wait too (onDeckConfirmed
   // restarts the song at 0:00), so anything showing then is covered as well
-  const adTxt = show ? (adWaitText() || (deck.confirmed ? '' : 'Starting your song\u2026')) : '';
+  const adTxt = show && !held ? (adWaitText() || (deck.confirmed ? '' : 'Starting your song\u2026')) : '';
   ytAdCover.hidden = !adTxt;
   if (adTxt) ytAdCover.textContent = adTxt;
-  Array.prototype.forEach.call(ytHost.children, c => c.classList.toggle('yt-on', show && c === el));
+  Array.prototype.forEach.call(ytHost.children, c => {
+    c.classList.toggle('yt-on', show && c === el);
+    c.classList.toggle('yt-out', show && !!fz && c === fz.out);
+    c.classList.toggle('yt-in', show && !!fz && c === fz.inn);
+  });
   ytHost.classList.toggle('is-shown', show);
   artworkWrap.classList.toggle('yt-video', show);
   flowArtWrap.classList.toggle('yt-video', show);
@@ -33089,6 +33137,7 @@ function reflectCurrentTrackUI(pos, opts){
 // Returns true when it actually stopped a fade, so a caller that isn't about
 // to load a track itself can put the next-track preload back (schedulePreload).
 function cancelCrossfade(){
+  ytFadeEnd();
   if (!swapInProgress) return false;
   swapInProgress = false;
   skipFade = null;
@@ -33151,6 +33200,8 @@ function promoteDeckDirect(nd, pos, shouldPlay, keepOld){
     // a plain forward step leaves the finished track warm for Previous
     if (old.confirmed && !old.adDodge && !castActive() && pos === oldPos + 1){ old.pos = oldPos; keepAsPrev(old); }
     else resetDeck(old);
+    // #750: a plain cut dissolves over 300ms when both frames are warm; the old frame survives only in the keepAsPrev case
+    if (nd.confirmed && old.confirmed && shouldPlay) ytFadeStart(old, nd, 300);
   }
   schedulePreload(pos);
 }
@@ -33189,6 +33240,7 @@ function runCrossfade(nd, nextPos){
   if (nd.player.unMute) nd.player.unMute();
   nd.player.playVideo();
   const durationMs = crossfadePrefs.ms;
+  ytFadeStart(old, nd, durationMs);   // #750: the video dissolves over the same window
   // Fade the album art over the same window as the audio crossfade, starting
   // now rather than waiting for finishCrossfade() - otherwise the art would
   // pop to the next track only once the audio fade is already done.
@@ -33220,6 +33272,7 @@ function finishCrossfade(old, nd, nextPos){
   reflectCurrentTrackUI(nextPos, { skipArtSwap: true });
   scPromoted(nd);
   setPlayingUI(true);
+  ytFadeEnd(true);
   // the incoming deck is already seconds in - repaint straight away rather
   // than leave reflectCurrentTrackUI's 0:00 up until the next poll tick
   updateSeekUI();
@@ -33368,6 +33421,8 @@ function startSkipCrossfade(pos, t){
       if (!skipIncomingSounds(nd) && t1 - f.waitStart < SKIP_WAIT_MAX_MS) return;
       f.fadeStart = t1;
       f.outFrom = f.outGain;
+      ytFadeStart(old, nd, f.fadeMs);   // #750: picture dissolves with the sound; the old picture was held until now
+      if (!ytFade && ytPanelOpen()) ytPanelSync();
     }
     const p = Math.min(1, (t1 - f.fadeStart) / f.fadeMs);
     f.outGain = f.outFrom * (1 - p);
@@ -33379,6 +33434,7 @@ function startSkipCrossfade(pos, t){
     nd.fadeTimer = null;
     swapInProgress = false;
     skipFade = null;
+    ytFadeEnd(true);
     if (old.player && old.player.pauseVideo) old.player.pauseVideo();
     resetDeck(old);
     schedulePreload(state.queuePos);
