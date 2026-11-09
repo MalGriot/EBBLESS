@@ -394,10 +394,10 @@ svg{display:block}
    stretched by the compositor - no CSS filter, so the GPU texture stays small */
 #ambient .layer{position:absolute;left:-40%;top:-40%;width:180%;height:180%;transform:scale(1.15);opacity:0;
   transition:opacity calc(var(--dur-surface) * 1.6) var(--ease-in-out);}
-#ambient .layer.is-active{opacity:.9;animation:ambient-drift var(--vibe-breathe,16s) ease-in-out infinite;will-change:transform}
+#ambient .layer.is-active{opacity:.9;animation:ambient-drift var(--vibe-breathe,32s) ease-in-out infinite;will-change:transform}
 /* #487: fullscreen covers this completely, so stop animating it underneath */
 body:has(#milkLayer.is-open) #ambient .layer,body:has(#flow-layer.is-open) #ambient .layer,body:has(#findMusic:not([hidden])) #ambient .layer,body:has(#musicMap:not([hidden])) #ambient .layer{animation-play-state:paused}
-#ambient .layer.is-active:nth-child(2){animation-duration:21s;animation-direction:alternate-reverse}
+#ambient .layer.is-active:nth-child(2){animation-duration:42s;animation-direction:alternate-reverse}
 @keyframes ambient-drift{
   0%{transform:translate(0,0) scale(1.2)}
   20%{transform:translate(-9%,7%) scale(1.42)}
@@ -407,9 +407,9 @@ body:has(#milkLayer.is-open) #ambient .layer,body:has(#flow-layer.is-open) #ambi
   100%{transform:translate(0,0) scale(1.2)}
 }
 /* brightness breathing (the old filter keyframes, #487-safe): the art is painted at peak brightness and a
-   black veil fades over it, opacity only, in step with the 16s drift */
+   black veil fades over it, opacity only, in step with the 32s drift (#748: halved from 16s, it read as distracting) */
 .ambient-veil{position:absolute;inset:0;background:#000;opacity:.25;pointer-events:none}
-#ambient:has(.layer.is-active) .ambient-veil{animation:ambient-breathe var(--vibe-breathe,16s) ease-in-out infinite}
+#ambient:has(.layer.is-active) .ambient-veil{animation:ambient-breathe var(--vibe-breathe,32s) ease-in-out infinite}
 body:has(#milkLayer.is-open) #ambient .ambient-veil,body:has(#flow-layer.is-open) #ambient .ambient-veil,body:has(#findMusic:not([hidden])) #ambient .ambient-veil,body:has(#musicMap:not([hidden])) #ambient .ambient-veil{animation-play-state:paused}
 @keyframes ambient-breathe{
   0%{opacity:.48}
@@ -2673,10 +2673,10 @@ body:has(#flow-layer.is-open:not(.is-leaving)) :is(#ambient,#topbar,#view-librar
 #flow-layer .flow-ambient{position:absolute;inset:0;z-index:0;overflow:hidden;background:var(--bg)}
 #flow-layer .flow-ambient .layer{position:absolute;left:-40%;top:-40%;width:180%;height:180%;transform:scale(1.15);opacity:0;
   transition:opacity calc(var(--dur-surface) * 1.6) var(--ease-in-out);}
-#flow-layer .flow-ambient .layer.is-active{opacity:.9;animation:ambient-drift 16s ease-in-out infinite;will-change:transform}
+#flow-layer .flow-ambient .layer.is-active{opacity:.9;animation:ambient-drift 32s ease-in-out infinite;will-change:transform}
 #flow-layer:not(.is-open) .flow-ambient .layer{animation-play-state:paused}
-#flow-layer .flow-ambient .layer.is-active:nth-child(2){animation-duration:21s;animation-direction:alternate-reverse}
-#flow-layer .flow-ambient:has(.layer.is-active) .ambient-veil{animation:ambient-breathe 16s ease-in-out infinite}
+#flow-layer .flow-ambient .layer.is-active:nth-child(2){animation-duration:42s;animation-direction:alternate-reverse}
+#flow-layer .flow-ambient:has(.layer.is-active) .ambient-veil{animation:ambient-breathe 32s ease-in-out infinite}
 #flow-layer:not(.is-open) .flow-ambient:has(.layer.is-active) .ambient-veil{animation-play-state:paused}
 #flow-layer .flow-ambient::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 30%, transparent 0%, var(--bg) 82%);}
 @media (prefers-reduced-motion:reduce){
@@ -24930,8 +24930,8 @@ async function vibeCheckUpcomingLyrics(){
 }
 // vibe-visuals: while a vibe plays, the background takes the vibe's color (a
 // tint layer on #ambient::after, which already fades its background over 4s)
-// and breathes with the song: the drift and the veil slow to 22s for the
-// calmest songs and quicken to 10s for the strongest. Both are the existing
+// and breathes with the song: the drift and the veil slow to 44s for the
+// calmest songs and quicken to 20s for the strongest (#748: halved, calmer). Both are the existing
 // transform/opacity animations with a new duration, set once per song.
 const VIBE_TINTS = [
   { re: /\b(sleep|asleep|bed|peace|calm|meditat\w*|monk|ambient|minute)\b/i, rgb: [70, 110, 170] },
@@ -24949,7 +24949,7 @@ function applyVibeVisuals(){
   const e = queueEnergy(state.queuePos);
   const rgb = hit ? hit.rgb : (e == null ? [200, 150, 90] : e < 0.4 ? [70, 110, 170] : e > 0.65 ? [200, 70, 80] : [200, 150, 90]);
   rs.setProperty('--vibe-tint', 'rgba(' + rgb.join(',') + ',0.16)');
-  rs.setProperty('--vibe-breathe', (e == null ? 16 : Math.round(22 - Math.min(1, Math.max(0, e)) * 12)) + 's');
+  rs.setProperty('--vibe-breathe', (e == null ? 32 : Math.round(44 - Math.min(1, Math.max(0, e)) * 24)) + 's');
 }
 function vibeOnTrackLoad(){
   try { applyVibeVisuals(); } catch(e){}
@@ -33783,8 +33783,8 @@ const MINI_PLAYER_STYLE = `
   #mpBg{overflow:hidden}
   #mpBg .mpl{position:absolute;inset:-40%;background-size:cover;background-position:center;opacity:0;transform:scale(1.15);
     filter:blur(40px) saturate(1.4) brightness(.52);transition:opacity 1.4s ease}
-  #mpBg .mpl.is-active{opacity:.85;animation:mp-drift 16s ease-in-out infinite}
-  #mpBg .mpl.is-active:nth-child(2){animation-duration:21s;animation-direction:alternate-reverse}
+  #mpBg .mpl.is-active{opacity:.85;animation:mp-drift 32s ease-in-out infinite}
+  #mpBg .mpl.is-active:nth-child(2){animation-duration:42s;animation-direction:alternate-reverse}
   @keyframes mp-drift{
     0%{transform:translate(0,0) scale(1.2)}
     20%{transform:translate(-9%,7%) scale(1.42)}
