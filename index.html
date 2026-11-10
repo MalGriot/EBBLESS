@@ -4352,6 +4352,18 @@ body.week-up-on{overflow:hidden}
 .milk-btn svg{width:18px;height:18px}
 .milk-btn:hover{background:rgba(32,32,32,.92)}
 .milk-btn.is-active{color:var(--accent)}
+/* fLUX in Flow: quiet chrome (no fills, no subtitle, no preset name) and a song title card. Opacity/transform only; hidden means visibility:hidden. */
+#milkLayer.milk-flow .milk-brand span,#milkLayer.milk-flow .milk-name{display:none}
+#milkLayer.milk-flow .milk-btn{background:transparent;color:rgba(255,255,255,.8)}
+#milkLayer.milk-flow .milk-btn:hover{background:rgba(255,255,255,.1)}
+#milkLayer.milk-flow .milk-btn.is-active{color:var(--accent)}
+#milkLayer.milk-flow .milk-mood-btn{background:transparent;color:#fff;box-shadow:inset 0 0 0 1px rgba(255,255,255,.4)}
+.milk-card{position:absolute;left:0;right:0;bottom:16%;padding:0 24px;text-align:center;pointer-events:none;opacity:0;visibility:hidden;transform:translateY(10px);
+  transition:opacity 1.2s var(--ease-in-out,ease-in-out),transform 1.2s var(--ease-out,ease-out),visibility 0s 1.2s}
+.milk-card.is-on{opacity:1;visibility:visible;transform:none;transition:opacity 1.2s var(--ease-in-out,ease-in-out),transform 1.2s var(--ease-out,ease-out),visibility 0s}
+.milk-card-title{font-size:clamp(26px,5vw,60px);font-weight:200;letter-spacing:.02em;line-height:1.1;color:#fff;text-shadow:0 2px 28px rgba(0,0,0,.6);overflow-wrap:anywhere}
+.milk-card-artist{margin-top:12px;font-size:12px;font-weight:500;letter-spacing:.32em;text-transform:uppercase;color:rgba(255,255,255,.72);text-shadow:0 1px 12px rgba(0,0,0,.6)}
+@media (prefers-reduced-motion:reduce){.milk-card,.milk-card.is-on{transform:none;transition:opacity .5s linear,visibility 0s}.milk-card:not(.is-on){transition:opacity .5s linear,visibility 0s .5s}}
 .milk-bar{position:absolute;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 18px);transform:translateX(-50%);display:flex;align-items:center;gap:8px;pointer-events:none}
 .milk-mood-btn{pointer-events:auto;height:40px;padding:0 16px;border-radius:20px;border:0;background:var(--accent);color:var(--on-accent,#151107);font:600 14px/1 inherit;font-family:inherit;cursor:pointer;display:flex;align-items:center;gap:6px}
 .milk-mood-btn small{font-size:11px;font-weight:500;opacity:.75}
@@ -5996,6 +6008,7 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
   <!-- LIGHT SHOW: MilkDrop presets via butterchurn, see the LIGHT SHOW script section -->
   <div id="milkLayer" role="dialog" aria-label="fLUX, Generative Visual Universe" aria-hidden="true">
     <canvas id="milkCanvas"></canvas>
+    <div class="milk-card" id="milkCard" aria-hidden="true"><div class="milk-card-title" id="milkCardTitle"></div><div class="milk-card-artist" id="milkCardArtist"></div></div>
     <div class="milk-ui">
       <div class="milk-top">
         <div class="milk-titles"><div class="milk-brand">fLUX <span>Generative Visual Universe</span></div><div class="milk-name" id="milkName"></div><div class="milk-signal" id="milkSignalNote"></div></div>
@@ -22176,6 +22189,9 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
+  { version: 515, date: '2026-11-11', items: [
+    'fLUX, the premium look: the song title fades in on each new song, the colors lean toward the cover, only smooth, well-lit looks play, and the controls go quiet. New Moods: Ember, Deep Water, Neon, Ghost, or follow the song.'
+  ]},
   { version: 514, date: '2026-11-11', items: [
     'fLUX: all your normal keys now work inside it. Left/right skip songs, Space pauses, K and O toggle shuffle and repeat, and H, P, Q, S, M and 1 to 5 leave fLUX and take you there. Up/down change the look.'
   ]},
@@ -30302,6 +30318,18 @@ const milkLowEnd = !!((navigator.deviceMemory && navigator.deviceMemory <= 4) ||
 const MILK_Q = [0.35, 0.5, 0.7, 0.85, 1];   // render scale steps, as a share of the canvas' device pixels
 
 const milkPrefs = Object.assign({ sel: { e: [], b: [], c: [], k: [] }, match: true, favOnly: false, every: 16, blend: 2.7 }, lsGet(LS_MILK, {}));
+// Flow tier: the premium fLUX (curated looks, cover-art tint, title card, quiet chrome, named moods).
+// On for everyone until the tier helper from the patreon-tiers lane lands; then this becomes hasTier('flow').
+function milkFlowOn(){ return true; }
+// Curated for Flow: mid brightness and calm motion, so nothing is washed out, muddy or frantic.
+function milkFlowKeep(p){ return p.l >= 0.15 && p.l <= 0.5 && p.m <= 0.10; }
+const MILK_MOODS = [
+  ['ember', 'Ember', { e: [0, 1], c: ['warm'] }],
+  ['water', 'Deep Water', { e: [0, 1], c: ['cool'] }],
+  ['neon', 'Neon', { e: [1, 2], c: ['violet', 'green'] }],
+  ['ghost', 'Ghost', { e: [], c: ['mono'] }],
+  ['follow', 'Follow the song', null],
+];
 const milkFavs = new Set(lsGet(LS_MILK_FAVS, []));
 const milkBans = new Set(lsGet(LS_MILK_BANS, []));
 const milk = {
@@ -30553,6 +30581,8 @@ function milkSongChanged(){
 // A new song (or its cover color arriving) re-reads the mood; with "Match
 // the song" on, the look changes with it.
 function milkWatchSong(){
+  const tr = currentTrack(), tid = tr ? (tr.videoId || tr.id || tr.title) : null;
+  if (tid !== milk.cardFor && milkLayer.classList.contains('milk-live')){ milk.cardFor = tid; milkShowCard(); }
   const before = milkSig.metricsFor;
   milkLoadMetrics();
   const acc = document.documentElement.style.getPropertyValue('--player-accent');
@@ -30561,6 +30591,7 @@ function milkWatchSong(){
   const mood = milkSongMood.e + '|' + milkSongMood.c;
   milkSongChanged();
   if (milkPrefs.match && before && mood !== milkSongMood.e + '|' + milkSongMood.c) milkNext();
+  else if (milkFlowOn() && milk.cur) milkShow(milk.cur, milkPrefs.blend, true);   // same look, new cover color
 }
 // What the mix filters on right now. "Match the song" fills energy and color
 // from the song, then loosens them if that leaves too few looks.
@@ -30575,7 +30606,8 @@ function milkEffSel(){
 }
 function milkPool(sel, skip){
   if (!milk.tags) return [];
-  return milk.tags.filter(p => !p.x && !milkBans.has(p.n) && (!milkPrefs.favOnly || milkFavs.has(p.n)) &&
+  const flow = milkFlowOn();
+  return milk.tags.filter(p => !p.x && !milkBans.has(p.n) && (!milkPrefs.favOnly || milkFavs.has(p.n)) && (!flow || milkPrefs.favOnly || milkFlowKeep(p)) &&
     MILK_GROUPS.every(([g]) => g === skip || !sel[g].length || sel[g].includes(p[g])));
 }
 function milkPick(){
@@ -30595,13 +30627,47 @@ function milkPick(){
   for (const n of fresh){ r -= milkFavs.has(n) ? 3 : 1; if (r <= 0) return n; }
   return fresh[fresh.length - 1];
 }
-function milkShow(name, blend){
+// The cover's accent as 0..1 rgb, lifted so its brightest channel is full (a dark cover still tints visibly).
+function milkAccentRgb(){
+  const acc = document.documentElement.style.getPropertyValue('--player-accent');
+  const m = acc && acc.match(/\d+(\.\d+)?/g);
+  if (!m || m.length < 3) return null;
+  const c = [+m[0] / 255, +m[1] / 255, +m[2] / 255], mx = Math.max(c[0], c[1], c[2]);
+  return mx > 0.05 ? c.map(v => v / mx) : null;
+}
+// Flow: nudge a look's own colors toward the cover. Works on a copy, so the loaded presets stay untouched,
+// and costs no GPU. Looks whose colors come from their shaders keep them; only the drawn colors move.
+function milkTint(p){
+  const a = milkFlowOn() && milkAccentRgb();
+  if (!a || !p || !p.baseVals) return p;
+  try {
+    const mix = (o, keys, k) => { const out = Object.assign({}, o); keys.forEach((key, i) => { if (typeof out[key] === 'number') out[key] += (a[i % 3] - out[key]) * k; }); return out; };
+    const q = Object.assign({}, p);
+    q.baseVals = mix(mix(mix(mix(p.baseVals, ['wave_r', 'wave_g', 'wave_b'], 0.5), ['mv_r', 'mv_g', 'mv_b'], 0.5), ['ob_r', 'ob_g', 'ob_b'], 0.4), ['ib_r', 'ib_g', 'ib_b'], 0.4);
+    if (Array.isArray(p.waves)) q.waves = p.waves.map(w => w && w.baseVals ? Object.assign({}, w, { baseVals: mix(w.baseVals, ['r', 'g', 'b'], 0.5) }) : w);
+    if (Array.isArray(p.shapes)) q.shapes = p.shapes.map(sh => sh && sh.baseVals ? Object.assign({}, sh, { baseVals: mix(mix(sh.baseVals, ['r', 'g', 'b'], 0.4), ['r2', 'g2', 'b2'], 0.4) }) : sh);
+    return q;
+  } catch (e){ return p; }
+}
+// Song title card: big, thin, no panel; fades in on a new song and out again.
+let milkCardTimer = 0;
+function milkShowCard(){
+  const c = $('milkCard');
+  clearTimeout(milkCardTimer);
+  const t = currentTrack();
+  if (!c || !milkFlowOn() || !t || !t.title){ if (c) c.classList.remove('is-on'); return; }
+  $('milkCardTitle').textContent = t.title;
+  $('milkCardArtist').textContent = t.artist || '';
+  c.classList.add('is-on');
+  milkCardTimer = setTimeout(() => c.classList.remove('is-on'), 5500);
+}
+function milkShow(name, blend, keepTiming){
   const p = milk.presets.get(name);
   if (!p || !milk.viz) return;
-  try { milk.viz.loadPreset(p, blend == null ? milkPrefs.blend : blend); }
+  try { milk.viz.loadPreset(milkTint(p), blend == null ? milkPrefs.blend : blend); }
   catch (e){ milkBans.add(name); return milkNext(); }   // a look that won't compile never comes back
   milk.cur = name;
-  milk.beatsSinceCut = 0; milk.lastCutAt = performance.now();
+  if (!keepTiming){ milk.beatsSinceCut = 0; milk.lastCutAt = performance.now(); }
   $('milkName').textContent = name;
   const fav = milkFavs.has(name);
   $('milkFavBtn').classList.toggle('is-active', fav);
@@ -30637,6 +30703,10 @@ function milkBan(){
   milkNext();
   milkRenderPanel();
 }
+function milkSelIs(sel){
+  const same = (a, b) => a.length === b.length && a.every(v => b.includes(v));
+  return same(milkPrefs.sel.e, sel.e) && same(milkPrefs.sel.c, sel.c) && !milkPrefs.sel.b.length && !milkPrefs.sel.k.length;
+}
 function milkRenderPanel(){
   const panel = $('milkPanel');
   const total = milkPool(milkEffSel()).length;
@@ -30646,6 +30716,15 @@ function milkRenderPanel(){
   const auto = milkPrefs.match;
   let html = '<div class="milk-panel-head"><span>Mood mix</span><span class="milk-total">' + total + ' looks</span></div>';
   html += '<label class="milk-row"><input type="checkbox" id="milkMatch"' + (auto ? ' checked' : '') + '> <span>Match the song<small>Energy from its tempo, color from its cover</small></span></label>';
+  if (milkFlowOn()){
+    html += '<div class="milk-group"><div class="milk-group-label">Moods</div><div class="milk-chips">';
+    MILK_MOODS.forEach(([id, name, sel]) => {
+      const on = sel ? (!auto && milkSelIs(sel)) : auto && !MILK_GROUPS.some(([g]) => milkPrefs.sel[g].length);
+      const n = sel ? milkPool({ e: sel.e, b: [], c: sel.c, k: [] }).length : 99;
+      html += '<button type="button" class="milk-chip' + (on ? ' is-on' : '') + '" data-mood="' + id + '"' + (n >= 4 ? '' : ' disabled') + ' aria-pressed="' + on + '">' + name + '</button>';
+    });
+    html += '</div></div>';
+  }
   MILK_GROUPS.forEach(([g, label, opts]) => {
     html += '<div class="milk-group"><div class="milk-group-label">' + label + '</div><div class="milk-chips">';
     const others = milkPool(eff, g);
@@ -30686,12 +30765,18 @@ $('milkPanel').addEventListener('click', (e) => {
     if (i >= 0) arr.splice(i, 1); else arr.push(v);
   } else if (b.dataset.every != null) milkPrefs.every = +b.dataset.every;
   else if (b.dataset.blend != null) milkPrefs.blend = +b.dataset.blend;
+  else if (b.dataset.mood){
+    const m = MILK_MOODS.find(x => x[0] === b.dataset.mood);
+    if (!m) return;
+    milkPrefs.sel = { e: m[2] ? m[2].e.slice() : [], b: [], c: m[2] ? m[2].c.slice() : [], k: [] };
+    milkPrefs.match = !m[2]; milkPrefs.favOnly = false;
+  }
   else if (b.id === 'milkClearMood'){ milkPrefs.sel = { e: [], b: [], c: [], k: [] }; milkPrefs.favOnly = false; }
   else if (b.id === 'milkUnban'){ milkBans.clear(); lsSet(LS_MILK_BANS, []); }
   else return;
   milkSavePrefs();
   milkRenderPanel();
-  if (b.dataset.g || b.id === 'milkClearMood') milkNext();
+  if (b.dataset.g || b.dataset.mood || b.id === 'milkClearMood') milkNext();
 });
 $('milkPanel').addEventListener('change', (e) => {
   if (e.target.id === 'milkMatch') milkPrefs.match = e.target.checked;
@@ -30808,6 +30893,8 @@ async function openMilk(){
   milk.openedAt = performance.now();
   clearTimeout(milk.closeTimer);
   milkLayer.classList.add('is-open', 'milk-dim');
+  milkLayer.classList.toggle('milk-flow', milkFlowOn());
+  milk.cardFor = null;
   milkLayer.setAttribute('aria-hidden', 'false');
   document.body.classList.add('milk-open');
   vizStop();                       // covered: the cymatics loop stops underneath
@@ -30848,6 +30935,7 @@ function closeMilk(){
 function closeMilkNow(){
   if (!milk.open) return;
   milk.open = false;
+  clearTimeout(milkCardTimer); $('milkCard').classList.remove('is-on');
   milkStopLoop();
   if (document.fullscreenElement === milkLayer) document.exitFullscreen().catch(() => {});
   milkLayer.classList.remove('milk-live', 'milk-dim');
