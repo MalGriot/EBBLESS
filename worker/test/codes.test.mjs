@@ -116,7 +116,7 @@ test('owner undo: revoke blocks sync and codes, undo lets them back, list shows 
   g = await listGrants(env);
   assert.equal(g.grants[0].src, 'revoked');
   const ent2 = await handlePatreon(new Request('https://w.test/entitlement', { method: 'POST', body: '{"idToken":"a"}' }), new URL('https://w.test/entitlement'), env, {}, { json, verifyIdentity, overIpLimit: async () => false });
-  assert.deepEqual(await ent2.json(), { tier: 'ebbless' });
+  assert.deepEqual(await ent2.json(), { tier: 'discovery' });
   await setRevoked(env, 'ua', true);
   assert.equal(kv.m.has('ent:ua'), false);
   assert.equal((await redeem(env, 'a', c)).status, 200);
@@ -133,4 +133,16 @@ test('admin grants and revoke need the owner token', async () => {
   assert.equal((await call('/admin/grants', 'GET', 'x'.repeat(40))).status, 200);
   assert.equal((await call('/admin/revoke', 'POST', 'x'.repeat(40), { sub: 'ua' })).status, 200);
   assert.equal(JSON.parse(kv.m.get('ent:ua')).src, 'revoked');
+});
+
+test('deep is a real plan: mintable, redeemable, ranked between flow and horizon', async () => {
+  const env = { PROFILES: fakeKV() };
+  const { codes: [d] } = await mintCodes(env, { tier: 'deep' });
+  assert.match(d, /^DEEP-/);
+  assert.deepEqual(await (await redeem(env, 'a', d)).json(), { tier: 'deep', until: null });
+  const { codes: [f] } = await mintCodes(env, { tier: 'flow' });
+  assert.deepEqual(await (await redeem(env, 'a', f)).json(), { tier: 'deep', already: true });   // flow never lowers deep
+  const { codes: [h] } = await mintCodes(env, { tier: 'horizon' });
+  assert.equal((await (await redeem(env, 'a', h)).json()).tier, 'horizon');
+  assert.equal(await voiceTierFor({ PROFILES: { get: async () => '{"tier":"deep"}' } }, 'x'), 'paid');
 });

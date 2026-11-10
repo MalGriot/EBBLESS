@@ -61,13 +61,14 @@ new_sqlite_classes = ["VoiceQuota"]
 # Remote kill switch for the Mac app adblock (#524): set ADBLOCK_FLAG = "false" to turn it off (GET /flags). Unset = on.
 [vars]
 GOOGLE_CLIENT_ID = "1081676829821-i60knuf71qvmooas84jr3b22ji19ehur.apps.googleusercontent.com"
-# Patreon tiers (src/patreon.js). Campaign 16923575: SUPPORTER 300 stays ebbless,
-# DEEP SUPPORTER 700 = flow, FOUNDING CREW 1500 = horizon.
+# Patreon plans (src/patreon.js). Campaign 16923575: SUPPORTER 300 = flow,
+# DEEP SUPPORTER 700 = deep, FOUNDING CREW 1500 = horizon; below 300 = discovery.
 PATREON_CLIENT_ID = "GgXUukchsPv7R8-wsQXZBfWJZI77DC13UWoJVmIMGnGjw_FNNlQ4S8pz3jqRUQt8"
 PATREON_REDIRECT_URI = "https://spotify-youtube-search.malgriot.workers.dev/patreon/callback"
 PATREON_RETURN_URL = "https://malgriot.github.io/EBBLESS/"
 PATREON_CAMPAIGN_ID = "16923575"
-PATREON_FLOW_CENTS = "700"
+PATREON_FLOW_CENTS = "300"
+PATREON_DEEP_CENTS = "700"
 PATREON_HORIZON_CENTS = "1500"
 
 # Separate KV namespaces so local dev / testing (`wrangler dev --env staging`,

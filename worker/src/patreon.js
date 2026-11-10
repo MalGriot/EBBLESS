@@ -1,16 +1,16 @@
 // Patreon connection and automatic tier verification (official Patreon API only).
 //
-// Tiers: ebbless (basic, free) < flow (premium) < horizon (premium +).
+// Plans: discovery (basic, free) < flow < deep < horizon.
 // The entitlement record the rest of the worker reads is `ent:<sub>` in PROFILES:
-//   { tier: 'free'|'flow'|'horizon'|'paid', src?: 'patreon', at?: ms }
-// `free` is what the client calls "ebbless". Hand-written records (no `src`) keep
+//   { tier: 'free'|'flow'|'deep'|'horizon'|'paid', src?: 'patreon'|'code'|'revoked', at?: ms, until?: ms }
+// `free` is what the client calls "discovery". Hand-written records (no `src`) keep
 // working: a Patreon sync never downgrades a hand-written record that is higher
 // than the pledge (owner grants win).
 //
 // Routes (all JSON, the session/ID token goes in the body like every other route):
 //   POST /patreon/connect     { idToken }  -> { url }  the Patreon authorize URL for this signed-in user
 //   GET  /patreon/callback    ?code&state  -> 302 to PATREON_RETURN_URL?patreon=ok|taken|error
-//   POST /patreon/disconnect  { idToken }  -> { ok }   forgets the link, drops back to ebbless
+//   POST /patreon/disconnect  { idToken }  -> { ok }   forgets the link, drops back to discovery
 //   POST /patreon/webhook     (Patreon)    -> { ok }   signed with HMAC-MD5; re-verifies that patron
 //   POST /entitlement         { idToken }  -> { tier } from the verified token; also the check-in
 //                                              (re-verifies a connected patron at most once a day)
@@ -22,14 +22,14 @@
 // PATREON_TOKEN_KEY (base64, 32 bytes; Patreon tokens are stored AES-GCM encrypted).
 // Plain vars: PATREON_CLIENT_ID, PATREON_REDIRECT_URI (exact, registered with Patreon),
 // PATREON_RETURN_URL (https app page), PATREON_CAMPAIGN_ID, PATREON_FLOW_CENTS,
-// PATREON_HORIZON_CENTS (monthly pledge thresholds). Anything unset = routes answer 503.
+// PATREON_DEEP_CENTS, PATREON_HORIZON_CENTS (monthly pledge thresholds). Anything unset = routes answer 503.
 import { hmacMd5Hex } from './md5.js';
 import { mintCodes } from './codes.js';
 import { sheet as sheetCall } from './beta.js';
 
 export const RECHECK_MS = 24 * 3600 * 1000;
 const STATE_TTL_S = 600;
-const TIER_RANK = { free: 0, flow: 1, horizon: 2, paid: 1 };
+const TIER_RANK = { free: 0, flow: 1, deep: 2, horizon: 3, paid: 1 };
 const API = 'https://www.patreon.com/api/oauth2';
 const IDENTITY_URL = API + '/v2/identity?include=memberships.campaign&fields%5Bmember%5D=patron_status,currently_entitled_amount_cents&fields%5Buser%5D=full_name';
 
@@ -45,10 +45,10 @@ export function entTier(rec, now = Date.now()) {
   return String(rec.tier || 'free').toLowerCase();
 }
 
-// What the client sees: free -> ebbless, paid (legacy hand-written) -> flow.
+// What the client sees: free -> discovery, paid (legacy hand-written) -> flow.
 export function publicTier(t) {
   const x = String(t || '').toLowerCase();
-  return x === 'horizon' ? 'horizon' : x === 'flow' || x === 'paid' ? 'flow' : 'ebbless';
+  return x === 'horizon' || x === 'deep' ? x : x === 'flow' || x === 'paid' ? 'flow' : 'discovery';
 }
 
 export function configOf(env) {
@@ -56,11 +56,11 @@ export function configOf(env) {
   const c = {
     clientId: String(env.PATREON_CLIENT_ID || ''), clientSecret: String(env.PATREON_CLIENT_SECRET || ''),
     redirectUri: String(env.PATREON_REDIRECT_URI || ''), returnUrl: String(env.PATREON_RETURN_URL || ''),
-    campaignId: String(env.PATREON_CAMPAIGN_ID || ''), flowCents: num(env.PATREON_FLOW_CENTS),
+    campaignId: String(env.PATREON_CAMPAIGN_ID || ''), flowCents: num(env.PATREON_FLOW_CENTS), deepCents: num(env.PATREON_DEEP_CENTS),
     horizonCents: num(env.PATREON_HORIZON_CENTS), tokenKey: String(env.PATREON_TOKEN_KEY || ''),
   };
   const ok = c.clientId && c.clientSecret && c.redirectUri.startsWith('https://') && c.returnUrl.startsWith('https://')
-    && c.campaignId && c.flowCents && c.horizonCents >= c.flowCents && c.tokenKey && env.PROFILES;
+    && c.campaignId && c.flowCents && c.deepCents > c.flowCents && c.horizonCents > c.deepCents && c.tokenKey && env.PROFILES;
   return ok ? c : null;
 }
 
@@ -76,7 +76,7 @@ export function tierFromIdentity(identity, cfg) {
     if (m.attributes.patron_status !== 'active_patron') continue;
     cents = Math.max(cents, Number(m.attributes.currently_entitled_amount_cents) || 0);
   }
-  return cents >= cfg.horizonCents ? 'horizon' : cents >= cfg.flowCents ? 'flow' : 'free';
+  return cents >= cfg.horizonCents ? 'horizon' : cents >= cfg.deepCents ? 'deep' : cents >= cfg.flowCents ? 'flow' : 'free';
 }
 
 // ---- token encryption (AES-GCM) -------------------------------------------
@@ -168,7 +168,7 @@ export async function thankForPayment(env, cfg, pid, data, sendMail, now = Date.
   const email = String(a.email || '').trim();
   if (!/^[^\s@]{1,64}@[^\s@]{1,190}\.[^\s@]{2,}$/.test(email) || email.length > 254) return false;
   const cents = Number(a.currently_entitled_amount_cents) || 0;
-  const tier = cents >= cfg.horizonCents ? 'horizon' : cents >= cfg.flowCents ? 'flow' : '';
+  const tier = cents >= cfg.horizonCents ? 'horizon' : cents >= cfg.deepCents ? 'deep' : cents >= cfg.flowCents ? 'flow' : '';
   const when = String(a.last_charge_date || '').slice(0, 32);
   if (!tier || !/^[0-9T:.\-+Z]{8,32}$/.test(when)) return false;
   const dedupe = 'paymail:' + pid + ':' + when;
@@ -269,7 +269,7 @@ export async function handlePatreon(request, url, env, ctx, deps) {
   }
   if (path === '/entitlement') {
     let ent = await readEnt(env, sub);
-    const hand = ent && ent.src === 'revoked' || ent && ent.src !== 'patreon' && publicTier(entTier(ent)) !== 'ebbless';
+    const hand = ent && ent.src === 'revoked' || ent && ent.src !== 'patreon' && publicTier(entTier(ent)) !== 'discovery';
     if (cfg && !hand && (!ent || !ent.at || Date.now() - ent.at > RECHECK_MS)) {
       const t = await syncTier(env, cfg, sub, fetchFn);
       if (t) ent = { tier: t };

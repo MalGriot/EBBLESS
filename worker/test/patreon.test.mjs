@@ -17,7 +17,7 @@ const json = (b, status = 200) => new Response(JSON.stringify(b), { status });
 const mkEnv = (extra = {}) => ({
   PROFILES: fakeKV(), PATREON_CLIENT_ID: 'cid', PATREON_CLIENT_SECRET: 'sec', PATREON_WEBHOOK_SECRET: 'whsec',
   PATREON_REDIRECT_URI: 'https://w.test/patreon/callback', PATREON_RETURN_URL: 'https://app.test/',
-  PATREON_CAMPAIGN_ID: '99', PATREON_FLOW_CENTS: '500', PATREON_HORIZON_CENTS: '1500',
+  PATREON_CAMPAIGN_ID: '99', PATREON_FLOW_CENTS: '300', PATREON_DEEP_CENTS: '700', PATREON_HORIZON_CENTS: '1500',
   PATREON_TOKEN_KEY: randomBytes(32).toString('base64'), ...extra });
 const cfgOf = (env) => configOf(env);
 const verifyIdentity = async (t) => { if (t !== 'good') throw new Error('bad'); return { sub: 'u1' }; };
@@ -51,9 +51,11 @@ test('md5 and hmac-md5 match node crypto', () => {
 test('pledge amount maps to ebbless / flow / horizon, only for our active campaign', () => {
   const cfg = cfgOf(mkEnv());
   assert.equal(tierFromIdentity(identityOf(), cfg), 'free');
-  assert.equal(tierFromIdentity(identityOf(member(499)), cfg), 'free');
-  assert.equal(tierFromIdentity(identityOf(member(500)), cfg), 'flow');
-  assert.equal(tierFromIdentity(identityOf(member(1499)), cfg), 'flow');
+  assert.equal(tierFromIdentity(identityOf(member(299)), cfg), 'free');
+  assert.equal(tierFromIdentity(identityOf(member(300)), cfg), 'flow');
+  assert.equal(tierFromIdentity(identityOf(member(699)), cfg), 'flow');
+  assert.equal(tierFromIdentity(identityOf(member(700)), cfg), 'deep');
+  assert.equal(tierFromIdentity(identityOf(member(1499)), cfg), 'deep');
   assert.equal(tierFromIdentity(identityOf(member(1500)), cfg), 'horizon');
   assert.equal(tierFromIdentity(identityOf(member(5000, 'former_patron')), cfg), 'free');
   assert.equal(tierFromIdentity(identityOf(member(5000, 'declined_patron')), cfg), 'free');
@@ -63,13 +65,15 @@ test('pledge amount maps to ebbless / flow / horizon, only for our active campai
   assert.equal(tierFromIdentity({ included: [null, {}, { type: 'member' }] }, cfg), 'free');
 });
 test('public tier names', () => {
-  assert.deepEqual(['free', 'paid', 'flow', 'horizon', 'weird', undefined].map(publicTier), ['ebbless', 'flow', 'flow', 'horizon', 'ebbless', 'ebbless']);
+  assert.deepEqual(['free', 'paid', 'flow', 'deep', 'horizon', 'weird', undefined].map(publicTier), ['discovery', 'flow', 'flow', 'deep', 'horizon', 'discovery', 'discovery']);
 });
 test('config needs everything, https URLs, horizon >= flow', () => {
   assert.ok(cfgOf(mkEnv()));
   assert.equal(cfgOf(mkEnv({ PATREON_CLIENT_SECRET: '' })), null);
   assert.equal(cfgOf(mkEnv({ PATREON_REDIRECT_URI: 'http://w.test/cb' })), null);
   assert.equal(cfgOf(mkEnv({ PATREON_HORIZON_CENTS: '100' })), null);
+  assert.equal(cfgOf(mkEnv({ PATREON_DEEP_CENTS: '300' })), null);
+  assert.equal(cfgOf(mkEnv({ PATREON_DEEP_CENTS: '' })), null);
 });
 
 // ---- entitlement writes ----
@@ -148,9 +152,9 @@ test('entitlement answers from the verified token, never the body', async () => 
 });
 test('unknown or absent record is ebbless, and works with Patreon unconfigured', async () => {
   const env = { PROFILES: fakeKV() };
-  assert.deepEqual(await (await call(env, '/entitlement', { body: { idToken: 'good' } })).json(), { tier: 'ebbless' });
+  assert.deepEqual(await (await call(env, '/entitlement', { body: { idToken: 'good' } })).json(), { tier: 'discovery' });
   env.PROFILES.m.set('ent:u1', 'garbage');
-  assert.deepEqual(await (await call(env, '/entitlement', { body: { idToken: 'good' } })).json(), { tier: 'ebbless' });
+  assert.deepEqual(await (await call(env, '/entitlement', { body: { idToken: 'good' } })).json(), { tier: 'discovery' });
   assert.equal((await call(env, '/patreon/connect', { body: { idToken: 'good' } })).status, 503);
 });
 test('entitlement is throttled per IP', async () => {
@@ -170,7 +174,7 @@ test('check-in: a stale patron is re-verified, upgrades and lapses apply, repeat
   // lapse
   env.PROFILES.m.set('ent:u1', JSON.stringify({ tier: 'horizon', src: 'patreon', at: 0 }));
   const gone = mkFetch(identityOf(member(2000, 'former_patron')));
-  assert.deepEqual(await (await call(env, '/entitlement', { body: { idToken: 'good' }, fetchFn: gone })).json(), { tier: 'ebbless' });
+  assert.deepEqual(await (await call(env, '/entitlement', { body: { idToken: 'good' }, fetchFn: gone })).json(), { tier: 'discovery' });
 });
 test('check-in: a Patreon outage keeps the current tier; a revoked link drops to ebbless', async () => {
   const env = mkEnv(), cfg = cfgOf(env);
@@ -182,7 +186,7 @@ test('check-in: a Patreon outage keeps the current tier; a revoked link drops to
   env.PROFILES.m.set('pat:u1', await tok(0));   // token due for refresh, Patreon says no
   env.PROFILES.m.set('patid:555', 'u1');
   const revoked = mkFetch({}, { tokenStatus: 401 });
-  assert.deepEqual(await (await call(env, '/entitlement', { body: { idToken: 'good' }, fetchFn: revoked })).json(), { tier: 'ebbless' });
+  assert.deepEqual(await (await call(env, '/entitlement', { body: { idToken: 'good' }, fetchFn: revoked })).json(), { tier: 'discovery' });
   assert.equal(env.PROFILES.m.has('pat:u1'), false);
   assert.equal(env.PROFILES.m.has('patid:555'), false);
 });
@@ -219,7 +223,7 @@ test('webhook needs a valid signature, then re-verifies that patron from Patreon
   env.PROFILES.m.set('patid:555', 'u1');
   const raw = JSON.stringify({ data: { relationships: { user: { data: { id: '555' } } } } });
   const sig = createHmac('md5', 'whsec').update(raw).digest('hex');
-  const f = mkFetch(identityOf(member(700)));
+  const f = mkFetch(identityOf(member(400)));
   assert.equal((await call(env, '/patreon/webhook', { body: raw, fetchFn: f })).status, 403);
   assert.equal((await call(env, '/patreon/webhook', { body: raw, headers: { 'X-Patreon-Signature': 'x'.repeat(32) }, fetchFn: f })).status, 403);
   assert.equal(f.calls.length, 0);

@@ -8088,14 +8088,14 @@ async function mintSession(credential, sub){
   } catch(e){}
 }
 /* ---------- TIER ----------
-   ebbless (basic) < flow (premium) < horizon (premium +). state.tier is what the
+   discovery (basic) < flow < deep < horizon. state.tier is what the
    worker says for the signed-in account (POST /entitlement, which also re-checks
    a connected Patreon pledge at most once a day). Fetched once per sign-in and
    cached on the device so a cold start is not blocked; unknown, offline or
    signed out means ebbless. The cache is a convenience only: the worker
    decides what is actually allowed. Raw localStorage, never synced. */
 const LS_TIER = 'ebbless:tier';   // { t: tier, sub }
-const TIER_RANK = { ebbless: 0, flow: 1, horizon: 2 };
+const TIER_RANK = { discovery: 0, flow: 1, deep: 2, horizon: 3 };
 function lsDelRaw(k){ try { localStorage.removeItem(k); } catch(e){} }
 function hasTier(min){
   const need = TIER_RANK[min];
@@ -8129,11 +8129,28 @@ async function runPendingTierAction(){
   } else if (p.kind === 'connect'){ await patreonConnect(); }
   else if (p.kind === 'redeem'){
     const t = await redeemCode(p.code);
-    showToast(t ? 'Code accepted. Your plan is ' + t + '.' : "That code didn't work. It may be used or expired.");
+    showToast(t ? 'Code accepted. Your plan is ' + (PLAN_NAMES[t] || t) + '.' : "That code didn't work. It may be used or expired.");
   }
 }
+/* Welcome video: once per plan, the first time this device sees that plan for
+   the signed-in account (after activating, or after an upgrade). Links to the
+   unlisted videos on the EBBLESS YouTube channel; an empty link means no card for
+   that plan. Shown as a toast with a Watch button, opened in a new tab. Not tied to
+   any purchase, so it also shows in the Android app. */
+const WELCOME_VIDEOS = { discovery: 'https://youtu.be/67-j1W6QPnE', flow: 'https://youtu.be/ka8ncF4saiU', deep: 'https://youtu.be/lAakr4MRV28', horizon: 'https://youtu.be/s028t5i117Y' };
+const PLAN_NAMES = { discovery: 'discover', flow: 'flowwww', deep: 'deeeep', horizon: 'horizonnn' };   // what Patreon and the videos call them
+const LS_WELCOME = 'ebbless:welcomeVideo';   // { sub, t: last plan shown }
+function maybeWelcomeVideo(tier, sub){
+  const url = WELCOME_VIDEOS[tier];
+  if (!url || url.indexOf('https://') !== 0 || !sub) return;
+  let seen = null;
+  try { seen = JSON.parse(localStorage.getItem(LS_WELCOME) || 'null'); } catch(e){}
+  if (seen && seen.sub === sub && seen.t === tier) return;
+  try { localStorage.setItem(LS_WELCOME, JSON.stringify({ sub, t: tier })); } catch(e){ return; }
+  showToast('Welcome to ' + (PLAN_NAMES[tier] || tier) + '. A quick hello from MAL GRIOT.', { label: 'Watch', run: () => { window.open(url, '_blank', 'noopener'); } }, 'welcome-video');
+}
 async function refreshTier(){
-  if (!profileIdToken){ state.tier = 'ebbless'; return; }
+  if (!profileIdToken){ state.tier = 'discovery'; return; }
   const sess = sessionLoad();
   try { const c = JSON.parse(localStorage.getItem(LS_TIER) || 'null'); if (c && TIER_RANK[c.t] !== undefined && c.sub && sess && sess.sub === c.sub) state.tier = c.t; } catch(e){}
   try {
@@ -8144,6 +8161,7 @@ async function refreshTier(){
     state.tier = d.tier;
     const s = sessionLoad();
     if (s && s.sub) try { localStorage.setItem(LS_TIER, JSON.stringify({ t: d.tier, sub: s.sub })); } catch(e){}
+    if (s && s.sub) maybeWelcomeVideo(d.tier, s.sub);
   } catch(e){ return; }
   runPendingTierAction();
 }
@@ -8337,7 +8355,7 @@ function signOutProfile(){
   const sess = sessionRaw(); sessionDrop();
   if (sess && isOurSession(sess.t)) fetch(BACKEND + '/auth/signout', { method: 'POST', keepalive: true, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ session: sess.t }) }).catch(() => {});
   profileIdToken = null; profileTokenExp = 0; profileSyncStatus = '';
-  state.tier = 'ebbless'; lsDelRaw(LS_TIER);
+  state.tier = 'discovery'; lsDelRaw(LS_TIER);
   try { if (window.google && google.accounts && google.accounts.id) google.accounts.id.disableAutoSelect(); } catch(e){}
   lsDel(LS_PROFILE_EMAIL);
   lsDel(LS_PROFILE_SYNCED_AT);
@@ -9395,7 +9413,7 @@ const bgResolveProgress = new Map();
    STATE
    ========================================================================= */
 const state = {
-  tier: 'ebbless',       // ebbless | flow | horizon, see TIER; use hasTier('flow')
+  tier: 'discovery',     // discovery | flow | deep | horizon, see TIER; use hasTier('flow')
   playlist: null,       // { id, name, tracks, ts } — the playlist currently being viewed/browsed
   queue: [],             // array of { plId, idx } pairs, effective play order (can span playlists)
   queuePos: -1,          // pointer into queue
@@ -22649,6 +22667,9 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
+  { version: 521, date: '2026-11-11', items: [
+    'Plans are now discover, flowwww, deeeep and horizonnn. Backing on Patreon sets yours automatically, and each plan has a welcome hello from MAL GRIOT.'
+  ]},
   { version: 519, date: '2026-11-11', items: [
     'Album and playlist links now end on the same choices as a single song: play now, play next, add to queue or add to a playlist, with a line saying how many songs matched and where the album was saved.',
   ]},

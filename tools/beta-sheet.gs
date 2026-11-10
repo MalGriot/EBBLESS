@@ -451,12 +451,12 @@ function sendInactivityReminders_() {
 function patronThanks_(b) {
   const to = String(b.to || '').trim(), tier = String(b.tier || ''), code = String(b.code || ''), app = String(b.app || '');
   if (!/^[^\s@]{1,64}@[^\s@]{1,190}\.[^\s@]{2,}$/.test(to)) return { ok: false, error: 'bad address' };
-  if (tier !== 'flow' && tier !== 'horizon') return { ok: false, error: 'bad tier' };
+  if (['flow', 'deep', 'horizon'].indexOf(tier) < 0) return { ok: false, error: 'bad tier' };
   if (!/^[A-Z0-9-]{8,24}$/.test(code)) return { ok: false, error: 'bad code' };
   if (!/^https:\/\/[^\s?#]+$/.test(app)) return { ok: false, error: 'bad app url' };
   const base = app + (app.indexOf('?') >= 0 ? '&' : '?');
   const text = 'Peace and love,\n\n' +
-    'Thank you for backing EBBLESS this month. Your ' + tier + ' plan is yours.\n\n' +
+    'Thank you for backing EBBLESS this month. Your ' + ({ flow: 'flowwww', deep: 'deeeep', horizon: 'horizonnn' }[tier]) + ' plan is yours.\n\n' +
     'Tap to activate it (sign in first if asked):\n' + base + 'redeem=' + code + '\n\n' +
     'Or type this code in EBBLESS: ' + code + '\n' +
     'It works once and is just for you. If you already connected Patreon inside EBBLESS you do not need it.\n\n' +
