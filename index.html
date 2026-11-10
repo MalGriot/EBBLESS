@@ -8057,14 +8057,14 @@ async function mintSession(credential, sub){
   } catch(e){}
 }
 /* ---------- TIER ----------
-   ebbless (basic) < flow (premium) < horizon (premium +). state.tier is what the
+   discovery (basic) < flow < deep < horizon. state.tier is what the
    worker says for the signed-in account (POST /entitlement, which also re-checks
    a connected Patreon pledge at most once a day). Fetched once per sign-in and
    cached on the device so a cold start is not blocked; unknown, offline or
    signed out means ebbless. The cache is a convenience only: the worker
    decides what is actually allowed. Raw localStorage, never synced. */
 const LS_TIER = 'ebbless:tier';   // { t: tier, sub }
-const TIER_RANK = { ebbless: 0, flow: 1, horizon: 2 };
+const TIER_RANK = { discovery: 0, flow: 1, deep: 2, horizon: 3 };
 function lsDelRaw(k){ try { localStorage.removeItem(k); } catch(e){} }
 function hasTier(min){
   const need = TIER_RANK[min];
@@ -8102,7 +8102,7 @@ async function runPendingTierAction(){
   }
 }
 async function refreshTier(){
-  if (!profileIdToken){ state.tier = 'ebbless'; return; }
+  if (!profileIdToken){ state.tier = 'discovery'; return; }
   const sess = sessionLoad();
   try { const c = JSON.parse(localStorage.getItem(LS_TIER) || 'null'); if (c && TIER_RANK[c.t] !== undefined && c.sub && sess && sess.sub === c.sub) state.tier = c.t; } catch(e){}
   try {
@@ -8306,7 +8306,7 @@ function signOutProfile(){
   const sess = sessionRaw(); sessionDrop();
   if (sess && isOurSession(sess.t)) fetch(BACKEND + '/auth/signout', { method: 'POST', keepalive: true, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ session: sess.t }) }).catch(() => {});
   profileIdToken = null; profileTokenExp = 0; profileSyncStatus = '';
-  state.tier = 'ebbless'; lsDelRaw(LS_TIER);
+  state.tier = 'discovery'; lsDelRaw(LS_TIER);
   try { if (window.google && google.accounts && google.accounts.id) google.accounts.id.disableAutoSelect(); } catch(e){}
   lsDel(LS_PROFILE_EMAIL);
   lsDel(LS_PROFILE_SYNCED_AT);
@@ -9364,7 +9364,7 @@ const bgResolveProgress = new Map();
    STATE
    ========================================================================= */
 const state = {
-  tier: 'ebbless',       // ebbless | flow | horizon, see TIER; use hasTier('flow')
+  tier: 'discovery',     // discovery | flow | deep | horizon, see TIER; use hasTier('flow')
   playlist: null,       // { id, name, tracks, ts } — the playlist currently being viewed/browsed
   queue: [],             // array of { plId, idx } pairs, effective play order (can span playlists)
   queuePos: -1,          // pointer into queue

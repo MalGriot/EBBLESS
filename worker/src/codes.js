@@ -13,8 +13,8 @@
 import { entTier, readEnt } from './patreon.js';
 
 const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';   // no 0/O/1/I
-const TIERS = ['flow', 'horizon'];
-const RANK = { free: 0, flow: 1, horizon: 2 };
+const TIERS = ['flow', 'deep', 'horizon'];
+const RANK = { free: 0, flow: 1, deep: 2, horizon: 3 };
 const DAY = 86400000;
 
 async function sha256Hex(s) {
@@ -35,7 +35,7 @@ function newCode(tier) {
 export async function mintCodes(env, body, now = Date.now()) {
   if (!env.PROFILES) return { error: 'profiles not configured' };
   const tier = String(body.tier || '').toLowerCase();
-  if (!TIERS.includes(tier)) return { error: 'tier must be flow or horizon' };
+  if (!TIERS.includes(tier)) return { error: 'tier must be flow, deep or horizon' };
   const int = (v, d, lo, hi) => { if (v == null || v === '') return d; const n = Number(v); return Number.isInteger(n) && n >= lo && n <= hi ? n : NaN; };
   const count = int(body.count, 1, 1, 50), days = int(body.days, 0, 1, 3650), uses = int(body.uses, 1, 1, 1000), expDays = int(body.expires_days, 30, 1, 365);
   if ([count, days, uses, expDays].some(Number.isNaN)) return { error: 'count, days, uses or expires_days out of range' };
@@ -85,7 +85,7 @@ export async function handleRedeem(request, env, ctx, deps) {
   const ent = { tier: rec.tier, src: 'code', at: now };
   if (until) ent.until = until;
   await env.PROFILES.put('ent:' + sub, JSON.stringify(ent));
-  return json({ tier: rec.tier === 'horizon' ? 'horizon' : 'flow', until: until || null });
+  return json({ tier: rec.tier, until: until || null });
 }
 
 // ---- owner undo (admin routes) ---------------------------------------------------

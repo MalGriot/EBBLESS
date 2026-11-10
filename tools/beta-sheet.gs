@@ -451,7 +451,7 @@ function sendInactivityReminders_() {
 function patronThanks_(b) {
   const to = String(b.to || '').trim(), tier = String(b.tier || ''), code = String(b.code || ''), app = String(b.app || '');
   if (!/^[^\s@]{1,64}@[^\s@]{1,190}\.[^\s@]{2,}$/.test(to)) return { ok: false, error: 'bad address' };
-  if (tier !== 'flow' && tier !== 'horizon') return { ok: false, error: 'bad tier' };
+  if (['flow', 'deep', 'horizon'].indexOf(tier) < 0) return { ok: false, error: 'bad tier' };
   if (!/^[A-Z0-9-]{8,24}$/.test(code)) return { ok: false, error: 'bad code' };
   if (!/^https:\/\/[^\s?#]+$/.test(app)) return { ok: false, error: 'bad app url' };
   const base = app + (app.indexOf('?') >= 0 ? '&' : '?');
