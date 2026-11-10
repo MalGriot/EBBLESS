@@ -43,6 +43,18 @@
 
     <div class="adm-tabs" role="tablist" id="tabs"></div>
 
+    <section id="grantsPanel" hidden>
+      <div class="adm-toolbar">
+        <input type="search" id="grantSearch" placeholder="Search email or account id..." aria-label="Search grants">
+        <button class="btn sm" id="grantRefresh" type="button">Reload</button>
+      </div>
+      <p class="lede">Who has flow or horizon, and how. Revoke puts one account back to ebbless for good (Patreon and codes cannot restore it) until you undo it.</p>
+      <p class="adm-count" id="grantCount"></p>
+      <div class="adm-table-wrap"><table class="adm-table" id="grantTable"><thead></thead><tbody></tbody></table></div>
+      <p class="status" id="grantStatus"></p>
+    </section>
+
+    <div id="sheetView">
     <div class="adm-toolbar">
       <input type="search" id="search" placeholder="Search name, email, notes..." aria-label="Search">
       <select id="filter" aria-label="Filter by status"></select>
@@ -62,6 +74,7 @@
     <p class="adm-count" id="count"></p>
     <div class="adm-table-wrap"><table class="adm-table" id="table"><thead></thead><tbody></tbody></table></div>
     <p class="lede" id="empty" hidden>Nothing matches.</p>
+    </div>
   </section>
 
   <p class="status" id="mainStatus"></p>

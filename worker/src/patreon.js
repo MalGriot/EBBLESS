@@ -24,6 +24,8 @@
 // PATREON_RETURN_URL (https app page), PATREON_CAMPAIGN_ID, PATREON_FLOW_CENTS,
 // PATREON_HORIZON_CENTS (monthly pledge thresholds). Anything unset = routes answer 503.
 import { hmacMd5Hex } from './md5.js';
+import { mintCodes } from './codes.js';
+import { sheet as sheetCall } from './beta.js';
 
 export const RECHECK_MS = 24 * 3600 * 1000;
 const STATE_TTL_S = 600;
@@ -152,6 +154,38 @@ async function dropLink(env, sub, raw) {
   return await writeTier(env, sub, 'free');
 }
 
+// ---- thank-you email per payment ------------------------------------------------
+// A payment webhook (members:pledge:create / update) carries the member: status, entitled
+// amount, last charge status and date, and the patron's email (creator token with the
+// campaigns.members[email] scope). Active + Paid + a flow-or-better amount: mint one personal,
+// single-use code (35 days of access, valid 60 days) and email it. The code stays unused
+// until they redeem it. The email address is only used for this send, never stored or logged.
+export async function thankForPayment(env, cfg, pid, data, sendMail, now = Date.now()) {
+  const a = data && data.attributes;
+  if (!a || a.patron_status !== 'active_patron' || a.last_charge_status !== 'Paid') return false;
+  const camp = data.relationships && data.relationships.campaign && data.relationships.campaign.data;
+  if (camp && String(camp.id) !== cfg.campaignId) return false;
+  const email = String(a.email || '').trim();
+  if (!/^[^\s@]{1,64}@[^\s@]{1,190}\.[^\s@]{2,}$/.test(email) || email.length > 254) return false;
+  const cents = Number(a.currently_entitled_amount_cents) || 0;
+  const tier = cents >= cfg.horizonCents ? 'horizon' : cents >= cfg.flowCents ? 'flow' : '';
+  const when = String(a.last_charge_date || '').slice(0, 32);
+  if (!tier || !/^[0-9T:.\-+Z]{8,32}$/.test(when)) return false;
+  const dedupe = 'paymail:' + pid + ':' + when;
+  if (await env.PROFILES.get(dedupe)) return false;
+  const out = await mintCodes(env, { tier, days: 35, uses: 1, expires_days: 60, note: 'patreon ' + pid }, now);
+  if (!out.codes) throw new Error('mint failed');
+  await sendMail(env, email, tier, out.codes[0]);   // throws on failure: no dedupe mark, so the retry sends
+  await env.PROFILES.put(dedupe, '1', { expirationTtl: 90 * 86400 });
+  return true;
+}
+// Sends through the beta Apps Script (action patron_thanks, a fixed template, so the worker
+// secret cannot be used to send arbitrary mail). Needs SHEET_URL and SHEET_SECRET.
+async function sendThanks(env, to, tier, code, cfg) {
+  if (!env.SHEET_URL || !env.SHEET_SECRET) throw new Error('mail not configured');
+  await sheetCall(env, 'patron_thanks', { to, tier, code, app: cfg.returnUrl });
+}
+
 // ---- routes ---------------------------------------------------------------------
 // deps: { json, verifyIdentity(token, env, ctx), overIpLimit(request, ctx, name, limit, windowS), fetchFn? }
 export async function handlePatreon(request, url, env, ctx, deps) {
@@ -200,9 +234,15 @@ export async function handlePatreon(request, url, env, ctx, deps) {
     if (diff !== 0) return json({ error: 'forbidden' }, 403);
     let body; try { body = JSON.parse(dec.decode(buf)); } catch (e) { return json({ error: 'invalid json body' }, 400); }
     const pid = body && body.data && body.data.relationships && body.data.relationships.user && body.data.relationships.user.data && String(body.data.relationships.user.data.id || '');
-    const sub = pid && /^\d{1,20}$/.test(pid) ? await env.PROFILES.get('patid:' + pid) : null;
+    const validPid = pid && /^\d{1,20}$/.test(pid);
+    const sub = validPid ? await env.PROFILES.get('patid:' + pid) : null;
     // Patreon retries failed deliveries, so this only ever re-reads the truth from Patreon.
     if (sub) { const p = syncTier(env, cfg, sub, fetchFn); if (ctx && ctx.waitUntil) ctx.waitUntil(p); else await p; }
+    // Each paid month: a thank-you email with a personal code (one email per payment, however often Patreon retries).
+    if (validPid) {
+      try { await thankForPayment(env, cfg, pid, body.data, deps.sendMail || ((e, to, t, code) => sendThanks(e, to, t, code, cfg))); }
+      catch (e) { console.error('patreon thank-you failed:', e && e.message); return json({ error: 'try again' }, 500); }   // non-2xx: Patreon retries
+    }
     return json({ ok: true });
   }
 

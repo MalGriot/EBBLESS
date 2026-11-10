@@ -112,4 +112,4 @@ GOOGLE_CLIENT_ID = "1081676829821-i60knuf71qvmooas84jr3b22ji19ehur.apps.googleus
 # PATREON_CLIENT_ID, PATREON_REDIRECT_URI (https://<worker>/patreon/callback, registered
 # with Patreon), PATREON_RETURN_URL (the app page), PATREON_CAMPAIGN_ID,
 # PATREON_FLOW_CENTS, PATREON_HORIZON_CENTS. Patreon webhook URL: https://<worker>/patreon/webhook
-# (events members:create, members:update, members:delete). Unset = connect routes answer 503.
+# (events members:create, members:update, members:delete and members:pledge:create, members:pledge:update, members:pledge:delete). The creator token needs the campaigns.members[email] scope so payment webhooks carry the patron's email for the thank-you mail (sent through the beta Apps Script: redeploy tools/beta-sheet.gs, needs SHEET_URL and SHEET_SECRET). Unset = connect routes answer 503.

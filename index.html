@@ -8059,6 +8059,37 @@ function hasTier(min){
   const need = TIER_RANK[min];
   return need !== undefined && (TIER_RANK[state.tier] || 0) >= need;
 }
+/* Links from the Patreon thank-you note and the thank-you emails:
+   ?activate=patreon connects the pledge, ?redeem=CODE redeems a code, and
+   ?patreon=ok|taken|error is Patreon sending the person back. Read once on
+   load, stripped from the address bar, and acted on as soon as they are signed
+   in. Not offered in the Android app (R8: no purchase UI until the Play Billing
+   vs Patreon decision). */
+const IS_ANDROID_APP = /EBBLESS-Android/.test(navigator.userAgent);
+let pendingTierAction = null;
+(function(){
+  try {
+    const q = new URLSearchParams(location.search), a = q.get('activate'), c = q.get('redeem'), r = q.get('patreon');
+    if (a === 'patreon' && !IS_ANDROID_APP) pendingTierAction = { kind: 'connect' };
+    else if (c && /^[A-Za-z0-9-]{8,24}$/.test(c) && !IS_ANDROID_APP) pendingTierAction = { kind: 'redeem', code: c };
+    else if (r === 'ok' || r === 'taken' || r === 'error') pendingTierAction = { kind: 'result', r };
+    if (a || c || r){
+      ['activate', 'redeem', 'patreon'].forEach(k => q.delete(k));
+      history.replaceState(null, '', location.pathname + (q.toString() ? '?' + q : '') + location.hash);
+    }
+  } catch(e){}
+})();
+async function runPendingTierAction(){
+  const p = pendingTierAction; if (!p) return;
+  pendingTierAction = null;
+  if (p.kind === 'result'){
+    showToast(p.r === 'ok' ? 'Patreon connected. Your plan is updated.' : p.r === 'taken' ? 'That Patreon account is already connected to another EBBLESS account.' : "Couldn't connect Patreon. Try again in a moment.");
+  } else if (p.kind === 'connect'){ await patreonConnect(); }
+  else if (p.kind === 'redeem'){
+    const t = await redeemCode(p.code);
+    showToast(t ? 'Code accepted. Your plan is ' + t + '.' : "That code didn't work. It may be used or expired.");
+  }
+}
 async function refreshTier(){
   if (!profileIdToken){ state.tier = 'ebbless'; return; }
   const sess = sessionLoad();
@@ -8071,7 +8102,8 @@ async function refreshTier(){
     state.tier = d.tier;
     const s = sessionLoad();
     if (s && s.sub) try { localStorage.setItem(LS_TIER, JSON.stringify({ t: d.tier, sub: s.sub })); } catch(e){}
-  } catch(e){}
+  } catch(e){ return; }
+  runPendingTierAction();
 }
 // Starts the Patreon connection for the signed-in account (the worker returns
 // Patreon's authorize URL). No button yet and none for the native Android app
@@ -8101,6 +8133,7 @@ async function redeemCode(code){
 function restoreSession(){
   if (lsGet(LS_PROFILE_SIGNED_OUT, false) === true){ sessionDrop(); return; }
   const s = sessionLoad();
+  if (!s && pendingTierAction && pendingTierAction.kind !== 'result') showToast('Sign in to finish activating your plan.');
   if (!s || profileIdToken) return;
   profileIdToken = s.t; profileTokenExp = 0;
   renderAccountRow();
@@ -22233,7 +22266,7 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
   { version: 516, date: '2026-11-11', items: [
-    'Codes for flow and horizon can now be redeemed on your account.'
+    'Patreon patrons can activate flow or horizon from the link in their thank-you note, and redeem the code in their thank-you email.'
   ]},
   { version: 515, date: '2026-11-11', items: [
     'EBBLESS now knows your plan (ebbless, flow or horizon) once you sign in, ready for Patreon connection.'

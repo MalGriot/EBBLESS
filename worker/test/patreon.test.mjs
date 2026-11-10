@@ -34,9 +34,9 @@ function mkFetch(identity, { tokenStatus = 200, idStatus = 200 } = {}) {
   };
   fn.calls = calls; return fn;
 }
-const call = (env, path, { method = 'POST', body, fetchFn, headers, limit = noLimit } = {}) => handlePatreon(
+const call = (env, path, { method = 'POST', body, fetchFn, headers, limit = noLimit, sendMail } = {}) => handlePatreon(
   new Request('https://w.test' + path, { method, headers, body: body === undefined ? undefined : (typeof body === 'string' ? body : JSON.stringify(body)) }),
-  new URL('https://w.test' + path), env, ctx, { json, verifyIdentity, overIpLimit: limit, fetchFn });
+  new URL('https://w.test' + path), env, ctx, { json, verifyIdentity, overIpLimit: limit, fetchFn, sendMail });
 
 // ---- md5 ----
 test('md5 and hmac-md5 match node crypto', () => {
@@ -232,4 +232,51 @@ test('webhook needs a valid signature, then re-verifies that patron from Patreon
   const r2 = await call(env, '/patreon/webhook', { body: raw2, headers: { 'X-Patreon-Signature': createHmac('md5', 'whsec').update(raw2).digest('hex') }, fetchFn: f });
   assert.equal(r2.status, 200);
   assert.equal((await call(env, '/patreon/webhook', { method: 'GET' })).status, 405);
+});
+
+// ---- thank-you email per payment ----
+const paid = (over = {}) => JSON.stringify({ data: { attributes: { patron_status: 'active_patron', last_charge_status: 'Paid', last_charge_date: '2026-11-11T10:00:00.000+00:00',
+  currently_entitled_amount_cents: 600, email: 'pat@example.com', ...over }, relationships: { user: { data: { id: '555' } }, campaign: { data: { id: '99' } } } } });
+const signed = (raw) => ({ 'X-Patreon-Signature': createHmac('md5', 'whsec').update(raw).digest('hex') });
+test('a paid month emails one personal code, once per payment, with the right tier', async () => {
+  const env = mkEnv(); const sent = [];
+  const sendMail = async (e, to, tier, code) => { sent.push([to, tier, code]); };
+  const raw = paid();
+  assert.equal((await call(env, '/patreon/webhook', { body: raw, headers: signed(raw), sendMail })).status, 200);
+  assert.equal((await call(env, '/patreon/webhook', { body: raw, headers: signed(raw), sendMail })).status, 200);   // Patreon retry
+  assert.equal(sent.length, 1);
+  assert.deepEqual([sent[0][0], sent[0][1]], ['pat@example.com', 'flow']);
+  assert.match(sent[0][2], /^FLOW-[A-Z2-9]{4}-[A-Z2-9]{4}$/);
+  const next = paid({ last_charge_date: '2026-12-11T10:00:00.000+00:00', currently_entitled_amount_cents: 2000 });
+  await call(env, '/patreon/webhook', { body: next, headers: signed(next), sendMail });
+  assert.equal(sent.length, 2);
+  assert.equal(sent[1][1], 'horizon');
+  assert.ok(![...env.PROFILES.m.values()].some((v) => v.includes('pat@example.com')));   // address never stored
+  // the code really redeems, once
+  const { handleRedeem } = await import('../src/codes.js');
+  const redeem = (tok) => handleRedeem(new Request('https://w.test/redeem', { method: 'POST', body: JSON.stringify({ idToken: tok, code: sent[0][2] }) }), env, {}, { json, verifyIdentity: async (t) => ({ sub: t }), overIpLimit: noLimit });
+  assert.equal((await redeem('p1')).status, 200);
+  assert.equal((await redeem('p2')).status, 400);
+});
+test('no mail for unpaid, lapsed, below-flow, other-campaign, bad-email or unsigned events', async () => {
+  const env = mkEnv(); let n = 0; const sendMail = async () => { n++; };
+  for (const over of [{ last_charge_status: 'Declined' }, { patron_status: 'former_patron' }, { currently_entitled_amount_cents: 100 }, { email: 'nope' }, { email: '' }, { last_charge_date: 'x' }]) {
+    const raw = paid(over);
+    assert.equal((await call(env, '/patreon/webhook', { body: raw, headers: signed(raw), sendMail })).status, 200);
+  }
+  const other = JSON.parse(paid()); other.data.relationships.campaign.data.id = '1'; const rawO = JSON.stringify(other);
+  await call(env, '/patreon/webhook', { body: rawO, headers: signed(rawO), sendMail });
+  await call(env, '/patreon/webhook', { body: paid(), sendMail });   // no signature
+  assert.equal(n, 0);
+});
+test('a failed send answers 500 so Patreon retries, and the retry sends', async () => {
+  const env = mkEnv(); let fail = true, n = 0;
+  const sendMail = async () => { if (fail) throw new Error('quota'); n++; };
+  const raw = paid();
+  const r = await call(env, '/patreon/webhook', { body: raw, headers: signed(raw), sendMail });
+  assert.equal(r.status, 500);
+  assert.deepEqual(await r.json(), { error: 'try again' });
+  fail = false;
+  assert.equal((await call(env, '/patreon/webhook', { body: raw, headers: signed(raw), sendMail })).status, 200);
+  assert.equal(n, 1);
 });
