@@ -377,6 +377,9 @@ body:has(#milkLayer.is-open) #ambient .ambient-veil,body:has(#flow-layer.is-open
 .wordmark{display:flex;align-items:center;background:none;border:none;padding:0;cursor:pointer}
 .wordmark img{height:22px;width:auto;display:block}
 #topbar .wordmark{margin-right:12px}
+/* plan name under the E logo (set from state.tier, see renderPlanBadge); static, no animation */
+.plan-badge{position:absolute;left:50%;top:calc(100% + 1px);transform:translateX(-50%);font-size:9px;line-height:1;letter-spacing:.06em;text-transform:lowercase;color:var(--accent);white-space:nowrap;pointer-events:none;opacity:.9}
+.plan-badge[hidden]{display:none}
 /* Hold-to-splash (Geethub #277): holding the wordmark ~1s returns to the
    splash; this ring fills in the accent color while the hold is in progress.
    A plain click still opens the player (see wordmarkHold in the script). */
@@ -4617,6 +4620,7 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
   <header id="topbar">
     <button class="wordmark" id="wordmarkBtn" aria-label="EBBLESS home">
       <img src="brand/assets/mark.png" alt="EBBLESS" draggable="false">
+      <span class="plan-badge" id="planBadge" hidden></span>
       <svg class="wm-hold-ring" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="16" pathLength="100"/></svg>
     </button>
     <form class="import-row" id="importForm">
@@ -8097,6 +8101,13 @@ async function mintSession(credential, sub){
 const LS_TIER = 'ebbless:tier';   // { t: tier, sub }
 const TIER_RANK = { discovery: 0, flow: 1, deep: 2, horizon: 3 };
 function lsDelRaw(k){ try { localStorage.removeItem(k); } catch(e){} }
+// The plan's name under the E logo, for a signed-in account only.
+function renderPlanBadge(){
+  const b = document.getElementById('planBadge'); if (!b) return;
+  const name = profileIdToken ? PLAN_NAMES[state.tier] : '';
+  b.textContent = name || ''; b.hidden = !name;
+  b.title = name ? 'Your plan: ' + name : '';
+}
 function hasTier(min){
   const need = TIER_RANK[min];
   return need !== undefined && (TIER_RANK[state.tier] || 0) >= need;
@@ -8150,15 +8161,16 @@ function maybeWelcomeVideo(tier, sub){
   showToast('Welcome to ' + (PLAN_NAMES[tier] || tier) + '. A quick hello from MAL GRIOT.', { label: 'Watch', run: () => { window.open(url, '_blank', 'noopener'); } }, 'welcome-video');
 }
 async function refreshTier(){
-  if (!profileIdToken){ state.tier = 'discovery'; return; }
+  if (!profileIdToken){ state.tier = 'discovery'; renderPlanBadge(); return; }
   const sess = sessionLoad();
   try { const c = JSON.parse(localStorage.getItem(LS_TIER) || 'null'); if (c && TIER_RANK[c.t] !== undefined && c.sub && sess && sess.sub === c.sub) state.tier = c.t; } catch(e){}
+  renderPlanBadge();
   try {
     const res = await fetch(BACKEND + '/entitlement', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idToken: profileIdToken }) });
     if (!res.ok) return;
     const d = await res.json();
     if (!d || TIER_RANK[d.tier] === undefined) return;
-    state.tier = d.tier;
+    state.tier = d.tier; renderPlanBadge();
     const s = sessionLoad();
     if (s && s.sub) try { localStorage.setItem(LS_TIER, JSON.stringify({ t: d.tier, sub: s.sub })); } catch(e){}
     if (s && s.sub) maybeWelcomeVideo(d.tier, s.sub);
@@ -8208,6 +8220,7 @@ function restoreSession(){
 function sessionRejected(){
   if (!isOurSession(profileIdToken)) return false;
   sessionDrop(); profileIdToken = null; profileTokenExp = 0; profileSyncStatus = '';
+  state.tier = 'discovery'; renderPlanBadge();
   renderAccountRow();
   silentReSignIn();
   return true;
@@ -8355,7 +8368,7 @@ function signOutProfile(){
   const sess = sessionRaw(); sessionDrop();
   if (sess && isOurSession(sess.t)) fetch(BACKEND + '/auth/signout', { method: 'POST', keepalive: true, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ session: sess.t }) }).catch(() => {});
   profileIdToken = null; profileTokenExp = 0; profileSyncStatus = '';
-  state.tier = 'discovery'; lsDelRaw(LS_TIER);
+  state.tier = 'discovery'; lsDelRaw(LS_TIER); renderPlanBadge();
   try { if (window.google && google.accounts && google.accounts.id) google.accounts.id.disableAutoSelect(); } catch(e){}
   lsDel(LS_PROFILE_EMAIL);
   lsDel(LS_PROFILE_SYNCED_AT);
@@ -22667,6 +22680,9 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
+  { version: 523, date: '2026-11-11', items: [
+    'Your plan name now shows under the E logo once you are signed in.'
+  ]},
   { version: 521, date: '2026-11-11', items: [
     'Plans are now discover, flowwww, deeeep and horizonnn. Backing on Patreon sets yours automatically, and each plan has a welcome hello from MAL GRIOT.'
   ]},
