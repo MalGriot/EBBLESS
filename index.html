@@ -4390,6 +4390,14 @@ body.week-up-on{overflow:hidden}
   #milkLayer:not(.milk-live) .milk-ui{opacity:0}
 }
 #milkLayer.milk-idle{cursor:none}
+/* #768: the light show opens inside the player's art box first (the tabs stay usable); the full layer above is its fullscreen look.
+   No page dimming here, and the heavy controls (brand, close, mood) wait for fullscreen. */
+#milkLayer.milk-inline{position:absolute;inset:0;z-index:4;border-radius:inherit;overflow:hidden}
+#milkLayer.milk-inline .milk-brand,#milkLayer.milk-inline .milk-signal,#milkLayer.milk-inline #milkCloseBtn,#milkLayer.milk-inline #milkMoodBtn,#milkLayer.milk-inline #milkBanBtn,#milkLayer.milk-inline .milk-panel{display:none}
+#milkLayer.milk-inline .milk-top{padding:8px 10px}
+#milkLayer.milk-inline .milk-bar{bottom:8px;gap:6px}
+#milkLayer.milk-inline .milk-btn{width:32px;height:32px}
+#milkLayer.milk-inline .milk-btn svg{width:15px;height:15px}
 #milkCanvas{position:absolute;inset:0;width:100%;height:100%;display:block}
 .milk-ui{position:absolute;inset:0;pointer-events:none;opacity:1;visibility:visible;transition:opacity var(--dur-surface,.25s) var(--ease-in-out,ease-in-out),visibility 0s}
 #milkLayer.milk-idle .milk-ui{opacity:0;visibility:hidden;transition:opacity .4s var(--ease-in-out,ease-in-out),visibility 0s .4s}
@@ -30984,7 +30992,7 @@ const milkPrefs = Object.assign({ sel: { e: [], b: [], c: [], k: [] }, match: tr
 const milkFavs = new Set(lsGet(LS_MILK_FAVS, []));
 const milkBans = new Set(lsGet(LS_MILK_BANS, []));
 const milk = {
-  open: false, viz: null, raf: 0, lastT: 0, loading: null,
+  inline: false, open: false, viz: null, raf: 0, lastT: 0, loading: null,
   presets: new Map(),          // name -> preset object, for loaded packs
   tags: null, tagByName: new Map(),
   history: [], hIdx: -1, cur: '',
@@ -31481,14 +31489,25 @@ function milkDesktopUntap(){
   window.ebblessAudioStream(null);
 }
 /* ---------- open / close ---------- */
-async function openMilk(){
+// #768: inline = the layer lives inside the player's art box; fullscreen = back on the page body, over everything (the old look)
+function milkSetInline(on){
+  milk.inline = !!on;
+  if (on){ artworkWrap.appendChild(milkLayer); document.body.classList.remove('milk-open'); }
+  else { document.body.appendChild(milkLayer); if (milk.open) document.body.classList.add('milk-open'); }
+  milkLayer.classList.toggle('milk-inline', !!on);
+  $('milkTabBtn').classList.toggle('is-active', !!on);
+  const ic = $('milkFsBtn'); if (ic){ ic.title = on ? 'Fullscreen' : 'Fullscreen (F)'; }
+  milkApplySize();
+}
+if (window.ResizeObserver) new ResizeObserver(() => { if (milk.open) milkApplySize(); }).observe(milkLayer);
+async function openMilk(inline = true){
   if (milk.open) return;
   milk.open = true;
+  milkSetInline(inline);
   milk.openedAt = performance.now();
   clearTimeout(milk.closeTimer);
   milkLayer.classList.add('is-open', 'milk-dim');
   milkLayer.setAttribute('aria-hidden', 'false');
-  document.body.classList.add('milk-open');
   vizStop();                       // covered: the cymatics loop stops underneath
   milkLoadMetrics();
   milkSongChanged();
@@ -31515,6 +31534,7 @@ async function openMilk(){
 const milkReduced = matchMedia('(prefers-reduced-motion: reduce)');
 function closeMilk(){
   if (!milk.open) return;
+  if (!milk.inline && milk.fromTab){ milkSetInline(true); return; }   // fullscreen steps back to the player first
   // Reduced motion: fLUX fades to black first, then the page fades back in.
   if (milkReduced.matches && !milk.closing){
     milk.closing = true;
@@ -31534,6 +31554,8 @@ function closeMilkNow(){
   else milkLayer.classList.remove('is-open');
   milkLayer.setAttribute('aria-hidden', 'true');
   document.body.classList.remove('milk-open');
+  milk.fromTab = false;
+  $('milkTabBtn').classList.remove('is-active');
   $('milkPanel').hidden = true;
   milkUntap();
   milkDesktopUntap();
@@ -31562,11 +31584,12 @@ document.addEventListener('fullscreenchange', () => {
 });
 let milkFsWas = false;
 function milkToggleFs(){
+  if (milk.inline){ milkSetInline(false); return; }
   milkFsIntent = true;
   if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
   else if (milkLayer.requestFullscreen) milkLayer.requestFullscreen().catch(() => {});
 }
-$('milkTabBtn').addEventListener('click', (e) => { e.stopPropagation(); openMilk(); });
+$('milkTabBtn').addEventListener('click', (e) => { e.stopPropagation(); if (milk.open && milk.inline){ closeMilk(); return; } milk.fromTab = true; openMilk(true); });
 $('milkCloseBtn').addEventListener('click', closeMilk);
 $('milkNextBtn').addEventListener('click', () => milkNext());
 $('milkPrevBtn').addEventListener('click', () => milkPrev());
@@ -31631,6 +31654,7 @@ function milkKeyFeedback(e){
 }
 document.addEventListener('keydown', (e) => {
   if (!milk.open || e.metaKey || e.ctrlKey || e.altKey) return;
+  if (milk.inline && e.key !== 'f' && e.key !== 'F' && e.key !== '3') return;   // inline: the player keeps its own keys
   const t = e.target;
   if (t && (t.tagName === 'INPUT' && !/^(checkbox|range|button)$/i.test(t.type) || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
   let used = true;
@@ -31662,6 +31686,7 @@ const lyricsCache = new Map();
 let lyricsState = { videoId: null, lines: [], synced: false, activeIdx: -1 };
 
 function applyVisualMode(){
+  if (milk.open && milk.inline) closeMilk();   // another tab was picked
   visualTabs.forEach(b => b.classList.toggle('is-active', b.dataset.mode === visualMode));
   artworkWrap.dataset.mode = visualMode;
   artworkWrap.classList.toggle('mode-lyrics', visualMode === 'lyrics');
@@ -31679,6 +31704,7 @@ function applyVisualMode(){
   }
 }
 function setVisualMode(mode){
+  if (milk.open && milk.inline) closeMilk();   // #768: picking any tab (even the current one) leaves the inline light show
   if (mode === visualMode) return;
   visualMode = mode;
   lsSet(LS_VIZ, mode);
@@ -33179,6 +33205,7 @@ visualTabs.forEach(btn => btn.addEventListener('click', (e) => {
     // the disc where the cue is, so a click there is a tap on the record,
     // never the art-style menu
     if (recGame.on){ recordGameTap(); return; }
+    if (milk.open && milk.inline){ closeMilk(); return; }   // #768: Art leaves the inline light show
     if (visualMode !== 'art'){ setVisualMode('art'); closeArtStyleMenu(); }
     else cycleArtStyle();
     return;
@@ -39862,6 +39889,7 @@ function onDocFsSettled(cb){
   setTimeout(go, 1000);
 }
 function openFlow(immersive = document.body.classList.contains('split-desktop')){
+  if (milk.open && milk.inline) closeMilk();
   clearTimeout(flowFsT);
   const seq = ++flowCloseSeq; // also cancels a close still waiting on the fullscreen exit
   flowLayer.classList.remove('is-leaving');
