@@ -69,6 +69,29 @@ guard, `/voice/plan` keeps an account-wide daily counter (`VoiceQuota` instance
 `worker/src/voice.js`). The estimate comes from remembered Workers AI pricing
 for the model, so re-check it if the model or prompt changes.
 
+**Picture vibes (`POST /vibe-picture`, `worker/src/vibe-picture.js`, #744).**
+A photo or movie still goes to `@cf/meta/llama-3.2-11b-vision-instruct`, which
+answers with one or two sentences about its feel; that sentence then runs
+through `/vibe-interpret`'s pipeline. The picture is never stored (no KV, R2,
+cache or log). Cost estimate per picture: vision about 13 to 34 neurons
+(roughly 1,600 to 6,400 image tokens at 4,410 per million in, at most 100
+tokens out at 61,493 per million) plus up to 25 for the text model reading the
+sentence: worst case about 60, typical about 25. Each picture is charged 50
+(`PICTURE_NEURONS_PER_CALL`) against its own account-wide daily counter
+(`VoiceQuota` instance `p:<UTC date>`, `PICTURE_DAILY_NEURON_LIMIT` 2,500 = 25%
+of the free 10,000, so about 50 pictures a day; voice keeps its 40%). At the
+ceiling, or if the counter cannot be read, the route answers 429 and the app
+shows a friendly line. Also 10 pictures per IP per hour and a 1 MB body cap.
+**One-time owner step before it works:** Meta's Llama 3.2 licence must be
+accepted on the Cloudflare account, by sending the model one request with
+`{"prompt":"agree"}` (for example `curl -X POST
+https://api.cloudflare.com/client/v4/accounts/$ACCOUNT_ID/ai/run/@cf/meta/llama-3.2-11b-vision-instruct
+-H "Authorization: Bearer $CF_API_TOKEN" -d '{"prompt":"agree"}'`). Until then
+the route answers 503 and logs a `vibe-picture: vision call failed` warning.
+Note the Llama 3.2 licence restricts its multimodal models for people and
+companies based in the EU. Re-check the neuron figures on Cloudflare's pricing
+page if the model changes.
+
 ## Testing against staging, not production
 
 The worker's KV namespaces (`MATCH_REPORTS`, `TASTE_POOL`, `PROFILES`) are on

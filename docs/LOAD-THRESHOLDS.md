@@ -52,7 +52,8 @@ driven, about 40 a minute in the background [repo, big-import work]. A 10,000-so
 Shared by podcast captions and the vibe interpreter. Captions are capped by a Durable Object
 budget at 150 audio minutes a day (about 214 minutes is the free ceiling) [repo]. When it runs out
 the captioner stops (`capped`) and the vibe route falls back to keyword matching [repo]. Degrades
-gracefully; not a breakage.
+gracefully; not a breakage. Picture vibes (`/vibe-picture`) stop at their own 2,500 neurons a day
+(about 50 pictures) [repo: `vibe-picture.js`].
 
 ### 4. YouTube: the quota that matters is not ours
 - Playback uses the embed in the browser, so each listener's own browser and IP carry it. No

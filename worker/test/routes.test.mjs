@@ -16,7 +16,7 @@ const CONTRACT = ['/admin/', '/album', '/amlist', '/amtrack', '/art', '/artist',
   '/podcaption/start', '/podcast', '/podcastmatch', '/podepisode', '/podtext', '/pool/affinity',
   '/pool/signal', '/profile/delete', '/profile/fetch', '/profile/sync', '/report', '/sctracksearch',
   '/search', '/similar', '/soundcloud', '/spotifyart', '/tags', '/tester-report', '/thisis', '/track',
-  '/vibe-interpret', '/voice/plan', '/waves', '/ytmix', '/ytplaylist', '/ytvideo'];
+  '/vibe-interpret', '/vibe-picture', '/voice/plan', '/waves', '/ytmix', '/ytplaylist', '/ytvideo'];
 
 test('every contract route is still routed', () => {
   const missing = CONTRACT.filter(r => !found.has(r));

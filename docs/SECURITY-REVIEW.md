@@ -94,3 +94,12 @@ automates the greppable parts.
   tokens are never read from query strings.
   Known and left: several routes return `e.message` from upstream fetch
   failures (`/search`, youtube search) and JWT verify errors; low risk.
+- 2026-11-10: `POST /vibe-picture` (picture vibes, #744) reviewed. Anonymous route
+  that spends Workers AI neurons and takes an upload: 1 MB cap enforced while
+  streaming, content-type allowlist plus magic bytes, per-IP throttle (10/hour),
+  own account-wide daily neuron ceiling that fails closed, picture never written
+  to KV/R2/cache/logs, model output length-capped, stripped of control chars,
+  markup and URLs, and escaped on display, generic error bodies, no URL fetch
+  (SSRF n/a), no secrets. `privacy.html` section 5b and `PRIVACY-AUDIT.md` updated.
+  Left: the per-IP throttle is the existing per-colo cache counter, so it is
+  approximate; the daily ceiling is the hard guard.
