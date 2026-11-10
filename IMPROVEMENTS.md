@@ -12500,9 +12500,9 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #757. Follow-up to player-button-colors (merged).
 
 ### gui-too-heavy-756: The GUI is too heavy, the mouse lags on desktop app and browser (Geethub #756)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** high
 - **Description:** Bug, Geethub #756. Mouse movement often lags on the desktop app and in the browser.
 - **Touches:** index.html (GPU budget: blurs, animations, custom cursor, liquid waves), sw.js cache bump
 - **Branch:**
-- **Notes:** Synced from Geethub #756. Related to mobile-moves-really-slow (in-progress, #635) and desktop-liquid-waves-698 and custom-cursor (the likely suspects). Check against the GPU budget rules in CLAUDE.md.
+- **Notes:** Merged v507: cursor canvas now clears only its dirty box per frame (was full 2x viewport). Audit found the cursor, liquid-waves and ambient loops already idle/pause per GPU budget; no backdrop-filter over moving content. Not changed: ambient drift + veil still composite full screen while playing. Synced from Geethub #756. Related to mobile-moves-really-slow (in-progress, #635) and desktop-liquid-waves-698 and custom-cursor (the likely suspects). Check against the GPU budget rules in CLAUDE.md.
