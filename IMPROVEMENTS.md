@@ -12556,7 +12556,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #762.
 
 ### music-map-should-start-from-current-763: Music map should start from current artist or have an artist input box - not just starting from meltt automati (Geethub #763)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** high
 - **Description:** Bug, Geethub issue #763. See the issue for references.
 - **Touches:** index.html (UI)
@@ -12588,7 +12588,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #766.
 
 ### even-if-a-playlist-is-updated-via-sp-767: Even if a playlist is updated via spotify, songs added on ebbless shouldn't be affected (Geethub #767)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** high
 - **Description:** Bug, Geethub issue #767. See the issue for references.
 - **Touches:** index.html (UI)
@@ -12644,7 +12644,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #773.
 
 ### desktop-library-when-podcasts-is-sel-774: Desktop: library: when podcasts is selected, a left chevron button appears and squeezes the other buttons. rem (Geethub #774)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** high
 - **Description:** Bug, Geethub issue #774. See the issue for references.
 - **Touches:** index.html (UI)
@@ -12652,7 +12652,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #774.
 
 ### bring-your-music-should-be-import-y-775: "bring your music" should be "import your music" (Geethub #775)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** high
 - **Description:** Bug, Geethub issue #775. See the issue for references.
 - **Touches:** index.html (UI)
@@ -12676,7 +12676,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #777.
 
 ### cd-mode-fullscreen-the-lines-look-to-778: Cd mode fullscreen: the lines look too cartoonish. make them beautiful (Geethub #778)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** high
 - **Description:** Bug, Geethub issue #778. See the issue for references.
 - **Touches:** index.html (UI)
@@ -12684,7 +12684,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #778.
 
 ### visualizer-should-be-called-cymatics-779: Visualizer should be called cymatics. fLUX is already a visualizer (Geethub #779)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** high
 - **Description:** Bug, Geethub issue #779. See the issue for references.
 - **Touches:** index.html (UI)
@@ -12692,7 +12692,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #779.
 
 ### on-mobile-when-i-go-to-the-splash-fr-780: On mobile when i go to the splash from inside the app, it doesn't show the buttons on the splash to return (Geethub #780)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** high
 - **Description:** Bug, Geethub issue #780. See the issue for references.
 - **Touches:** index.html (UI)
@@ -12708,7 +12708,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #781.
 
 ### on-mobile-the-top-nav-is-so-high-it-782: On mobile: the top nav is so high, it's blocked by the phone's clock and top icons (Geethub #782)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** high
 - **Description:** Bug, Geethub issue #782. See the issue for references.
 - **Touches:** index.html (UI)
@@ -12716,7 +12716,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #782.
 
 ### thumbs-down-button-missing-from-desk-784: Thumbs down button missing from desktop (Geethub #784)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** high
 - **Description:** Bug, Geethub issue #784. See the issue for references.
 - **Touches:** index.html (UI)
