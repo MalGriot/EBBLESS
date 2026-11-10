@@ -5510,7 +5510,7 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
           <li><span><kbd>Esc</kbd></span>Close the video, leave fullscreen, close a playlist</li>
           <li><span><kbd>1</kbd></span>Art (again to change style)</li>
           <li><span><kbd>2</kbd></span>Cymatics</li>
-          <li><span><kbd>3</kbd></span>fLUX</li>
+          <li><span><kbd>3</kbd></span>fLUX (inside it: <kbd>&uarr;</kbd> <kbd>&darr;</kbd> change the look, other keys work as usual)</li>
           <li><span><kbd>4</kbd></span>Lyrics</li>
           <li><span><kbd>5</kbd></span>Video</li>
           <li><span><kbd>T</kbd></span>With the video showing: cinema mode (dim the rest)</li>
@@ -6004,7 +6004,7 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
         </button>
       </div>
       <div class="milk-bar">
-        <button type="button" class="milk-btn" id="milkPrevBtn" title="Previous look (Left arrow)" aria-label="Previous look">
+        <button type="button" class="milk-btn" id="milkPrevBtn" title="Previous look (Up arrow)" aria-label="Previous look">
           <svg viewBox="0 0 24 24" fill="currentColor"><path d="M15.4 7.4L14 6l-6 6 6 6 1.4-1.4L10.8 12z"/></svg>
         </button>
         <button type="button" class="milk-btn" id="milkBanBtn" title="Never show this look" aria-label="Never show this look">
@@ -6014,7 +6014,7 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
         <button type="button" class="milk-btn" id="milkFavBtn" title="Favorite this look" aria-label="Favorite this look" aria-pressed="false">
           <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 20.3l-1.3-1.2C5.9 14.7 3 12.1 3 8.9 3 6.3 5 4.3 7.6 4.3c1.5 0 2.9.7 3.8 1.8h1.2c.9-1.1 2.3-1.8 3.8-1.8C19 4.3 21 6.3 21 8.9c0 3.2-2.9 5.8-7.7 10.2z"/></svg>
         </button>
-        <button type="button" class="milk-btn" id="milkNextBtn" title="Next look (Right arrow)" aria-label="Next look">
+        <button type="button" class="milk-btn" id="milkNextBtn" title="Next look (Down arrow)" aria-label="Next look">
           <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8.6 16.6L10 18l6-6-6-6-1.4 1.4 4.6 4.6z"/></svg>
         </button>
         <button type="button" class="milk-btn" id="milkFsBtn" title="Fullscreen (F)" aria-label="Fullscreen">
@@ -22176,6 +22176,9 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
+  { version: 514, date: '2026-11-11', items: [
+    'fLUX: all your normal keys now work inside it. Left/right skip songs, Space pauses, K and O toggle shuffle and repeat, and H, P, Q, S, M and 1 to 5 leave fLUX and take you there. Up/down change the look.'
+  ]},
   { version: 513, date: '2026-11-11', items: [
     'Keyboard shortcuts for the visuals are now numbers, left to right: 1 Art, 2 Cymatics, 3 fLUX, 4 Lyrics, 5 Video.'
   ]},
@@ -30869,7 +30872,18 @@ function milkPoke(){
   clearTimeout(milk.idleTimer);
   milk.idleTimer = setTimeout(() => { if (milk.open && $('milkPanel').hidden) milkLayer.classList.add('milk-idle'); }, 3200);
 }
+let milkFsIntent = false;
+document.addEventListener('fullscreenchange', () => {
+  // the browser eats the first Esc in fullscreen to leave it; say so, since a second Esc closes fLUX
+  if (!document.fullscreenElement && milk.open && !milk.closing){
+    if (!milkFsIntent && milkFsWas) showToast('Press Esc again to close fLUX');
+  }
+  milkFsIntent = false;
+  milkFsWas = document.fullscreenElement === milkLayer;
+});
+let milkFsWas = false;
 function milkToggleFs(){
+  milkFsIntent = true;
   if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
   else if (milkLayer.requestFullscreen) milkLayer.requestFullscreen().catch(() => {});
 }
@@ -30913,20 +30927,46 @@ function milkBindCanvas(c){
   c.addEventListener('dblclick', milkToggleFs);
 }
 milkBindCanvas(milkCanvas);
-// Arrows change look, Esc closes, F goes fullscreen. Runs before the app's
-// own shortcuts so arrows don't skip songs while the light show is up.
+// fLUX keys. Runs before the app's own shortcuts (capture). Up/Down change the
+// look, Esc closes, F goes fullscreen, 3 closes. Space, left/right, Shift+left/right,
+// K and O keep their normal job and get a toast, because the player is hidden
+// behind the layer. Keys that open another screen (H P L Q S M 1 2 4 5) close fLUX
+// first, then fall through to the app's handler so the screen shows.
+const MILK_CLOSE_THEN_ACT = new Set(['h', 'H', 'p', 'P', 'l', 'L', 'q', 'Q', 's', 'S', 'm', 'M', '1', '2', '4', '5']);
+function milkKeyFeedback(e){
+  const k = e.key;
+  if (e.repeat && k !== 'ArrowLeft' && k !== 'ArrowRight') return;
+  if (k === ' '){
+    const ad = activeDeck(), st = ad.player && ad.player.getPlayerState ? ad.player.getPlayerState() : -1;
+    if (state.queuePos >= 0) showToast(st === 1 ? 'Paused' : 'Playing');
+  } else if (k === 'ArrowLeft' || k === 'ArrowRight'){
+    if (ytPanelOpen() || state.queuePos < 0) return;
+    const dir = k === 'ArrowLeft' ? -1 : 1;
+    if (e.shiftKey === isPodcastTrack(currentTrack())) showToast(dir < 0 ? 'Previous song' : 'Next song');
+    else showToast((dir < 0 ? '-' : '+') + seekStepS() + 's', null, 'milkseek');
+  } else if (k === 'k' || k === 'K'){
+    setTimeout(() => { if (!isVibeQueue()) showToast(state.shuffleDiscover ? 'Shuffle + Discover' : state.shuffle ? 'Shuffle: on' : 'Shuffle: off'); }, 0);
+  } else if (k === 'o' || k === 'O'){
+    setTimeout(() => showToast(state.repeat === 'one' ? 'Repeat: this song' : state.repeat === 'all' ? 'Repeat: on' : 'Repeat: off'), 0);
+  }
+}
 document.addEventListener('keydown', (e) => {
   if (!milk.open || e.metaKey || e.ctrlKey || e.altKey) return;
   const t = e.target;
   if (t && (t.tagName === 'INPUT' && !/^(checkbox|range|button)$/i.test(t.type) || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
   let used = true;
-  if (e.key === 'ArrowRight' && !e.shiftKey) milkNext();
-  else if (e.key === 'ArrowLeft' && !e.shiftKey) milkPrev();
+  if (e.key === 'ArrowDown' && !e.shiftKey) milkNext();
+  else if (e.key === 'ArrowUp' && !e.shiftKey) milkPrev();
   else if (e.key === 'Escape'){ if (!$('milkPanel').hidden) $('milkPanel').hidden = true; else closeMilk(); }
   else if (e.key === 'f' || e.key === 'F'){ if (!e.repeat) milkToggleFs(); }
   else if (e.key === '3'){ if (!e.repeat) closeMilk(); }
   else used = false;
-  if (used){ e.preventDefault(); e.stopPropagation(); milkPoke(); }
+  if (used){ e.preventDefault(); e.stopPropagation(); milkPoke(); return; }
+  // not ours: the app's handler runs next (it ignores keys it has no case for)
+  if (MILK_CLOSE_THEN_ACT.has(e.key)){ if (!e.repeat) closeMilk(); else { e.preventDefault(); e.stopPropagation(); } return; }
+  if (e.key === 'i' || e.key === 'I' || e.key === 't' || e.key === 'T'){ e.preventDefault(); e.stopPropagation(); return; } // cymatics / cinema only: nothing to do here
+  milkKeyFeedback(e);
+  milkPoke();
 }, true);
 /* =========================================================================
    VISUAL MODE — album art / visualizer / lyrics, one at a time
