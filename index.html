@@ -17611,31 +17611,50 @@ async function startRadio(name, own, keepPlaying){
 function openAddToPlaylistPicker(track){
   openImportOverlay();
   const liked = getCachedPlaylist(LIKED_ID) || { id: LIKED_ID, name: 'Liked Songs', tracks: [] };
-  const customs = [liked].concat(addablePlaylists().filter(p => p.id !== LIKED_ID));
-  const rowsHtml = customs.map(p =>
-    '<label class="btn-ghost pl-pick" style="width:100%;text-align:left;margin-bottom:8px;display:flex;align-items:center;gap:10px;cursor:pointer">' +
-      '<input type="checkbox" class="pl-pick-cb" data-id="' + p.id + '" style="flex:none">' +
-      '<span>' + escapeHtml(p.name) + ' <span style="color:var(--faint-2)">(' + p.tracks.length + (p.tracks.length === 1 ? ' song' : ' songs') + ')</span></span>' +
-    '</label>'
-  ).join('');
+  const others = addablePlaylists().filter(p => p.id !== LIKED_ID);
+  const picked = new Set();   // #766: ticks survive searching and re-sorting
+  const fieldCss = 'background:var(--panel-2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-size:14px';
   importStage.innerHTML =
     '<div class="step">Add to playlist</div>' +
-    '<div style="width:100%;max-height:55vh;overflow-y:auto;overscroll-behavior:contain;margin-bottom:16px">' +
-      (rowsHtml || '<div style="color:var(--faint-2);font-size:13px;margin-bottom:12px">No playlists yet.</div>') +
+    '<div style="display:flex;gap:8px;width:100%;margin-bottom:10px">' +
+      '<input id="plPickSearch" type="search" placeholder="Search playlists" autocomplete="off" spellcheck="false" aria-label="Search playlists" style="flex:1;min-width:0;' + fieldCss + '">' +
+      '<select id="plPickSort" aria-label="Sort playlists" style="' + fieldCss + '">' +
+        '<option value="recent">Most recent</option><option value="alpha">A to Z</option>' +
+        '<option value="tracks_desc">Most songs</option><option value="plays_desc">Most played</option>' +
+      '</select>' +
     '</div>' +
+    '<div id="plPickList" style="width:100%;max-height:50vh;overflow-y:auto;overscroll-behavior:contain;margin-bottom:16px"></div>' +
     '<button class="btn-ghost" id="plAddSelectedBtn" style="width:100%;margin-bottom:8px" disabled>Add</button>' +
     '<button class="btn-ghost" id="plNewFromPickerBtn" style="width:100%">+ New playlist</button>';
-  const addBtn = $('plAddSelectedBtn');
-  const checked = () => Array.from(importStage.querySelectorAll('.pl-pick-cb:checked'));
-  importStage.querySelectorAll('.pl-pick-cb').forEach(cb => {
-    cb.addEventListener('change', () => {
-      const n = checked().length;
-      addBtn.disabled = !n;
-      addBtn.textContent = n > 1 ? 'Add to ' + n + ' playlists' : 'Add';
-    });
+  const addBtn = $('plAddSelectedBtn'), listEl = $('plPickList'), searchEl = $('plPickSearch'), sortEl = $('plPickSort');
+  const rowHtml = (p) =>
+    '<label class="btn-ghost pl-pick" style="width:100%;text-align:left;margin-bottom:8px;display:flex;align-items:center;gap:10px;cursor:pointer">' +
+      '<input type="checkbox" class="pl-pick-cb" data-id="' + escapeHtml(p.id) + '"' + (picked.has(p.id) ? ' checked' : '') + ' style="flex:none">' +
+      '<span>' + escapeHtml(p.name) + ' <span style="color:var(--faint-2)">(' + p.tracks.length + (p.tracks.length === 1 ? ' song' : ' songs') + ')</span></span>' +
+    '</label>';
+  function renderList(){
+    const q = searchEl.value.trim().toLowerCase();
+    const order = sortLibraryIds(others.map(p => p.id), sortEl.value);
+    const byId = new Map(others.map(p => [p.id, p]));
+    const rows = [liked].concat(order.map(id => byId.get(id)).filter(Boolean)).filter(p => !q || String(p.name || '').toLowerCase().includes(q));
+    listEl.innerHTML = rows.length ? rows.map(rowHtml).join('') : '<div style="color:var(--faint-2);font-size:13px;margin-bottom:12px">' + (q ? 'No playlists match.' : 'No playlists yet.') + '</div>';
+  }
+  const refreshBtn = () => {
+    const n = picked.size;
+    addBtn.disabled = !n;
+    addBtn.textContent = n > 1 ? 'Add to ' + n + ' playlists' : 'Add';
+  };
+  listEl.addEventListener('change', (e) => {
+    const cb = e.target.closest('.pl-pick-cb');
+    if (!cb) return;
+    if (cb.checked) picked.add(cb.dataset.id); else picked.delete(cb.dataset.id);
+    refreshBtn();
   });
+  searchEl.addEventListener('input', renderList);
+  sortEl.addEventListener('change', renderList);
+  renderList();
   addBtn.addEventListener('click', () => {
-    let ids = checked().map(cb => cb.dataset.id);
+    let ids = Array.from(picked);
     closeImportOverlay();
     // Liked Songs goes through the like path so hearts, taste signals and streaks stay in sync
     if (ids.includes(LIKED_ID)){
