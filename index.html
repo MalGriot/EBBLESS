@@ -8098,7 +8098,7 @@ async function runPendingTierAction(){
   } else if (p.kind === 'connect'){ await patreonConnect(); }
   else if (p.kind === 'redeem'){
     const t = await redeemCode(p.code);
-    showToast(t ? 'Code accepted. Your plan is ' + t + '.' : "That code didn't work. It may be used or expired.");
+    showToast(t ? 'Code accepted. Your plan is ' + (PLAN_NAMES[t] || t) + '.' : "That code didn't work. It may be used or expired.");
   }
 }
 /* Welcome video: once per plan, the first time this device sees that plan for
@@ -8107,6 +8107,7 @@ async function runPendingTierAction(){
    plan. Shown as a toast with a Watch button, opened in a new tab. Not tied to
    any purchase, so it also shows in the Android app. */
 const WELCOME_VIDEOS = { flow: '', deep: '', horizon: '' };
+const PLAN_NAMES = { discovery: 'discover', flow: 'flowwww', deep: 'deeeep', horizon: 'horizonnn' };   // what Patreon and the videos call them
 const LS_WELCOME = 'ebbless:welcomeVideo';   // { sub, t: last plan shown }
 function maybeWelcomeVideo(tier, sub){
   const url = WELCOME_VIDEOS[tier];
@@ -8115,7 +8116,7 @@ function maybeWelcomeVideo(tier, sub){
   try { seen = JSON.parse(localStorage.getItem(LS_WELCOME) || 'null'); } catch(e){}
   if (seen && seen.sub === sub && seen.t === tier) return;
   try { localStorage.setItem(LS_WELCOME, JSON.stringify({ sub, t: tier })); } catch(e){ return; }
-  showToast('Welcome to ' + tier + '. A quick hello from MAL GRIOT.', { label: 'Watch', run: () => { window.open(url, '_blank', 'noopener'); } }, 'welcome-video');
+  showToast('Welcome to ' + (PLAN_NAMES[tier] || tier) + '. A quick hello from MAL GRIOT.', { label: 'Watch', run: () => { window.open(url, '_blank', 'noopener'); } }, 'welcome-video');
 }
 async function refreshTier(){
   if (!profileIdToken){ state.tier = 'discovery'; return; }
@@ -22393,7 +22394,7 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
   { version: 518, date: '2026-11-11', items: [
-    'Plans are now Discovery, Flow, Deep and Horizon. Backing on Patreon sets yours automatically, and each plan has a welcome hello from MAL GRIOT.'
+    'Plans are now discover, flowwww, deeeep and horizonnn. Backing on Patreon sets yours automatically, and each plan has a welcome hello from MAL GRIOT.'
   ]},
   { version: 517, date: '2026-11-11', items: [
     'Android app: after your first song, EBBLESS offers a one-tap way to open Spotify, Apple Music and YouTube Music links here. You can also find it in Settings.',
