@@ -127,7 +127,7 @@ Add entries in this shape:
 -->
 
 ### edge-to-edge-717: Mobile: edge-to-edge full-screen UI (Geethub #717)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #717. See the issue for references.
 - **Touches:** index.html (UI), sw.js cache bump
@@ -143,7 +143,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #718; all ten UI issues share one lane (ui-batch). Built: three looks behind ?look=a|b|c (A tinted card, B full-bleed poster, C left-aligned hybrid), static gradients, waveform is the masked seek rail. Checked in a 375px preview with a fake title/artist: all three render, no GPU-watchdog warnings. Not checked with real album art or live playback; still opt-in via URL only, not a setting. Follow-up: background tint removed (plain app background). Waveform now follows the real audio for device uploads (lf:) and podcast files (au:, if the host allows the fetch); YouTube/SoundCloud songs play in cross-origin players the page cannot read, so they show flat even bars instead of a made-up shape. Peak math checked on a synthetic 20s clip; not yet checked with a real upload. No sw cache bump yet. Landed on main in cache v484 (web part live; issue closed).
 
 ### waveform-real-peaks-727: Real waveform for streamed (YouTube / SoundCloud) songs
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Follow-up to #718. Uploads and podcast files already draw a real waveform. Streamed songs show flat bars because their audio sits in cross-origin players the page cannot read. This scopes how to get real peaks for them.
 - **Touches:** index.html (waveSync/waveCompute, seek rail), android-webview (native visualizer feed), desktop/ (audio tap), possibly worker/ (KV)
@@ -263,7 +263,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #714. Stalled-song skip toast now counts 5s down; ad-wait toast shows seconds left before the wait gives up (20s cap); the Ads button already counted "Skipping in Ns". Both tick off the existing updateSeekUI timer, no new loops. Not tested on device.
 
 ### desktop-queue-hover-fill-711: Desktop: queue songs show a filled background when not hovered (Geethub #711)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Bug, Geethub issue #711. On desktop, queue rows keep the hover fill when the mouse is off them.
 - **Touches:** queue row hover styles. Possible regression of queue-song-hover-fill (#394).
@@ -271,7 +271,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #711. Cause: #672 made the desktop queue pane glass, but rows kept an opaque var(--panel) fill at rest. Rows are now transparent at rest on mouse desktops (dragged row stays opaque); hover fill unchanged.
 
 ### dock-logo-bigger-710: Dock e logo as big as fits without clipping (Geethub #710)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #710. The e logo on the dock icon should be as large as it can be without being clipped.
 - **Touches:** dock icon art. Related to dock-icon-shadow-697.
@@ -287,7 +287,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #709. Native only: MainActivity.dispatchKeyEvent watches volume keys; two presses of the same key within 350 ms is a double-tap. Second press is consumed and the first press volume step is reversed, then it calls the existing __ebbMediaAction: down while playing = pause; up while paused = play; up while playing = next. Double down while paused is just two normal volume steps. Play state comes from the existing EbbNative.playing(). Single presses unchanged. Not built (no Android SDK on this Mac) and untested on device; needs a build + TECNO POP 9 test. No versionCode bump.
 
 ### nothing-playing-trailing-es-708: Nothing playing animation: trailing E's build up on each bounce (Geethub #708)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #708. The animation starts with one e. Each bounce adds another e trailing behind it, up to 6.
 - **Touches:** nothing-playing bouncing logo (see #647). GPU budget: transform/opacity only.
@@ -295,7 +295,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #708. The six trail ghosts already existed (#647); they now follow the lead E's wall hits in an 18-hit round: one E fades in per hit (1 to 6), three hits with all six, then one leaves per hit (the last one first), three hits with none, then it starts over. Hits are x every 9s from 3s and y every 13.8s from 7.8s after the empty art shows. `trailBounceTick()` (next to the `#flowArtWrap` clone) reads the lead's own animation clock and toggles `.on` on the ghosts; one timer at the next hit, polls at 1s when paused or hidden. Fade is an opacity transition only. Reduced motion still hides the trail. Verified on localhost by stepping the lead's clock through 20 hits: counts 0,1,2,3,4,5,6,6,6,6,5,4,3,2,1,0,0,0,0,1,2. No console errors. sw cache v462. Tap on the main E (#694 handler): no hop any more; the trail flashes in the UI accent (`--accent`) one E after the next, 70ms apart, 0.32s each (an accent copy of the E as `::after`, opacity only, class removed on animationend; off under reduced motion). The tap ripples are unchanged. Verified: tap sets staggered delays 0 to 350ms on t1..t6, no animation on the lead E, class cleared afterwards, no console errors. The tap ripple is a small burst: three soft accent rings (2px, light glow, staggered 160ms, 1.2s, scale to 2x) from the tap point; transform and opacity only, removed on animationend, capped at about two bursts alive.
 
 ### ui-more-album-colors-707: UI sometimes does not match the album art color; more colors available (Geethub #707)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #707. Sometimes the UI accent does not look like a color from the album art. Offer more color choices drawn from the art.
 - **Touches:** accent extraction from album art.
@@ -303,7 +303,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #707. Cause: sampleDominantColor averaged all pixels 50/50 with the most saturated pixel, blending hues into a color not in the art. Now buckets pixels and returns the real average of the best common+colorful bucket. Checked with synthetic covers via a canvas mock; not yet seen on real covers.
 
 ### mobile-pause-fade-706: Pausing on mobile stops suddenly; fade out slightly (Geethub #706)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Bug, Geethub issue #706. Pausing a song on mobile still cuts off abruptly. It should fade out briefly.
 - **Touches:** pause path, mobile volume ramp (see earlier fade work).
@@ -311,7 +311,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #706. Pause fade already existed (600ms linear); made it 900ms with a squared out-curve so it no longer sounds cut off on phones. Resume path unchanged (restores effectiveVolume). Not verified on device. Hidden-tab throttled timers could still shorten the fade from the lock screen. Follow-up: while the page is hidden (lock screen) each fade step is also scheduled from a worker timer so the fade is not throttled to a cut (not verified on device). Cache v478. No Android bump needed (web only).
 
 ### desktop-library-fullscreen-slide-705: Desktop: library fullscreen tab makes the window slide out (Geethub #705)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #705. On desktop, hitting the library fullscreen tab should make the window slide out.
 - **Touches:** library window fullscreen transition.
@@ -319,7 +319,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #705. Read "fullscreen tab" as the desktop library expand tab (libWideBtn), which used to snap the grid. Now the player pane glides to its new spot and the library eases out (translateX + opacity via WAAPI, 320ms; no grid/filter animation). Skipped under reduced motion and in desktop-fs. Verified on localhost at 1500px (animations fire both directions, no [gpu-watchdog] warnings); not eyeballed frame by frame. Cache v464.
 
 ### artist-links-logos-704: Artist page: links and socials buttons become just logos (Geethub #704)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #704. On the artist page, link and social buttons should show only the logo.
 - **Touches:** artist window links row.
@@ -327,7 +327,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #704.
 
 ### mobile-search-hold-mic-703: Mobile: holding the footer search button activates the mic (Geethub #703)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #703. Long-press on the footer menu search button starts voice search.
 - **Touches:** mobile footer menu, search button.
@@ -336,7 +336,7 @@ Add entries in this shape:
 - **Review:** Long-press (500 ms, existing attachLongPress) on the footer Search button opens search and clicks the existing micBtn (Web Speech, or native EbbNative on Android); toast if no voice support. Tap unchanged. Not verified: real speech (browser pane blocks the mic), real touch device.
 
 ### mobile-footer-prev-next-702: Mobile footer player: previous and next buttons beside play (Geethub #702)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #702. Add previous and next track buttons on either side of the play button in the mobile footer player.
 - **Touches:** mobile footer player.
@@ -344,7 +344,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #702.
 
 ### single-update-cta-701: One update CTA: check on load, show at top of settings, drop Reload now (Geethub #701)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #701. Update app and Reload now are redundant. Check for updates on load; if newer, show an update CTA at the top of the settings list. Remove Reload now.
 - **Touches:** settings, updater. Overlaps update-app-button and adblock-live-rules (both in review).
@@ -352,7 +352,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #701. Reload now and Update app rows are gone. One "Update" button sits at the top of Settings, hidden until an update is found: Android (page copy newer, checked on load and on return), Mac (newer build, checked on load, then download and restart), web (new version waiting while music plays). The logo hold still reloads. Android installs new builds by itself already.
 
 ### header-support-icon-700: Header heart becomes an icon that means supporting financially (Geethub #700)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #700. The header heart should be a different icon that reads as financial support.
 - **Touches:** header donate button (see #640).
@@ -360,7 +360,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #700. Heart swapped for a dollar-in-circle coin icon; label, title and tap behavior unchanged.
 
 ### toasts-center-swipe-699: Resume and update toasts: center of top header, swipe to dismiss (Geethub #699)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #699. Resume and update toasts appear in the center of the top header and can be swiped away.
 - **Touches:** toast layer, header.
@@ -368,7 +368,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #699.
 
 ### desktop-liquid-waves-698: Desktop: mouse drag makes liquid waves on the background only (Geethub #698)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #698. Dragging the mouse creates liquid-like waves on the background only, not on windows or song art, and must not affect buttons.
 - **Touches:** background layer, pointer. Check GPU budget rules (rAF must idle, pause when covered).
@@ -10419,7 +10419,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #516. Likely needs app signing/notarizing; overlaps download-link entry. Partial (agent/mac-download-flow): download shows a 3-step first-open guide under the button (drag to Applications; right-click, Open, Open; newer macOS: System Settings > Privacy & Security > Open Anyway). The real fix is Developer ID signing + notarization (Apple Developer account, $99/yr), blocked on the user; app is ad-hoc signed today. Parked 2026-10-17 by owner (needs an Apple account/signing); the first-open guide stays. Revisit when an Apple Developer account exists.
 
 ### mac-intel-and-pc: Build the desktop app for Intel Macs and Windows PC (Geethub #515)
-- **Status:** review
+- **Status:** merged
 - **Priority:** low
 - **Description:** Idea, Geethub #515. Build the desktop app for Intel Macs and Windows PC.
 - **Touches:**
@@ -11031,7 +11031,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #564. Built 2026-10-17 in desktop/main.js (Mac app 1.0.7): the 1.0.4 fix (skipTransformProcessType) did not hold, so the mini window now re-pins on every show/focus/blur/move, on main-window hide/show/restore, on app activate, and a 1.5s check restores the all-desktops flag and calls app.dock.show() if the Dock icon is hidden. Not run on a Mac; needs a new DMG release and user confirmation. index.html download links still point at v1.0.6.
 
 ### there-should-be-a-desktop-download: there should be a desktop download for pc (Geethub #565)
-- **Status:** review
+- **Status:** merged
 - **Priority:** low
 - **Description:** Idea, Geethub #565. medium
 - **Touches:** tbd.
@@ -11313,7 +11313,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #604. Related to #605, #623. Opens with left/top set to the bottom right of the screen's usable area (16px gap, above the Dock) and moves there once more after the window exists. Not verified in real Electron.
 
 ### the-miniplayer-should-stay-in-position-acr: the miniplayer should stay in position across desktops (Geethub #605)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea Geethub #605. 
 - **Touches:** tbd.
@@ -11518,7 +11518,7 @@ Add entries in this shape:
 - **Built (MVP, agent/upload-songs):** upload button in the library head and drag/drop of files or folders onto the window; files stored in IndexedDB (ebbless-uploads) as 'lf:<hash>' tracks in the Uploads playlist; title/artist/cover from ID3 (MP3) and MP4 atoms (M4A), else the file name; played through the <audio> deck; no matching, no taste-pool signal, no cast; removing from Uploads deletes the file after 30s. Verified in a desktop browser with a generated WAV (add, play, no worker requests, no console errors). Revised 2026-10-22 (owner): Uploads is local only and never syncs with the account (profileWithoutUploads strips it from what is sent and applied); the direct device-to-device transfer and the worker /transfer route were removed. Google Drive is the only way across devices: Back up to Google Drive (Uploads bar) and Get songs from Google Drive (bar and a library header button, which also works on a device with no Uploads yet; it downloads files from the Drive folder 'EBBLESS Uploads' and rebuilds the tracks from the files' own tags). Drive is NOT verified: needs the Drive API enabled and the drive.file scope on the OAuth consent screen in Google Cloud, plus Google's review for non-test users; the Mac app popup may not work. Uploaded songs with no cover show the EBBLESS mark. Not built: Android/Mac app checks, FLAC/ogg tag reading.
 
 ### when-on-air-is-on-air-the-thumb-should-swi: when on air is "on air", the thumb should switch between the thumb video art and a 1x1 of the song that's currently playing (Geethub #622)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea Geethub #622. when it's off air, it should switch between the thumb video art and the 2x2 grid thumb art
 - **Touches:** tbd.
@@ -11654,7 +11654,7 @@ Add entries in this shape:
 - **Notes:** Matcher returns something for almost any text, so nonsense lines still get a video; the strip only lists lines with no result at all.
 
 ### active-deck-alt-swaps-healthy-songs: Healthy songs get swapped to other links after a quick skip (found on the phone while testing #561)
-- **Status:** review
+- **Status:** merged
 - **Priority:** high
 - **Description:** Found 2026-10-18 on the TECNO POP 9 (phone Chrome, ad test playlist): about 3 of 6 songs were moved to a different link (once to SoundCloud) although they were not showing an ad, right after skipping with Next. The log shows 'status' (the "Ad playing" note), 'unstick muted', then 'alt swap to ...' from adTryAlternate (#624) on the active deck, with the player reporting the song's true length each time. A good link should not be replaced.
 - **Touches:** index.html (maybeDodgeAd, skipHeldAd, adTryAlternate, deckAdReason 'not-moving').
@@ -11664,7 +11664,7 @@ Add entries in this shape:
 - **Review notes:** Built: new adAltReady(reason, sinceTs) gates adTryAlternate on the active deck. Video-level signals (duration, short, video-id) still swap right away; the clock signals (not-moving, frozen, no-duration) must hold AD_ALT_SOFT_WAIT_MS (20s) first. Applied in maybeDodgeAd (since muteStartTs) and skipHeldAd (since adMutedAt or gateHeld). The dodge itself is unchanged. Same rule the standby deck already used. Cache bump v388. Side effect: a real ad that only shows clock signals no longer triggers the swap if the dodge hand-off happens first (the dodged deck still gets the standby-alt path after its reload). Verified: inline script syntax check only. NOT verified: real device (TECNO POP 9), quick-skip repro, a real ad.
 
 ### stalled-song-auto-skip: a song not playing after 10s skips to the next, with a Cancel prompt
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Owner request: if a song is ever not playing after 10s, skip to the next in the queue, but show a prompt to cancel and wait.
 - **Touches:** index.html (stallWatch, called from updateSeekUI), sw.js.
@@ -11706,7 +11706,7 @@ Add entries in this shape:
 - **Notes:** Built: returnFromAdDodge now starts the returning first song at volume 0 and runs the existing pause/resume fade-in (runPlayFade) instead of a hard cut at full volume; skipped on iOS (out of scope, setVolume ignored there). Syntax-checked only; the dodge-return path needs a real ad to exercise, so verify on a phone. Cache bump v386.
 
 ### queue-drag-pill-art: The pill a queue song turns into when dragged shows the song art (Geethub #657)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea Geethub #657.
 - **Touches:** tbd.
@@ -11714,7 +11714,7 @@ Add entries in this shape:
 - **Notes:** Drag chip falls back to the row's own art, then the list cover, when the song has no art. Reviewed in browser: loads clean, no console errors or [gpu-watchdog] warnings. Real drag not exercised (needs a library with songs).
 
 ### library-drag-pill-art: The pill a dragged library item turns into always has art (Geethub #656)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea Geethub #656. Pill shows a circle with the art when there is art; when the playlist or album has none, use the 2x2 thumb.
 - **Touches:** tbd.
@@ -11722,7 +11722,7 @@ Add entries in this shape:
 - **Notes:** Drag chip circle: cover if present, else first song's art for albums, else 2x2 of up to 4 songs' art (setDragChip accepts a list). Reviewed in browser: loads clean, no console errors.
 
 ### hover-boxes-full-width: Queue and library hover boxes stretch edge to edge instead of pills (Geethub #655)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea Geethub #655.
 - **Touches:** tbd.
@@ -11730,7 +11730,7 @@ Add entries in this shape:
 - **Notes:** Queue and playlist panels: .queue-body side padding 0, rows carry it, radius 0. Library list rows: negative margin by --vs-pad (24px, 18px on phones) with .lib-body padding to match. Hover fills edge to edge. Unchecked visually with real data.
 
 ### queue-remove-swoop: Remove the swoop/wave from the top of the queue window so it matches library (Geethub #654)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea Geethub #654.
 - **Touches:** tbd.
@@ -11738,7 +11738,7 @@ Add entries in this shape:
 - **Notes:** Removed #queue-panel from the #626 swoop selector. Left on the playlist, history panels and desktop library pane (those were not asked for). Verified ::before is none on the queue.
 
 ### cymatics-tap-loop: Cymatics: tap toggles loop, double tap toggles rotation (Geethub #653)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea Geethub #653.
 - **Touches:** index.html, sw.js (v386).
@@ -11746,7 +11746,7 @@ Add entries in this shape:
 - **Notes:** Cymatics (inline player and fullscreen): a tap toggles the loop (the infinity hold-pattern button), a double tap toggles rotation (first tap is put back). Replaces the old double tap to fullscreen and double tap to close on cymatics only. Verified in browser; not yet verified on a real phone. Synced from Geethub #653.
 
 ### lp-game-click-space: LP game: once started, click or space plays; space only pauses the song before the game and after the high score leaves (Geethub #652)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea Geethub #652.
 - **Touches:** index.html, sw.js (v386).
@@ -11818,7 +11818,7 @@ Add entries in this shape:
 - **Notes:** Owner 2026-10-29: postponed. Synced from GitHub issue #637 (idea); issue body was empty beyond the title.
 
 ### audius-fallback-source: Play songs from Audius when SoundCloud blocks or only previews them (from #571 research)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** From docs/MORE-MUSIC-SOURCES.md (branch agent/more-music-sources-571) and the owner's Audius API check: Audius streams full songs with no listener login, the API needs no key for reads (free plan: 10 req/s, 500k/month), and `/v1/tracks/{id}/stream` redirects to audio with CORS open. Add an `au:` source modelled on the `sc:` one. First prototype it on a scratch page (search, play one track in an audio element, seek, skip tracks whose access.stream is false), then wire it as a fallback when SoundCloud reports BLOCK or SNIP, before the YouTube swap.
 - **Touches:** deck adapters (sc: pattern), SoundCloud BLOCK/SNIP handling, link-swap order.
@@ -11826,7 +11826,7 @@ Add entries in this shape:
 - **Notes:** Unconfirmed: what app_name is for and Audius terms of use for apps; check before shipping. Follow the GPU budget rules in CLAUDE.md.
 
 ### adblock-mac-android-real: Real ad blocking: block ad requests, hide ads, auto-skip ads (owner decision 2026-10-25, ends compliant-only)
-- **Status:** review
+- **Status:** merged
 - **Priority:** high
 - **Description:** Owner (2026-10-25): block ad requests, hide ads, auto-skip ads, no more compliance. Builds the parked #524 plan for the native apps, where the app controls the browser engine: Mac (Electron, session.webRequest plus injection into the YouTube player frame) and Android (WebView request interception and frame injection). A plain web page cannot do this (YouTube's player is a cross-origin iframe), so the web build keeps the existing avoidance logic.
 - **Touches:** desktop/ (adblock.js, main.js), android-webview/, README.
@@ -11843,7 +11843,7 @@ Add entries in this shape:
 - **Notes:** Earlier research (docs/SPONSORBLOCK-AND-PODCAST-ADS.md) recommended against stripping podcast ads; owner has now decided. Mind the free-tier Workers AI budget (PodCaptionBudget).
 
 ### update-app-button: Update-the-app button for the Mac and Android apps (owner request 2026-10-25)
-- **Status:** review
+- **Status:** merged
 - **Priority:** high
 - **Description:** Owner: "make it a button that I and testers can push in the apps that reinstalls." A Settings row (shown only inside the native apps) that checks for a newer app build and installs it now. Android: trigger the existing Updater.java check immediately instead of waiting for the hourly check, then install. Mac: no updater exists; download the latest release dmg, replace /Applications/EBBLESS.app, relaunch. Plain web: row hidden.
 - **Touches:** index.html (Settings row), desktop/ (main.js, preload.js), android-webview/ (Updater.java, MainActivity bridge), README.
@@ -11851,7 +11851,7 @@ Add entries in this shape:
 - **Notes:** Mac app is unsigned (identity null), so Squirrel autoUpdater will not work; use a download, hdiutil attach, ditto, relaunch script. Never interrupt playback without a clear tap, confirm before restarting.
 
 ### adblock-live-rules: Reload now puts the newest adblock in full effect (owner request 2026-10-25)
-- **Status:** review
+- **Status:** merged
 - **Priority:** high
 - **Description:** Owner: the "Reload now" button should put all the adblocks in full effect. Today the rules and the in-frame skip script are compiled into the Mac and Android apps, so a web reload cannot change them. Move the rule list and the injected script out to live files served by the site (adblock/rules.json, adblock/inject.js), have both native shells fetch them (cached, with a bundled fallback and the remote kill flag), and make Reload now (and launch) refetch and reinject so a selector fix reaches every installed app with a normal push to main, no reinstall.
 - **Touches:** desktop/adblock.js, android-webview AdBlock.java/MainActivity, new adblock/ folder, Settings reload row in index.html.
@@ -11859,7 +11859,7 @@ Add entries in this shape:
 - **Notes:** One manual install of the new native builds is still needed once per device. Security: fetch only from the site's own https host, size and JSON checks, inject only into youtube embed frames, honor the /flags kill switch.
 
 ### cassette-interactive: Make the cassette interactive (reels, window, label, peel)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Cassette mode reacts to touch. Drag a reel to scrub (seeks on release), tap a reel for 15s back or forward, tap the tape window to play or pause, hold it to stop the tape until you let go, long-press the label to pen a mark (star = liked, repeat = repeat one), pull a label corner to peel the sticker (it presses back on release). Swipe to skip is the existing art swipe.
 - **Touches:** index.html (cassette SVG, `.cs-zone` / `.cassette-back` CSS, "interactive cassette" block after cassetteSetProgress), sw.js cache v410.
@@ -11875,7 +11875,7 @@ Add entries in this shape:
 - **Notes:** Related to #668 (video in the player, not a popout).
 
 ### video-in-player-668: Video plays inside the player, not a popout, so the rest of the UI stays usable (Geethub #668)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** The video should show inside the player instead of a popout, so the rest of the UI can still be used while it plays.
 - **Touches:** (not specified)
@@ -11883,7 +11883,7 @@ Add entries in this shape:
 - **Notes:** Related to #667 (mobile mini-player for videos).
 
 ### queue-scroll-up-previous-669: Scroll up in the queue to see the previous songs (Geethub #669)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea Geethub #669. Scrolling up in the queue should reveal the songs that already played.
 - **Touches:** (not specified)
@@ -11891,7 +11891,7 @@ Add entries in this shape:
 - **Notes:** renderQueuePanel now renders already-played songs (queue entries before queuePos, last 100, dimmed, tap to jump) above Now; Now stays the scroll anchor (snaps to top of view on open/new queue per #629, kept steady on edits). Static, no animation. Page-load verified, render not exercised live (state is module-scoped).
 
 ### no-album-art-hover-expand-670: Hovering the album art should not expand it (Geethub #670)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Bug Geethub #670. Remove the feature where hovering the album art expands it.
 - **Touches:** (not specified)
@@ -11899,7 +11899,7 @@ Add entries in this shape:
 - **Notes:** Removed the cassette-hover-expand (#403) CSS block and its pointerenter script (--art-hx). Library card hover untouched. Console clean of new errors.
 
 ### home-fixed-spots-583a: Home: fixed spots. Player, library and queue never move or get renamed (Geethub #583)
-- **Status:** review
+- **Status:** merged
 - **Priority:** low
 - **Description:** Audit what moves or changes place today, then lock three permanent places so everything is findable without looking.
 - **Touches:** index.html (#bottom-nav order).
@@ -11908,7 +11908,7 @@ Add entries in this shape:
 
 
 ### home-time-of-day-warmth-583b: Home: ambient color temperature shifts with the time of day (Geethub #583)
-- **Status:** review
+- **Status:** merged
 - **Priority:** low
 - **Description:** Slow static tint (amber evening, cooler morning, dim late night). No new animation or blur layers, so GPU budget stays flat.
 - **Touches:** index.html (#ambient::after, updateTimeOfDayTint).
@@ -11916,7 +11916,7 @@ Add entries in this shape:
 - **Notes:** Split out of #583 (app should feel like home) brainstorm, 2026-10-27. Built: one --tod-tint var on #ambient, extra gradient layer inside the existing #ambient::after, refreshed every 5 min, no animation/blur/new layer. Cool morning (5-10h), neutral day, amber evening (16-22h), dim night. Peak alpha .20 (night), .09 (evening). Verified load and console only; not eyeballed at each hour.
 
 ### home-quiet-by-default-583c: Home: quiet by default, controls fade back until the pointer or finger is near (Geethub #583)
-- **Status:** review
+- **Status:** merged
 - **Priority:** low
 - **Description:** Art and the song are the loudest thing on screen. Must respect the least-clicks motto: nothing hidden that costs an extra tap.
 - **Touches:** index.html (queue row CSS)
@@ -11924,7 +11924,7 @@ Add entries in this shape:
 - **Notes:** Split out of #583 (app should feel like home) brainstorm, 2026-10-27. Changed: queue row drag handle, remove X and 3-dot menu now sit at 40% opacity on mouse devices only (@media hover:hover and pointer:fine) and return to full on row hover, keyboard focus-within, open menu, or drag. Touch unchanged and fully visible. Opacity transition only, no filter/blur/animation. Considered and skipped: art corner buttons (#fsBtn, like, cast) because the fullscreen idle fade already drives their opacity.
 
 ### home-your-stuff-shelf-583d: Home: a shelf of your recent things (last playlist, album, favorite) instead of recommendations (Geethub #583)
-- **Status:** review
+- **Status:** merged
 - **Priority:** low
 - **Description:** Objects left on a table, not a store shelf. No accounts, no ad-like feel.
 - **Touches:** index.html (renderHomeShelf, #homeShelf, setView).
@@ -11932,7 +11932,7 @@ Add entries in this shape:
 - **Notes:** Also shown on the Library landing (above the grid, hidden while searching), 2026-10-27. Split out of #583 (app should feel like home) brainstorm, 2026-10-27. Shipped: up to 4 small static tiles under "Find music" on the empty player: last played playlist, last played album, Liked Songs, then other recently played, from existing last-played times and the cached playlists (no new storage, no network, no animation, no blur). One tap calls playPlaylistNow. Shows nothing when nothing was played; hides itself once something loads. The art gives its row back at mobile and desktop widths so controls stay in view; Library/Player/Queue spots untouched. Limit: it only appears on the empty player, and a cold open with nothing resumed still lands on Library (setView), so it is seen after leaving Library for Player or after a resume is cleared; with a resumed song the welcome-back toast covers it. Verified on localhost (800x600) with seeded playlists: tiles render, tap loads the song, console clean. Real audio start not verified, and mobile width not eyeballed.
 
 ### home-welcome-back-583e: Home: welcome-back line with one-tap resume of what you were playing (Geethub #583)
-- **Status:** review
+- **Status:** merged
 - **Priority:** low
 - **Description:** On open, e.g. 'Welcome back. You were in the middle of [album].' One tap to resume.
 - **Touches:** index.html (welcomeBackLine, startApp).
@@ -11940,7 +11940,7 @@ Add entries in this shape:
 - **Notes:** Split out of #583 (app should feel like home) brainstorm, 2026-10-27. Shipped: on a cold open with a saved resume (LS_RESUME via tryResume), the existing toast reads "Welcome back. You were in the middle of [playlist or song]." with a Resume button (one tap, auto-fades, nothing to dismiss). Waits for the splash to clear; shows nothing with no saved resume or on a return from background. Verified on localhost with a seeded resume; real audio start on tap not verified.
 
 ### home-edge-breathing-room-583f: Home: consistent spacing and softer edges so no panel crowds another (Geethub #583)
-- **Status:** review
+- **Status:** merged
 - **Priority:** low
 - **Description:** Overlaps #654 and #655 (queue and library edge styles); fold into them where they already cover it.
 - **Touches:** index.html.
@@ -12412,7 +12412,7 @@ Add entries in this shape:
 - **Notes:** Split from #744. Fits the mission (effortless discovery). Cheapest of the three: the app already has discover toggles and tag data. "Zero-stream" songs cannot be checked for a playable link, so aim for low-listener songs that still match to a playable source. Respect thumbs-downs and the Unliked list. Recommended first. Built: setting "Break my bubble" (Settings > Playback, plus a small icon beside Discover in the queue), default off, synced with the profile. On, about a third of Discover batches and typed-vibe lists come from artists with no history, sharing a seed tag and sound band, lower Last.fm play counts and a different top tag preferred; thumbs-downs, blacklisted tags and unpicked languages stay out. Logic in the BREAK-MY-BUBBLE block, tools/bubble-break.test.js. Cost: one extra /metrics request (up to 8 songs) per Discover batch while on; no new worker route. Swirl is built from the library only, so it is untouched; CuRRentSSsss slots pick one song each, so no bubble share there.
 
 ### vibe-slider-744a: Vibe slider: nudge a vibe's mood live (Geethub #744)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #744 part 1 of 3. On a vibe, one or two sliders (for example more melancholy / more electronic) re-shape the playlist as you move them, swapping songs, not just reordering.
 - **Touches:** index.html (vibe UI and generation), worker/ (/vibe-interpret)
@@ -12420,7 +12420,7 @@ Add entries in this shape:
 - **Notes:** Split from #744. The app has no per-song mood vectors, only energy estimates and tags, so build it as tag and energy shifts on the vibe (re-pull and re-rank), not "real-time vector adjustments". Debounce slider moves so a drag costs one worker call at most; reuse cached answers. Keep the surface simple (least clicks): the sliders hide until asked for. Built (client only, no worker change): Fine-tune pill under the queue header while a typed vibe plays; Mood (Mellow/Upbeat, energy shift) and Sound (Organic/Electronic, tag-family shift) sliders, 400ms debounce, only unplayed vibe songs swapped, reset returns the vibe, thumbs-down/blacklist/languages/Break my bubble respected. VIBE-SLIDER block + tools/vibe-slider.test.js (12 tests). Thin pool costs one extra /vibe-interpret call per settle (shared Workers AI allowance). Verified on a throwaway copy with stubbed network; not verified with real worker, playback or touch.
 
 ### picture-to-playlist-744b: Picture, movie frame or poem becomes a playlist (Geethub #744)
-- **Status:** review
+- **Status:** merged
 - **Priority:** low
 - **Description:** Idea, Geethub issue #744 part 2 of 3. Pick a photo, a movie screenshot or a poem and get a playlist that matches its feel (light, color, mood).
 - **Touches:** index.html (new input on Home), worker/ (new route, image model call)
@@ -12468,7 +12468,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #739. Related: thumbs-down-reasons-715 (merged). Built: Unliked is a derived view of LS_DECLINED (UNLIKED_ID, unlikedPlaylist()), last card in Playlists, recycle glyph; Restore per song via removeDecline + recordListenSignal; Artists chips (2+ thumbs-downs) clear via clearDeclinedArtist. Excluded from play counts, recents, play history, play log, stats, skip/taste signals; Swirl buildBlendTracks now drops declined songs. Verified render/restore with seeded data; playback from Unliked checked by code reading only.
 
 ### nav-grey-to-white-760: Top nav buttons that are grey become white so they are easy to select (Geethub #760)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Bug, Geethub #760. Grey top nav buttons should be white so they read as selectable.
 - **Touches:** index.html (top nav styles), sw.js cache bump
@@ -12476,7 +12476,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #760. Issue has no further detail.
 
 ### library-queue-edge-peek-759: Edge of another window peeks out and can't be reached, left of Library and right of Queue (Geethub #759)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Bug, Geethub #759. On desktop, the edge of another window shows on the left of the library window and on the right of the queue window, and it can't be clicked.
 - **Touches:** index.html (library and queue panel layout), sw.js cache bump
@@ -12484,7 +12484,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #759. Possibly related to home-edge-breathing-room-583f and hover-boxes-full-width (both in review).
 
 ### library-queue-align-758: Desktop: Library heading and filters line up with Queue heading and Discover buttons (Geethub #758)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Idea, Geethub #758. Library h1 moves up to line up exactly with the Queue h1; the library filter buttons line up with the Discover buttons in the queue window.
 - **Touches:** index.html (desktop library and queue headers), sw.js cache bump
@@ -12492,7 +12492,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #758. Same area as library-queue-edge-peek-759; consider one lane.
 
 ### play-button-white-icons-757: When the play button is white, the other player icons match instead of clashing (Geethub #757)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Bug, Geethub #757. When the play button turns white, the other player icons also turn white, which doesn't match the rest of the UI.
 - **Touches:** index.html (player button colors), sw.js cache bump
@@ -12500,7 +12500,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #757. Follow-up to player-button-colors (merged).
 
 ### gui-too-heavy-756: The GUI is too heavy, the mouse lags on desktop app and browser (Geethub #756)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** high
 - **Description:** Bug, Geethub #756. Mouse movement often lags on the desktop app and in the browser.
 - **Touches:** index.html (GPU budget: blurs, animations, custom cursor, liquid waves), sw.js cache bump
