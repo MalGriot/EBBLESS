@@ -588,6 +588,50 @@ public class MainActivity extends Activity {
                     }
                 });
             }
+            /** #746 follow-up: which of open.spotify.com, music.apple.com, music.youtube.com are on for EBBLESS right now, comma-separated ("" when none). "unsupported" below Android 12, "unknown" on any failure. Spotify is often greyed because Spotify's own app holds that link, so the page reads each host on its own. */
+            @android.webkit.JavascriptInterface public String linkHosts() {
+                try {
+                    if (Build.VERSION.SDK_INT < 31) return "unsupported";
+                    android.content.pm.verify.domain.DomainVerificationManager dvm =
+                            (android.content.pm.verify.domain.DomainVerificationManager) getSystemService(android.content.pm.verify.domain.DomainVerificationManager.class);
+                    if (dvm == null) return "unknown";
+                    android.content.pm.verify.domain.DomainVerificationUserState st = dvm.getDomainVerificationUserState(getPackageName());
+                    if (st == null) return "unknown";
+                    java.util.Map<String, Integer> hosts = st.getHostToStateMap();
+                    String[] want = { "open.spotify.com", "music.apple.com", "music.youtube.com" };
+                    StringBuilder sb = new StringBuilder();
+                    for (String h : want) {
+                        Integer v = hosts == null ? null : hosts.get(h);
+                        if (v != null && (v == android.content.pm.verify.domain.DomainVerificationUserState.DOMAIN_STATE_SELECTED
+                                || v == android.content.pm.verify.domain.DomainVerificationUserState.DOMAIN_STATE_VERIFIED)) {
+                            if (sb.length() > 0) sb.append(',');
+                            sb.append(h);
+                        }
+                    }
+                    return sb.toString();
+                } catch (Throwable t) { return "unknown"; }
+            }
+            /** #746 follow-up: is Spotify's app installed? (The manifest declares it in queries, which Android 11+ needs to answer this.) */
+            @android.webkit.JavascriptInterface public boolean spotifyInstalled() {
+                try { getPackageManager().getPackageInfo("com.spotify.music", 0); return true; } catch (Throwable t) { return false; }
+            }
+            /** #746 follow-up: opens Spotify's own "Open by default" page (Android 12+) so the user can turn off its Open supported links; falls back to Spotify's app-details page, then to this app's link settings. */
+            @android.webkit.JavascriptInterface public void openSpotifyLinkSettings() {
+                runOnUiThread(() -> {
+                    Uri pkg = Uri.parse("package:com.spotify.music");
+                    try {
+                        startActivity(new Intent(android.provider.Settings.ACTION_APP_OPEN_BY_DEFAULT_SETTINGS, pkg));
+                    } catch (Throwable t) {
+                        try {
+                            startActivity(new Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, pkg));
+                        } catch (Throwable t2) {
+                            try {
+                                startActivity(new Intent(android.provider.Settings.ACTION_APP_OPEN_BY_DEFAULT_SETTINGS, Uri.parse("package:" + getPackageName())));
+                            } catch (Throwable t3) { /* nothing to open */ }
+                        }
+                    }
+                });
+            }
             /** The page: a video song is (not) playing right now, so leaving the app should (not) open Picture-in-Picture. */
             @android.webkit.JavascriptInterface public void videoPip(boolean on) { videoPip = on; if (on) runOnUiThread(() -> askPipPermission()); }
             /** The page's player state (title, artist, art, play state, position, liked) for the lock screen and notification player. */
