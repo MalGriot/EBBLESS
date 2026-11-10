@@ -1564,6 +1564,7 @@ body:has(#import-overlay.is-open) #fsBtn{display:none}
 .v-tab-label{font-size:10px;font-weight:600;line-height:1;letter-spacing:.01em;white-space:nowrap}
 .visual-tabs .v-tab:hover{color:var(--text)}
 .visual-tabs .v-tab.is-active{background:var(--accent);color:var(--on-accent,#151107)}
+.visual-tabs:has(#milkTabBtn.is-active) .v-tab[data-mode="art"].is-active{background:none;color:var(--faint)} /* #768: only fLUX shows as picked while the light show is inline */
 .visual-tabs.yt-on .v-tab:not(#ytPanelBtn).is-active{background:none;color:var(--faint)}
 .visual-tabs .v-tab:disabled{opacity:.35;pointer-events:none}
 /* fLUX tab: glow + twinkling sparkles on hover. Transform/opacity only, and the
