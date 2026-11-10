@@ -36,6 +36,13 @@ const hex = (u8) => [...u8].map((b) => b.toString(16).padStart(2, '0')).join('')
 const b64 = (u8) => btoa(String.fromCharCode(...u8));
 const unb64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
 
+// The tier an entitlement record gives right now: a record with `until` (ms) stops counting once it passes.
+export function entTier(rec, now = Date.now()) {
+  if (!rec || typeof rec !== 'object') return 'free';
+  if (rec.until && Number(rec.until) <= now) return 'free';
+  return String(rec.tier || 'free').toLowerCase();
+}
+
 // What the client sees: free -> ebbless, paid (legacy hand-written) -> flow.
 export function publicTier(t) {
   const x = String(t || '').toLowerCase();
@@ -106,13 +113,13 @@ async function fetchIdentity(access, fetchFn) {
 }
 
 // ---- entitlement writes ------------------------------------------------------
-async function readEnt(env, sub) {
+export async function readEnt(env, sub) {
   try { const raw = await env.PROFILES.get('ent:' + sub); return raw ? JSON.parse(raw) : null; } catch (e) { return null; }
 }
 // Idempotent: same input, same record (apart from `at`). Never lowers a hand-written grant.
 export async function writeTier(env, sub, tier, now = Date.now()) {
   const cur = await readEnt(env, sub);
-  if (cur && cur.src !== 'patreon' && (TIER_RANK[String(cur.tier).toLowerCase()] || 0) > TIER_RANK[tier]) return cur.tier;
+  if (cur && cur.src !== 'patreon' && (TIER_RANK[entTier(cur, now)] || 0) > TIER_RANK[tier]) return entTier(cur, now);
   await env.PROFILES.put('ent:' + sub, JSON.stringify({ tier, src: 'patreon', at: now }));
   return tier;
 }
@@ -221,12 +228,12 @@ export async function handlePatreon(request, url, env, ctx, deps) {
   }
   if (path === '/entitlement') {
     let ent = await readEnt(env, sub);
-    const hand = ent && ent.src !== 'patreon' && publicTier(ent.tier) !== 'ebbless';
+    const hand = ent && ent.src !== 'patreon' && publicTier(entTier(ent)) !== 'ebbless';
     if (cfg && !hand && (!ent || !ent.at || Date.now() - ent.at > RECHECK_MS)) {
       const t = await syncTier(env, cfg, sub, fetchFn);
       if (t) ent = { tier: t };
     }
-    return json({ tier: publicTier(ent && ent.tier) });
+    return json({ tier: publicTier(entTier(ent)) });
   }
   return json({ error: 'not found' }, 404);
 }

@@ -8086,6 +8086,17 @@ async function patreonConnect(){
   showToast("Couldn't reach Patreon. Try again in a moment.");
   return false;
 }
+// Redeem a flow/horizon code (owner-minted, handed out through Patreon or directly).
+// Returns the new tier name, or '' when the code did not work. No input field yet.
+async function redeemCode(code){
+  if (!profileIdToken) return '';
+  try {
+    const res = await fetch(BACKEND + '/redeem', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idToken: profileIdToken, code: String(code || '').slice(0, 40) }) });
+    if (!res.ok) return '';
+    await refreshTier();
+    return state.tier;
+  } catch(e){ return ''; }
+}
 // On load: a remembered session signs the person back in with no Google involved.
 function restoreSession(){
   if (lsGet(LS_PROFILE_SIGNED_OUT, false) === true){ sessionDrop(); return; }
@@ -22221,6 +22232,9 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
+  { version: 516, date: '2026-11-11', items: [
+    'Codes for flow and horizon can now be redeemed on your account.'
+  ]},
   { version: 515, date: '2026-11-11', items: [
     'EBBLESS now knows your plan (ebbless, flow or horizon) once you sign in, ready for Patreon connection.'
   ]},

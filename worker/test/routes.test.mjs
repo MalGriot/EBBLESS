@@ -14,7 +14,7 @@ const CONTRACT = ['/admin/', '/album', '/amlist', '/amtrack', '/art', '/artist',
   '/artistsearch', '/auth/session', '/auth/signout', '/beta/', '/entitlement', '/flags', '/linkfix', '/lyrics', '/metrics',
   '/nowplaying', '/playlist', '/playlistsearch', '/podads', '/podaudio', '/podcaption/collect',
   '/podcaption/start', '/podcast', '/podcastmatch', '/podepisode', '/podtext', '/patreon/', '/pool/affinity',
-  '/pool/signal', '/profile/delete', '/profile/fetch', '/profile/sync', '/report', '/sctracksearch',
+  '/pool/signal', '/profile/delete', '/profile/fetch', '/profile/sync', '/redeem', '/report', '/sctracksearch',
   '/search', '/similar', '/soundcloud', '/spotifyart', '/tags', '/tester-report', '/thisis', '/track',
   '/vibe-interpret', '/vibe-picture', '/voice/plan', '/waves', '/ytmix', '/ytplaylist', '/ytvideo'];
 
