@@ -8045,6 +8045,47 @@ async function mintSession(credential, sub){
     if (profileIdToken === credential){ profileIdToken = d.session; profileTokenExp = 0; }
   } catch(e){}
 }
+/* ---------- TIER ----------
+   ebbless (basic) < flow (premium) < horizon (premium +). state.tier is what the
+   worker says for the signed-in account (POST /entitlement, which also re-checks
+   a connected Patreon pledge at most once a day). Fetched once per sign-in and
+   cached on the device so a cold start is not blocked; unknown, offline or
+   signed out means ebbless. The cache is a convenience only: the worker
+   decides what is actually allowed. Raw localStorage, never synced. */
+const LS_TIER = 'ebbless:tier';   // { t: tier, sub }
+const TIER_RANK = { ebbless: 0, flow: 1, horizon: 2 };
+function lsDelRaw(k){ try { localStorage.removeItem(k); } catch(e){} }
+function hasTier(min){
+  const need = TIER_RANK[min];
+  return need !== undefined && (TIER_RANK[state.tier] || 0) >= need;
+}
+async function refreshTier(){
+  if (!profileIdToken){ state.tier = 'ebbless'; return; }
+  const sess = sessionLoad();
+  try { const c = JSON.parse(localStorage.getItem(LS_TIER) || 'null'); if (c && TIER_RANK[c.t] !== undefined && c.sub && sess && sess.sub === c.sub) state.tier = c.t; } catch(e){}
+  try {
+    const res = await fetch(BACKEND + '/entitlement', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idToken: profileIdToken }) });
+    if (!res.ok) return;
+    const d = await res.json();
+    if (!d || TIER_RANK[d.tier] === undefined) return;
+    state.tier = d.tier;
+    const s = sessionLoad();
+    if (s && s.sub) try { localStorage.setItem(LS_TIER, JSON.stringify({ t: d.tier, sub: s.sub })); } catch(e){}
+  } catch(e){}
+}
+// Starts the Patreon connection for the signed-in account (the worker returns
+// Patreon's authorize URL). No button yet and none for the native Android app
+// until the Play Billing vs Patreon decision (docs/ANDROID-NATIVE-AUDIT.md, R8).
+async function patreonConnect(){
+  if (!profileIdToken) return false;
+  try {
+    const res = await fetch(BACKEND + '/patreon/connect', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idToken: profileIdToken }) });
+    const d = res.ok ? await res.json() : null;
+    if (d && typeof d.url === 'string' && d.url.indexOf('https://www.patreon.com/') === 0){ window.location.href = d.url; return true; }
+  } catch(e){}
+  showToast("Couldn't reach Patreon. Try again in a moment.");
+  return false;
+}
 // On load: a remembered session signs the person back in with no Google involved.
 function restoreSession(){
   if (lsGet(LS_PROFILE_SIGNED_OUT, false) === true){ sessionDrop(); return; }
@@ -8053,6 +8094,7 @@ function restoreSession(){
   profileIdToken = s.t; profileTokenExp = 0;
   renderAccountRow();
   npSchedulePublish(2000);   // music already playing when the session comes back: go on air (#500)
+  refreshTier();
   syncProfileNow({ force: true });
   const gate = window.ebblessBetaGate;
   if (gate && s.sub && gate.hasToken && !gate.hasToken()) betaAccountLink(s.t, s.sub);
@@ -8095,6 +8137,7 @@ function handleGoogleCredential(response){
   lsDel(LS_PROFILE_SIGNED_OUT);
   profileSyncStatus = '';
   npSchedulePublish(2000);   // signed in mid-song: go on air (#500)
+  refreshTier();
   syncProfileNow({ force: true, announce: true });
   betaAccountLink(response.credential, sub);
   mintSession(response.credential, sub);
@@ -8208,6 +8251,7 @@ function signOutProfile(){
   const sess = sessionRaw(); sessionDrop();
   if (sess && isOurSession(sess.t)) fetch(BACKEND + '/auth/signout', { method: 'POST', keepalive: true, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ session: sess.t }) }).catch(() => {});
   profileIdToken = null; profileTokenExp = 0; profileSyncStatus = '';
+  state.tier = 'ebbless'; lsDelRaw(LS_TIER);
   try { if (window.google && google.accounts && google.accounts.id) google.accounts.id.disableAutoSelect(); } catch(e){}
   lsDel(LS_PROFILE_EMAIL);
   lsDel(LS_PROFILE_SYNCED_AT);
@@ -9265,6 +9309,7 @@ const bgResolveProgress = new Map();
    STATE
    ========================================================================= */
 const state = {
+  tier: 'ebbless',       // ebbless | flow | horizon, see TIER; use hasTier('flow')
   playlist: null,       // { id, name, tracks, ts } — the playlist currently being viewed/browsed
   queue: [],             // array of { plId, idx } pairs, effective play order (can span playlists)
   queuePos: -1,          // pointer into queue
@@ -22176,6 +22221,9 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
+  { version: 514, date: '2026-11-11', items: [
+    'EBBLESS now knows your plan (ebbless, flow or horizon) once you sign in, ready for Patreon connection.'
+  ]},
   { version: 513, date: '2026-11-11', items: [
     'Keyboard shortcuts for the visuals are now numbers, left to right: 1 Art, 2 Cymatics, 3 fLUX, 4 Lyrics, 5 Video.'
   ]},
