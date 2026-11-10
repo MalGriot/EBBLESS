@@ -8102,11 +8102,11 @@ async function runPendingTierAction(){
   }
 }
 /* Welcome video: once per plan, the first time this device sees that plan for
-   the signed-in account (after activating, or after an upgrade). Paste the three
-   links below (unlisted YouTube is fine); an empty link means no card for that
-   plan. Shown as a toast with a Watch button, opened in a new tab. Not tied to
+   the signed-in account (after activating, or after an upgrade). Links to the
+   unlisted videos on the EBBLESS YouTube channel; an empty link means no card for
+   that plan. Shown as a toast with a Watch button, opened in a new tab. Not tied to
    any purchase, so it also shows in the Android app. */
-const WELCOME_VIDEOS = { flow: '', deep: '', horizon: '' };
+const WELCOME_VIDEOS = { discovery: 'https://youtu.be/67-j1W6QPnE', flow: 'https://youtu.be/ka8ncF4saiU', deep: 'https://youtu.be/lAakr4MRV28', horizon: 'https://youtu.be/s028t5i117Y' };
 const PLAN_NAMES = { discovery: 'discover', flow: 'flowwww', deep: 'deeeep', horizon: 'horizonnn' };   // what Patreon and the videos call them
 const LS_WELCOME = 'ebbless:welcomeVideo';   // { sub, t: last plan shown }
 function maybeWelcomeVideo(tier, sub){
