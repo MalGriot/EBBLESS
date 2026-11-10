@@ -585,6 +585,15 @@ video.lib-bg-video.is-playing{opacity:1}
 #view-home .hm-vibe-pic:hover,#view-home .hm-vibe-pic:focus-visible{background:rgba(255,255,255,.18)}
 #view-home .hm-vibe-pic svg{width:22px;height:22px}
 #view-home .hm-vibe-note{margin:8px 4px 0;font-size:12px;line-height:1.4;color:var(--faint)}
+/* #761: Home's add-music block: two big taps plus a few genre chips (static, no motion) */
+#view-home .hm-add-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+#view-home .hm-add-btn{display:flex;flex-direction:column;gap:3px;text-align:left;padding:14px 16px;border-radius:16px;background:var(--panel-2);border:1px solid var(--border);color:var(--text);cursor:pointer;font:inherit}
+#view-home .hm-add-btn:hover,#view-home .hm-add-btn:focus-visible{background:var(--panel-3)}
+#view-home .hm-add-btn b{font-size:15.5px}
+#view-home .hm-add-btn span{font-size:12.5px;color:var(--faint)}
+#view-home .hm-add-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+#view-home .hm-add-chip{font:inherit;font-size:13.5px;font-weight:600;padding:8px 14px;border-radius:999px;background:var(--panel-2);border:1px solid var(--border);color:var(--text);cursor:pointer}
+#view-home .hm-add-chip:hover,#view-home .hm-add-chip:focus-visible{background:var(--panel-3)}
 #view-home .hm-vibe-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
 #view-home .hm-vibe-chip{display:inline-flex;align-items:baseline;gap:6px;font:inherit;font-size:13.5px;font-weight:600;padding:8px 14px;border-radius:999px;background:rgba(255,255,255,.10);color:var(--text);cursor:pointer;text-align:left}
 #view-home .hm-vibe-chip:hover{background:rgba(255,255,255,.18)}
@@ -7278,6 +7287,7 @@ async function resolveTrackArt(sourceKind, title, artist, nativeArt){
 const LS_LIB = 'ebbless:library';           // array of playlist ids, most recent first
 const LS_PINNED = 'ebbless:pinned';          // array of pinned playlist ids, most recently pinned first
 const LS_LASTPLAYED = (id) => 'ebbless:lastplayed:' + id;  // ms timestamp a playlist last started playing
+const LS_LASTEDITED = (id) => 'ebbless:lastedited:' + id;  // #765: ms timestamp songs were last added to / removed from a playlist, or it was renamed
 const LS_LASTOPENED = (id) => 'ebbless:lastopened:' + id;  // ms timestamp a playlist's tracklist panel was last opened
 const LS_PL = (id) => 'ebbless:playlist:' + id;  // resolved playlist cache
 /* Advanced settings (phase 1): per-device prefs that have no older home.
@@ -8915,7 +8925,10 @@ function sortLibraryIds(ids, mode){
   const withPl = ids.map(id => ({ id, pl: getCachedPlaylist(id) })).filter(x => x.pl);
   if (mode === 'recent'){
     // #607: most recently played first; never-played keep their order (stable sort)
-    withPl.sort((a, b) => (getLastPlayed(b.id) || 0) - (getLastPlayed(a.id) || 0));
+    // #765: an edit counts like a play, and the playlist playing right now sits above all of them
+    const nowId = state.playlist && state.playlist.id;
+    const stamp = (id) => id === nowId ? Infinity : Math.max(getLastPlayed(id) || 0, lsGet(LS_LASTEDITED(id), 0) || 0);
+    withPl.sort((a, b) => { const x = stamp(a.id), y = stamp(b.id); return x === y ? 0 : (y > x ? 1 : -1); });
   } else if (mode === 'alpha'){
     withPl.sort((a, b) => a.pl.name.localeCompare(b.pl.name, undefined, { sensitivity: 'base' }));
   } else if (mode === 'plays_desc'){
@@ -8943,6 +8956,7 @@ function orderedLibraryIds(){
 
 function recordLastPlayed(plId){ if (plId && plId !== UNLIKED_ID) lsSet(LS_LASTPLAYED(plId), Date.now()); }
 function getLastPlayed(id){ return lsGet(LS_LASTPLAYED(id), null); }
+function recordLastEdited(plId){ if (plId && plId !== UNLIKED_ID) lsSet(LS_LASTEDITED(plId), Date.now()); }
 function recordLastOpened(plId){ if (plId) lsSet(LS_LASTOPENED(plId), Date.now()); }
 function getLastOpened(id){ return lsGet(LS_LASTOPENED(id), null); }
 function formatLastPlayed(ts){
@@ -9646,7 +9660,11 @@ const libSearchBox = $('libSearchBox'), libSearchToggle = $('libSearchToggle');
 const libSearchTracks = $('libSearchTracks'), libSearchTracksList = $('libSearchTracksList');
 const importOverlay = $('import-overlay'), importStage = $('importStage');
 const trackTitle = $('trackTitle'), trackArtist = $('trackArtist');
-$('emptyFindBtn').addEventListener('click', () => openFindMusic());
+// #761: with no songs of your own yet, Find music lands on Home, where import and genres sit together
+$('emptyFindBtn').addEventListener('click', () => {
+  const mine = getLibrary().filter(id => ![SWELL_ID, BLEND_ID, NP_ID, LIKED_ID].includes(id));
+  if (mine.length) openFindMusic(); else { leaveFullscreen(true); setView('home'); }
+});
 $('emptyVibeBtn').addEventListener('click', () => openHomeVibe());
 $('browseBtn').addEventListener('click', () => openFindMusic());
 $('hubBringMusic').addEventListener('click', () => openBring());
@@ -15649,6 +15667,7 @@ function openRenamePlaylistFlow(id, pl){
     };
     apply(pl);
     lsSet(LS_PL(id), pl);
+    recordLastEdited(id);
     if (state.playlist && state.playlist.id === id) apply(state.playlist);
     closeImportOverlay();
     renderLibrary();
@@ -16777,6 +16796,7 @@ function removeTrackFromPlaylistAt(playlistId, idx){
   if (!pl || idx < 0 || idx >= pl.tracks.length) return;
   const gone = pl.tracks.splice(idx, 1)[0];
   lsSet(LS_PL(playlistId), pl);
+  recordLastEdited(playlistId);
   if (playlistId === UPLOADS_ID && gone) dropLocalFileSoon(gone.videoId);
   if (state.playlist && state.playlist.id === playlistId){
     state.queue = state.queue
@@ -16798,6 +16818,7 @@ function insertTrackIntoPlaylistAt(playlistId, idx, track){
   idx = Math.max(0, Math.min(idx, pl.tracks.length));
   pl.tracks.splice(idx, 0, track);
   lsSet(LS_PL(playlistId), pl);
+  recordLastEdited(playlistId);
   if (state.playlist && state.playlist.id === playlistId){
     state.queue = state.queue.map(e => (e.plId === playlistId && e.idx >= idx) ? { ...e, idx: e.idx + 1 } : e);
     state.playlist = pl;
@@ -16983,6 +17004,7 @@ function createCustomPlaylist(name){
   const id = 'custom-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   const pl = { id, type: 'custom', name, image: null, tracks: [], ts: Date.now() };
   lsSet(LS_PL(id), pl);
+  recordLastEdited(id);
   saveToLibrary(id);
   awardMilestone('playlist');
   renderLibrary();
@@ -17014,6 +17036,7 @@ function addTracksToPlaylist(playlistId, tracks, allowDup){
     if (state.playlist && state.playlist.id === LIKED_ID) state.queue = state.queue.map(e => e.plId === LIKED_ID ? Object.assign({}, e, { idx: e.idx + added }) : e);
   } else pl.tracks = pl.tracks.concat(fresh);
   lsSet(LS_PL(playlistId), pl);
+  recordLastEdited(playlistId);
   renderLibrary();
   if (state.playlist && state.playlist.id === playlistId) state.playlist = pl;
   return added;
@@ -17168,7 +17191,7 @@ let relinkDragCtx = null; // { list, t } of the open matching-links window
   // dragover (many a second) froze the app on a big library. Ask once per drag.
   let addableIds = null;
   const addableSet = () => addableIds || (addableIds = new Set(addablePlaylists().map(p => p.id)));
-  const okTarget = (card) => !!card && addableSet().has(card.dataset.plId);
+  const okTarget = (card) => !!card && (card.dataset.plId === UNLIKED_ID || addableSet().has(card.dataset.plId));
   let hiCard = null, hiPanel = false;
   function clearHi(){
     if (hiCard){ hiCard.classList.remove('is-drop-target'); hiCard = null; }
@@ -17183,7 +17206,7 @@ let relinkDragCtx = null; // { list, t } of the open matching-links window
   // #548: the open playlist is itself a drop target (not the one the song is already dragged out of)
   function panelDropId(el){
     if (!el || !el.closest || !el.closest('#libpl-panel') || !openLibraryPanelId) return null;
-    if (!addableSet().has(openLibraryPanelId)) return null;
+    if (openLibraryPanelId !== UNLIKED_ID && !addableSet().has(openLibraryPanelId)) return null;
     if (dragFromLib && dragSrcPl === openLibraryPanelId) return null;
     return openLibraryPanelId;
   }
@@ -17276,6 +17299,13 @@ let relinkDragCtx = null; // { list, t } of the open matching-links window
     const card = cardOf(e.target);
     const panelId = panelDropId(e.target);
     clearHi();
+    // #785: a song dropped on Unliked (its card or its open list) is thumbed down, not added
+    if (panelId === UNLIKED_ID || (card && card.dataset.plId === UNLIKED_ID)){
+      e.preventDefault();
+      if (relinkDrag) closeImportOverlay();
+      unlikeDroppedSong(dragTrack);
+      return;
+    }
     if (panelId){
       e.preventDefault();
       const addViewOpen = !!$('asInput') && importOverlay.classList.contains('is-open');
@@ -17606,31 +17636,50 @@ async function startRadio(name, own, keepPlaying){
 function openAddToPlaylistPicker(track){
   openImportOverlay();
   const liked = getCachedPlaylist(LIKED_ID) || { id: LIKED_ID, name: 'Liked Songs', tracks: [] };
-  const customs = [liked].concat(addablePlaylists().filter(p => p.id !== LIKED_ID));
-  const rowsHtml = customs.map(p =>
-    '<label class="btn-ghost pl-pick" style="width:100%;text-align:left;margin-bottom:8px;display:flex;align-items:center;gap:10px;cursor:pointer">' +
-      '<input type="checkbox" class="pl-pick-cb" data-id="' + p.id + '" style="flex:none">' +
-      '<span>' + escapeHtml(p.name) + ' <span style="color:var(--faint-2)">(' + p.tracks.length + (p.tracks.length === 1 ? ' song' : ' songs') + ')</span></span>' +
-    '</label>'
-  ).join('');
+  const others = addablePlaylists().filter(p => p.id !== LIKED_ID);
+  const picked = new Set();   // #766: ticks survive searching and re-sorting
+  const fieldCss = 'background:var(--panel-2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-size:14px';
   importStage.innerHTML =
     '<div class="step">Add to playlist</div>' +
-    '<div style="width:100%;max-height:55vh;overflow-y:auto;overscroll-behavior:contain;margin-bottom:16px">' +
-      (rowsHtml || '<div style="color:var(--faint-2);font-size:13px;margin-bottom:12px">No playlists yet.</div>') +
+    '<div style="display:flex;gap:8px;width:100%;margin-bottom:10px">' +
+      '<input id="plPickSearch" type="search" placeholder="Search playlists" autocomplete="off" spellcheck="false" aria-label="Search playlists" style="flex:1;min-width:0;' + fieldCss + '">' +
+      '<select id="plPickSort" aria-label="Sort playlists" style="' + fieldCss + '">' +
+        '<option value="recent">Most recent</option><option value="alpha">A to Z</option>' +
+        '<option value="tracks_desc">Most songs</option><option value="plays_desc">Most played</option>' +
+      '</select>' +
     '</div>' +
+    '<div id="plPickList" style="width:100%;max-height:50vh;overflow-y:auto;overscroll-behavior:contain;margin-bottom:16px"></div>' +
     '<button class="btn-ghost" id="plAddSelectedBtn" style="width:100%;margin-bottom:8px" disabled>Add</button>' +
     '<button class="btn-ghost" id="plNewFromPickerBtn" style="width:100%">+ New playlist</button>';
-  const addBtn = $('plAddSelectedBtn');
-  const checked = () => Array.from(importStage.querySelectorAll('.pl-pick-cb:checked'));
-  importStage.querySelectorAll('.pl-pick-cb').forEach(cb => {
-    cb.addEventListener('change', () => {
-      const n = checked().length;
-      addBtn.disabled = !n;
-      addBtn.textContent = n > 1 ? 'Add to ' + n + ' playlists' : 'Add';
-    });
+  const addBtn = $('plAddSelectedBtn'), listEl = $('plPickList'), searchEl = $('plPickSearch'), sortEl = $('plPickSort');
+  const rowHtml = (p) =>
+    '<label class="btn-ghost pl-pick" style="width:100%;text-align:left;margin-bottom:8px;display:flex;align-items:center;gap:10px;cursor:pointer">' +
+      '<input type="checkbox" class="pl-pick-cb" data-id="' + escapeHtml(p.id) + '"' + (picked.has(p.id) ? ' checked' : '') + ' style="flex:none">' +
+      '<span>' + escapeHtml(p.name) + ' <span style="color:var(--faint-2)">(' + p.tracks.length + (p.tracks.length === 1 ? ' song' : ' songs') + ')</span></span>' +
+    '</label>';
+  function renderList(){
+    const q = searchEl.value.trim().toLowerCase();
+    const order = sortLibraryIds(others.map(p => p.id), sortEl.value);
+    const byId = new Map(others.map(p => [p.id, p]));
+    const rows = [liked].concat(order.map(id => byId.get(id)).filter(Boolean)).filter(p => !q || String(p.name || '').toLowerCase().includes(q));
+    listEl.innerHTML = rows.length ? rows.map(rowHtml).join('') : '<div style="color:var(--faint-2);font-size:13px;margin-bottom:12px">' + (q ? 'No playlists match.' : 'No playlists yet.') + '</div>';
+  }
+  const refreshBtn = () => {
+    const n = picked.size;
+    addBtn.disabled = !n;
+    addBtn.textContent = n > 1 ? 'Add to ' + n + ' playlists' : 'Add';
+  };
+  listEl.addEventListener('change', (e) => {
+    const cb = e.target.closest('.pl-pick-cb');
+    if (!cb) return;
+    if (cb.checked) picked.add(cb.dataset.id); else picked.delete(cb.dataset.id);
+    refreshBtn();
   });
+  searchEl.addEventListener('input', renderList);
+  sortEl.addEventListener('change', renderList);
+  renderList();
   addBtn.addEventListener('click', () => {
-    let ids = checked().map(cb => cb.dataset.id);
+    let ids = Array.from(picked);
     closeImportOverlay();
     // Liked Songs goes through the like path so hearts, taste signals and streaks stay in sync
     if (ids.includes(LIKED_ID)){
@@ -19547,6 +19596,22 @@ function renderHome(){
   };
   const row = (sec, cards) => { const r = mk('div', 'hm-row'); cards.forEach(c => r.appendChild(c)); sec.appendChild(r); };
   renderHomeVibe(body, mk);
+  // #761: every way to get songs in lives here: import, or pick a genre
+  {
+    const sec = section('Add songs');
+    const r = mk('div', 'hm-add-row');
+    const big = (t, sub, fn) => { const b = mk('button', 'hm-add-btn'); b.type = 'button'; b.appendChild(mk('b', '', t)); b.appendChild(mk('span', '', sub)); b.addEventListener('click', fn); return b; };
+    r.appendChild(big('Import your music', 'Spotify, YouTube Music and more', () => openBring()));
+    r.appendChild(big('Browse by genre', 'Hip-Hop, Soul, Funk and more', () => openFindMusic()));
+    sec.appendChild(r);
+    const chips = mk('div', 'hm-add-chips');
+    Object.keys(FM_GENRES).slice(0, 6).forEach(g => {
+      const c = mk('button', 'hm-add-chip', g); c.type = 'button';
+      c.addEventListener('click', () => { openFindMusic(); fmTab = 'genres'; fmOpenGenre = g; fmRender(); });
+      chips.appendChild(c);
+    });
+    sec.appendChild(chips);
+  }
   const coverOf = (pl) => pl.image ? { art: pl.image } : (pl.tracks.find(t => t && (t.videoId || t.art)) || null);
   const plays = (pl) => totalPlaylistPlays(pl);
   // recently played: playlists and albums you played last, newest first (one tap plays)
@@ -25846,6 +25911,23 @@ function unlikedRefresh(){
   const sc = libplPanel.querySelector('.queue-scroll'), top = sc ? sc.scrollTop : 0;
   rerenderLibraryKeepPanel();
   if (sc) sc.scrollTop = top;
+}
+// #785: dragging any song onto Unliked thumbs it down: out of Liked, into Unliked, and into taste.
+function unlikeDroppedSong(t){
+  if (!t || !t.videoId){ showToast('That song cannot be unliked'); return; }
+  const wasLiked = isTrackLiked(t.videoId);
+  if (wasLiked) removeTrackFromPlaylistByVideoId(LIKED_ID, t.videoId);
+  addDecline(t, t.tags || []);
+  recordListenSignal(t, -3);
+  rerenderLibraryKeepPanel();
+  csMarksSync();
+  syncDeclineBtn();
+  showToast('Moved to Unliked', { label: 'Undo', run: () => {
+    removeDecline(t.videoId);
+    recordListenSignal(t, 3);
+    if (wasLiked) addTracksToPlaylist(LIKED_ID, [t]);
+    rerenderLibraryKeepPanel(); csMarksSync(); syncDeclineBtn();
+  } });
 }
 // Same path as the Undo on a thumbs-down (undoDeclineCurrents).
 function restoreUnlikedSong(t){
