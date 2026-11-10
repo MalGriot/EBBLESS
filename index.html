@@ -442,24 +442,24 @@ body:has(#milkLayer.is-open) #ambient .ambient-veil,body:has(#flow-layer.is-open
    (the clock --accent, or the album-art --player-accent in the queue).
    scrollbar-color is applied only where ::-webkit-scrollbar is unsupported
    (Firefox), because Chrome 121+ drops the webkit styling once it is set. */
-.view,.queue-scroll,.paste-recents-list{--sb-accent:var(--accent)}
+.view,.queue-scroll,.paste-recents-list,.lib-body{--sb-accent:var(--accent)}
 #queue-panel .queue-scroll{--sb-accent:var(--player-accent)}
 @media (hover:hover) and (pointer:fine){
-  .view::-webkit-scrollbar,.queue-scroll::-webkit-scrollbar,.paste-recents-list::-webkit-scrollbar{width:12px;height:12px}
-  .view::-webkit-scrollbar-track,.queue-scroll::-webkit-scrollbar-track,
-  .view::-webkit-scrollbar-corner,.queue-scroll::-webkit-scrollbar-corner,
+  .view::-webkit-scrollbar,.queue-scroll::-webkit-scrollbar,.paste-recents-list::-webkit-scrollbar,.lib-body::-webkit-scrollbar{width:12px;height:12px}
+  .view::-webkit-scrollbar-track,.queue-scroll::-webkit-scrollbar-track,.lib-body::-webkit-scrollbar-track,
+  .view::-webkit-scrollbar-corner,.queue-scroll::-webkit-scrollbar-corner,.lib-body::-webkit-scrollbar-corner,
   .paste-recents-list::-webkit-scrollbar-track,.paste-recents-list::-webkit-scrollbar-corner{background:transparent}
-  .view::-webkit-scrollbar-thumb,.queue-scroll::-webkit-scrollbar-thumb,.paste-recents-list::-webkit-scrollbar-thumb{
+  .view::-webkit-scrollbar-thumb,.queue-scroll::-webkit-scrollbar-thumb,.paste-recents-list::-webkit-scrollbar-thumb,.lib-body::-webkit-scrollbar-thumb{
     min-height:48px;border-radius:12px;border:3px solid transparent;background-clip:padding-box;
     background-color:rgba(255,255,255,.18);background-color:color-mix(in srgb,var(--sb-accent) 38%,transparent)}
-  .view:hover::-webkit-scrollbar-thumb,.queue-scroll:hover::-webkit-scrollbar-thumb,.paste-recents-list:hover::-webkit-scrollbar-thumb{
+  .view:hover::-webkit-scrollbar-thumb,.queue-scroll:hover::-webkit-scrollbar-thumb,.paste-recents-list:hover::-webkit-scrollbar-thumb,.lib-body:hover::-webkit-scrollbar-thumb{
     background-color:rgba(255,255,255,.26);background-color:color-mix(in srgb,var(--sb-accent) 55%,transparent)}
-  .view::-webkit-scrollbar-thumb:hover,.queue-scroll::-webkit-scrollbar-thumb:hover,.paste-recents-list::-webkit-scrollbar-thumb:hover{
+  .view::-webkit-scrollbar-thumb:hover,.queue-scroll::-webkit-scrollbar-thumb:hover,.paste-recents-list::-webkit-scrollbar-thumb:hover,.lib-body::-webkit-scrollbar-thumb:hover{
     border-width:2px;background-color:rgba(255,255,255,.4);background-color:color-mix(in srgb,var(--sb-accent) 80%,transparent)}
-  .view::-webkit-scrollbar-thumb:active,.queue-scroll::-webkit-scrollbar-thumb:active,.paste-recents-list::-webkit-scrollbar-thumb:active{
+  .view::-webkit-scrollbar-thumb:active,.queue-scroll::-webkit-scrollbar-thumb:active,.paste-recents-list::-webkit-scrollbar-thumb:active,.lib-body::-webkit-scrollbar-thumb:active{
     border-width:2px;background-color:var(--sb-accent)}
   @supports not selector(::-webkit-scrollbar){
-    .view,.queue-scroll,.paste-recents-list{scrollbar-color:color-mix(in srgb,var(--sb-accent) 55%,transparent) transparent}
+    .view,.queue-scroll,.paste-recents-list,.lib-body{scrollbar-color:color-mix(in srgb,var(--sb-accent) 55%,transparent) transparent}
   }
 }
 
@@ -4610,7 +4610,7 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
     <span class="splash-install-label">Add to Home Screen</span>
   </button>
   <div id="splashChoice" class="splash-choice">
-    <button id="splashBringMusic" type="button" class="splash-choice-btn splash-choice-btn-primary splash-bring">Bring your music</button>
+    <button id="splashBringMusic" type="button" class="splash-choice-btn splash-choice-btn-primary splash-bring">Import your music</button>
     <button id="splashPlayTutorial" type="button" class="splash-choice-btn">Tutorial</button>
     <button id="splashSkipTutorial" type="button" class="splash-choice-btn">Enter</button>
   </div>
@@ -4708,7 +4708,7 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
       <div id="libraryEmpty" class="empty-lib hidden">
         <div class="queue-head"><h2>Library</h2></div>
         Paste a playlist, album, song, or podcast link to begin.
-        <div><button class="btn-ghost" id="libBringBtnEmpty" style="margin-top:14px;padding:5px 14px;font-size:12.5px">Bring your music</button></div>
+        <div><button class="btn-ghost" id="libBringBtnEmpty" style="margin-top:14px;padding:5px 14px;font-size:12.5px">Import your music</button></div>
         <div><button class="btn-ghost" id="newPlaylistBtnEmpty" style="margin-top:14px;padding:5px 14px;font-size:12.5px">+ New playlist</button></div>
       </div>
 
@@ -4718,7 +4718,7 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
         <div class="section-label-row">
           <div class="lib-head-actions">
             <button type="button" class="view-toggle-btn lib-sort-btn lib-tb-btn" id="newPlaylistBtn" aria-label="New playlist" title="New playlist"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
-            <button type="button" class="view-toggle-btn lib-sort-btn lib-tb-btn" id="libBringBtn" aria-label="Bring your music" title="Bring your music from Spotify, YouTube Music and more"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 19h14"/></svg></button>
+            <button type="button" class="view-toggle-btn lib-sort-btn lib-tb-btn" id="libBringBtn" aria-label="Import your music" title="Import your music from Spotify, YouTube Music and more"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 19h14"/></svg></button>
             <button type="button" class="view-toggle-btn lib-sort-btn lib-tb-btn" id="uploadSongsBtn" aria-label="Add your songs" title="Add your songs from this device"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5M5 20h14"/></svg></button>
             <button type="button" class="view-toggle-btn lib-sort-btn lib-tb-btn" id="driveSongsBtn" aria-label="Add your songs from Google Drive" title="Add your songs from Google Drive"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 18a4 4 0 0 1-.5-7.97A5.5 5.5 0 0 1 17 8.5 4.5 4.5 0 0 1 17.5 18H7zM12 11v6m-3-3 3 3 3-3"/></svg></button>
             <input type="file" id="uploadFileInput" accept="audio/*,.mp3,.m4a,.aac,.wav,.flac,.ogg,.opus" multiple hidden>
@@ -5338,7 +5338,7 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
       <button type="button" class="settings-back" id="settingsBackBtn" aria-label="Back"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>Back</button>
       <h1 class="set-title" id="setTitle">Settings</h1>
       <nav class="set-hub" id="settingsHub" aria-label="Settings sections">
-        <button type="button" class="set-hub-row" id="hubBringMusic"><span class="hub-text"><span class="hub-t">Bring your music</span><span class="hub-s">Sign in to Spotify, YouTube Music and more</span></span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+        <button type="button" class="set-hub-row" id="hubBringMusic"><span class="hub-text"><span class="hub-t">Import your music</span><span class="hub-s">Sign in to Spotify, YouTube Music and more</span></span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
         <button type="button" class="set-hub-row" data-spage-go="playback"><span class="hub-text"><span class="hub-t">Playback</span><span class="hub-s">Blending, volume, ad skipping</span></span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
         <button type="button" class="set-hub-row" data-spage-go="customize"><span class="hub-text"><span class="hub-t">Customize</span><span class="hub-s">Look, library, player, gestures, backup</span></span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
         <button type="button" class="set-hub-row" data-spage-go="privacy"><span class="hub-text"><span class="hub-t">Privacy &amp; data</span><span class="hub-s">Listening profile, terms, clear playlists</span></span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
@@ -9500,6 +9500,16 @@ function thumbArtUrl(url){
   if (/^https:\/\/(img\.youtube\.com|i\.ytimg\.com)\/vi\//.test(url)) return url.replace(/\/(maxresdefault|sddefault)\.jpg$/, '/hqdefault.jpg');
   return url;
 }
+// #727: small icons (library rows, queue rows, mini bar) only need a ~64px
+// image, so they ask for each source's smallest variant first. The sized
+// chain falls back to the thumbnail and then the full cover if it is missing.
+function iconArtUrl(url){
+  if (typeof url !== 'string') return url;
+  if (/^https:\/\/(i\.scdn\.co|image-cdn-[a-z]+\.spotifycdn\.com)\/image\/ab67616d0000(b273|1e02)/.test(url)) return url.replace(/ab67616d0000(b273|1e02)/, 'ab67616d00004851');
+  if (/^https:\/\/[a-z0-9.-]*mzstatic\.com\//.test(url)) return url.replace(/\/(\d{2,4})x(\d{2,4})(bb|cc)?\.(jpg|jpeg|png|webp)$/i, (m, w, h, suf, ext) => '/100x100' + (suf || 'bb') + '.' + ext);
+  if (/^https:\/\/[a-z0-9.-]*sndcdn\.com\//.test(url)) return url.replace(/-(t500x500|t300x300|original|large)\./, '-t67x67.');
+  return thumbArtUrl(url);
+}
 function attachCardArt(img, track){
   img.decoding = 'async';
   attachArtworkFallback(img, track, true);
@@ -9535,7 +9545,8 @@ const YT_PLACEHOLDER_SIZE = { w: 120, h: 90 };
 function attachArtworkFallback(img, track, thumb){
   let chain = artworkUrls(track);
   // thumbnails first, the full-size chain behind them if a variant is missing
-  if (thumb) chain = Array.from(new Set(chain.map(thumbArtUrl).concat(chain)));
+  if (thumb === 'icon') chain = Array.from(new Set(chain.map(iconArtUrl).concat(chain.map(thumbArtUrl), chain)));
+  else if (thumb) chain = Array.from(new Set(chain.map(thumbArtUrl).concat(chain)));
   if (!chain.length){ img.removeAttribute('src'); return; }
   let i = 0;
   img.onerror = function(){ i++; if (i < chain.length) img.src = chain[i]; else img.onerror = null; };
@@ -9629,7 +9640,7 @@ $('browseBtn').addEventListener('click', () => openFindMusic());
 $('hubBringMusic').addEventListener('click', () => openBring());
 $('libBringBtn').addEventListener('click', () => openBring());
 $('libBringBtnEmpty').addEventListener('click', () => openBring());
-// Splash "Bring your music": enter exactly like Enter (every splash path
+// Splash "Import your music": enter exactly like Enter (every splash path
 // already handles that button), then open the service list on top.
 document.addEventListener('click', (e) => {
   if (!e.target.closest || !e.target.closest('#splashBringMusic')) return;
@@ -9814,7 +9825,7 @@ function fmRender(){
     body += '<div class="fm-grid">' + Object.keys(src).map(k => fmTile('pick', k, src[k], ' data-t="' + escapeHtml(k) + '"')).join('') + '</div>';
   }
   sc.innerHTML =
-    '<button type="button" class="fm-load" data-fm="bring">Bring your music from another app</button>' +
+    '<button type="button" class="fm-load" data-fm="bring">Import your music from another app</button>' +
     '<div class="fm-tabs" role="tablist">' + [['genres', 'Genres'], ['region', 'Region'], ['vibe', 'Vibe']].map(([k, l]) =>
       '<button type="button" role="tab" class="fm-tab' + (fmTab === k ? ' is-active' : '') + '" aria-selected="' + (fmTab === k) + '" data-fm="tab" data-v="' + k + '">' + l + '</button>').join('') + '</div>' + body;
 }
@@ -9902,8 +9913,8 @@ function bringBuild(){
   bringEl.id = 'bringMusic';
   bringEl.hidden = true;
   bringEl.setAttribute('role', 'dialog');
-  bringEl.setAttribute('aria-label', 'Bring your music');
-  bringEl.innerHTML = '<div class="fm-head"><button type="button" class="fm-back" id="bmBack" aria-label="Back"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20z"/></svg></button><div class="fm-title" id="bmTitle">Bring your music</div></div><div class="bm-scroll" id="bmScroll"></div>';
+  bringEl.setAttribute('aria-label', 'Import your music');
+  bringEl.innerHTML = '<div class="fm-head"><button type="button" class="fm-back" id="bmBack" aria-label="Back"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20z"/></svg></button><div class="fm-title" id="bmTitle">Import your music</div></div><div class="bm-scroll" id="bmScroll"></div>';
   document.body.appendChild(bringEl);
   $('bmBack').addEventListener('click', () => { if (bringView !== 'home'){ bringView = 'home'; bringRender(); } else closeBring(); });
   bringEl.addEventListener('click', (e) => {
@@ -9972,7 +9983,7 @@ function bringRender(){
       '</div><div class="bm-note">Last.fm counts plays from the moment you connect, so your list fills up as you listen. Your loved songs and most played songs come over.</div>';
     return;
   }
-  $('bmTitle').textContent = 'Bring your music';
+  $('bmTitle').textContent = 'Import your music';
   const muted = !!bringStoreGet('ebbless:bringMute');
   sc.innerHTML = '<div class="bm-lead">Pick where your music lives now. EBBLESS brings your playlists and loved songs over, then finds every song to play.</div>' +
     '<div class="bm-h">Bring it over now</div><div class="bm-grid">' + bringSignin().map(n => bringTile(n, n === 'Spotify' ? 'Paste your playlists' : 'Sign in')).join('') + '</div>' +
@@ -10184,7 +10195,7 @@ function spotifyLibraryImport(entries){
 
 // Periodic nudge: only while nothing has been brought over, at most every 3 days,
 // never in a visitor's first day (the splash already offers it), and "Don't ask
-// again" silences it for good (Bring your music page offers to turn it back on).
+// again" silences it for good (Import your music page offers to turn it back on).
 let bringNudgeEl = null;
 function hideBringNudge(){ if (bringNudgeEl){ bringNudgeEl.classList.remove('is-open'); const el = bringNudgeEl; setTimeout(() => { el.hidden = true; }, 350); } }
 function bringNudgeBuild(kind){
@@ -10203,10 +10214,10 @@ function bringNudgeBuild(kind){
     });
   }
   bringNudgeEl.dataset.kind = kind;
-  bringNudgeEl.setAttribute('aria-label', kind === 'file' ? 'Your Spotify file' : 'Bring your music');
+  bringNudgeEl.setAttribute('aria-label', kind === 'file' ? 'Your Spotify file' : 'Import your music');
   bringNudgeEl.innerHTML = kind === 'file'
     ? '<div class="bn-t">Your Spotify file should be here</div><div class="bn-s">Spotify takes a few days to send your data. When it arrives, add it and your Liked Songs and playlists come over.</div><div class="bn-row"><button type="button" class="bm-btn bm-btn-go" data-bn="go">Add my file</button><button type="button" class="bm-btn" data-bn="later">Not yet</button></div><button type="button" class="bm-link bn-never" data-bn="never">Stop reminding me</button>'
-    : '<div class="bn-t">Bring your music to EBBLESS</div><div class="bn-s">Already have playlists on Spotify, YouTube Music or another app? Bring them over in a minute.</div><div class="bn-row"><button type="button" class="bm-btn bm-btn-go" data-bn="go">Bring my music</button><button type="button" class="bm-btn" data-bn="later">Not now</button></div><button type="button" class="bm-link bn-never" data-bn="never">Don\'t ask me again</button>';
+    : '<div class="bn-t">Import your music to EBBLESS</div><div class="bn-s">Already have playlists on Spotify, YouTube Music or another app? Bring them over in a minute.</div><div class="bn-row"><button type="button" class="bm-btn bm-btn-go" data-bn="go">Bring my music</button><button type="button" class="bm-btn" data-bn="later">Not now</button></div><button type="button" class="bm-link bn-never" data-bn="never">Don\'t ask me again</button>';
   bringNudgeEl.hidden = false;
   requestAnimationFrame(() => requestAnimationFrame(() => bringNudgeEl.classList.add('is-open')));
 }
@@ -13251,7 +13262,7 @@ function toggleLibraryPlaylistPanel(id){
       row.className = 'track-row' + (t.videoId ? '' : ' is-missing');
       row.dataset.plId = id; row.dataset.idx = i;
       const img = document.createElement('img');
-      if (t.videoId || t.art) attachArtworkFallback(img, t);
+      if (t.videoId || t.art) attachArtworkFallback(img, t, 'icon');
       const meta = document.createElement('div'); meta.className = 'meta';
       const title = document.createElement('div'); title.className = 'title'; title.textContent = t.title;
       const artist = document.createElement('div'); artist.className = 'artist';
@@ -13718,7 +13729,7 @@ function artistSongRow(song, album, n, year){
   const row = document.createElement('div'); row.className = 'track-row';
   row.style.cursor = 'pointer';
   const img = document.createElement('img');
-  if (song.art) attachArtworkFallback(img, { art: song.art });
+  if (song.art) attachArtworkFallback(img, { art: song.art }, 'icon');
   const meta = document.createElement('div'); meta.className = 'meta';
   const ttl = document.createElement('div'); ttl.className = 'title'; ttl.textContent = song.title;
   meta.appendChild(ttl);
@@ -16368,7 +16379,7 @@ function fillLibRowLive(plId, idx, t){
   const spin = row && row.querySelector('.row-spinner');
   if (!row || row.dataset.plId !== plId || !spin) return;
   const title = row.querySelector('.title'); if (title) title.textContent = t.title;
-  const img = row.querySelector('img'); if (img && (t.videoId || t.art)) attachArtworkFallback(img, t);
+  const img = row.querySelector('img'); if (img && (t.videoId || t.art)) attachArtworkFallback(img, t, 'icon');
   const menuBtn = document.createElement('button');
   menuBtn.setAttribute('aria-label', 'Song options'); menuBtn.setAttribute('aria-haspopup', 'true'); menuBtn.setAttribute('aria-expanded', 'false');
   menuBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>';
@@ -16460,7 +16471,7 @@ function repaintNowPlayingArt(cur){
   swapAltArt(cur);
   setAmbient(cur);
   updatePlayerAccentColor(cur);
-  attachArtworkFallback(miniArt, cur);
+  attachArtworkFallback(miniArt, cur, 'icon');
   cassetteSetLabelArt(cur);
   updateMediaSessionMeta(cur);
 }
@@ -22684,6 +22695,11 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
+  { version: 524, date: '2026-11-11', items: [
+    'Bring your music is now called Import your music everywhere it appears.',
+    'The library scrollbar now matches the queue scrollbar.',
+    'Small song icons in the library, queue and mini player load faster.'
+  ]},
   { version: 523, date: '2026-11-11', items: [
     'Your plan name now shows under the E logo and on the opening screen once you are signed in.'
   ]},
@@ -34416,7 +34432,7 @@ function reflectCurrentTrackUI(pos, opts){
   }
   setAmbient(t);
   updatePlayerAccentColor(t);
-  attachArtworkFallback(miniArt, t);
+  attachArtworkFallback(miniArt, t, 'icon');
   cassetteUpdateTrack(t, pos, { skipLabelArt: skipArt });
   bumpPlayCount(entry);
   renderQueuePanel();
@@ -39482,7 +39498,7 @@ function tryResume(){
   swapAltArt(track);
   setAmbient(track);
   updatePlayerAccentColor(track);
-  attachArtworkFallback(miniArt, track);
+  attachArtworkFallback(miniArt, track, 'icon');
   cassetteUpdateTrack(track, state.queuePos);
   // a podcast episode reopened paused still gets its chapter button (#256)
   // - reflectCurrentTrackUI, which normally does this, only runs on play
