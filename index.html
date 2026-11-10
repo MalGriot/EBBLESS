@@ -2234,6 +2234,21 @@ body.queue-open #bottom-nav button[data-view].is-active{color:var(--faint-2)}
 .queue-head h2{font-size:15px;font-weight:700;margin:0;flex:1 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .queue-arc{padding:0 20px 8px;font-size:11.5px;font-weight:600;color:var(--faint-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:none}
 .queue-arc[hidden]{display:none}
+.queue-fine{padding:0 20px 10px;flex:none}
+.queue-fine[hidden],.fine-body[hidden],.fine-reset[hidden]{display:none}
+.fine-toggle{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;padding:5px 10px 5px 8px;border-radius:20px;border:1px solid var(--border-2);color:var(--faint);transition:color var(--dur-ui) var(--ease-out),border-color var(--dur-ui) var(--ease-out)}
+.fine-toggle svg{width:14px;height:14px;flex:none}
+.fine-toggle:hover,.fine-toggle[aria-expanded="true"],.fine-toggle.is-set{color:var(--text)}
+.fine-toggle.is-set{border-color:var(--accent)}
+.fine-toggle:focus-visible,.fine-reset:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.fine-body{padding-top:10px}
+.fine-axis{margin-bottom:8px}
+.fine-ends{display:flex;justify-content:space-between;font-size:11.5px;font-weight:500;color:var(--faint)}
+.fine-ends span:nth-child(2){color:var(--faint-2);font-weight:600}
+.fine-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:22px}
+.fine-status{font-size:11.5px;color:var(--faint-2);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fine-reset{flex:none;font-size:11.5px;font-weight:600;color:var(--faint);padding:4px 8px;border-radius:7px;background:var(--panel-2)}
+.fine-reset:hover{color:var(--text)}
 .radio-steer{display:flex;gap:6px;padding:0 20px 10px;overflow-x:auto;scrollbar-width:none;flex:none;-webkit-overflow-scrolling:touch}
 .radio-steer::-webkit-scrollbar{display:none}
 .radio-steer[hidden]{display:none}
@@ -5878,6 +5893,14 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
       <button class="clear qh-icon" id="queueClearBtn" title="Clear" aria-label="Clear"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 3h4M6 7l1 13a1 1 0 001 1h8a1 1 0 001-1l1-13M10 11v6M14 11v6"/></svg></button>
     </div>
     <div class="queue-arc" id="queueArcRow" hidden></div>
+    <div class="queue-fine" id="queueFineRow" hidden>
+      <button type="button" class="fine-toggle" id="fineToggleBtn" aria-expanded="false" aria-controls="fineBody" title="Nudge this vibe: mellower or more upbeat, more organic or more electronic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg>Fine-tune</button>
+      <div class="fine-body" id="fineBody" hidden>
+        <div class="fine-axis"><div class="fine-ends"><span>Mellow</span><span>Mood</span><span>Upbeat</span></div><input type="range" class="slider" id="fineMood" min="-2" max="2" step="1" value="0" aria-label="Mood, from mellow to upbeat"></div>
+        <div class="fine-axis"><div class="fine-ends"><span>Organic</span><span>Sound</span><span>Electronic</span></div><input type="range" class="slider" id="fineSound" min="-2" max="2" step="1" value="0" aria-label="Sound, from organic to electronic"></div>
+        <div class="fine-foot"><span class="fine-status" id="fineStatus" role="status" aria-live="polite"></span><button type="button" class="fine-reset" id="fineResetBtn" hidden>As the vibe</button></div>
+      </div>
+    </div>
     <div class="radio-steer" id="radioSteerRow" aria-label="Steer the radio" hidden></div>
     <div class="queue-scroll">
       <div class="queue-body" id="queueBody">
@@ -19963,6 +19986,7 @@ async function playVibePlaylist(interp, list, startIdx, save, text, opts){
   const order = list.slice(startIdx).concat(list.slice(0, startIdx));
   vibeRememberPlayed(text, list);
   vibeShuffleOff();   // the arc only works in order
+  vibeFineReset();    // a new vibe starts with Fine-tune in the middle
   const id = save ? 'custom-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6) : VIBE_SESSION_ID;
   const pl = { id, type: 'custom', name: interp.title || 'Your vibe', image: null, tracks: [], ts: Date.now(), rematchUnmatched: true, vibeQuery: String(text || '').slice(0, 300) };
   persistPlaylistObj(pl);
@@ -25425,6 +25449,335 @@ function vibeOnTrackLoad(){
 }
 /* VIBE-LIVE:END */
 
+/* VIBE-SLIDER:BEGIN (tools/vibe-slider.test.js loads this block)
+   Fine-tune (GitHub #744 part 1): two sliders on a typed vibe's queue nudge it
+   without leaving it. The app has no per-song mood vectors, only energy
+   estimates (/metrics) and Last.fm tags, so this is a tag and energy shift:
+     Mood  -2 Mellow ... +2 Upbeat      moves the energy the vibe aims for
+     Sound -2 Organic ... +2 Electronic  leans on the tag family (acoustic, folk,
+                                         soul... vs electronic, synth, house...)
+   vibeFineSwap re-scores the vibe's own unplayed songs plus the rest of its
+   pool and says which songs should fill the unplayed slots; vibeFinePlace puts
+   them on the vibe's energy arc. Pure: everything comes in through o, so the
+   same input always gives the same output (ties break by key).
+   o: { shifts: { mood, sound }, fixed: [played and playing songs, never moved],
+        open: [the vibe's own unplayed songs, as the vibe ordered them],
+        pool: [other candidates, best first],
+        keyOf(x), artistOf(x), tagsOf(x) -> [tags], energyOf(x) -> 0..1|null,
+        baseOf(x) -> 0..1 (how well x fits the vibe unshifted), adjustOf(x) -> n | -Infinity (taste),
+        blacklist, langBlocked: Sets of tags, declinedKeys, declinedArtists: Sets,
+        bubbleMin, outsideOf(x), seedTags (Break my bubble: keep at least this many songs
+        from outside the listener's history), arcAt(p) -> 0..1 (vibeArcTarget) }
+   -> { picked, reserve, needsMore, matchCount }
+   Both sliders at the middle: the vibe's own songs come back untouched. A pool
+   song only gets in when it matches every slider that is off the middle;
+   fewer than VIBE_FINE_MIN_MATCH such songs (open ones included) sets
+   needsMore, and the caller asks the worker once for more. */
+const VIBE_FINE_MAX = 2;            // slider stops each side of the middle
+const VIBE_FINE_MIN_MATCH = 8;      // fewer matching songs than this: ask for more
+const VIBE_FINE_W = 0.9;            // weight of a full slider push, against a 0..1 base score
+const VIBE_FINE_STAY = 0.1;         // the vibe's own songs lean to stay, so small nudges swap few
+const VIBE_FINE_PER_ARTIST = 2;
+const VIBE_FINE_ELECTRONIC = ['electronic', 'electronica', 'electro', 'electropop', 'synth', 'synths', 'synthpop', 'synthwave', 'synth-pop', 'house', 'deep house', 'tech house', 'afro house', 'progressive house', 'techno', 'minimal techno', 'edm', 'trance', 'idm', 'glitch', 'dubstep', 'drum and bass', 'dnb', 'future bass', 'chillwave', 'vaporwave', 'dance', 'club', 'uk garage', 'garage', 'breakbeat'];
+const VIBE_FINE_ORGANIC = ['acoustic', 'folk', 'indie folk', 'singer-songwriter', 'singer songwriter', 'soul', 'neo soul', 'country', 'americana', 'bluegrass', 'blues', 'jazz', 'classical', 'piano', 'guitar', 'unplugged', 'acoustic guitar', 'roots', 'gospel'];
+const VIBE_FINE_ELEC_SET = new Set(VIBE_FINE_ELECTRONIC), VIBE_FINE_ORG_SET = new Set(VIBE_FINE_ORGANIC);
+// -1 (all organic tags) .. +1 (all electronic tags); null when no tag says either
+function vibeFineSoundOf(tags){
+  let e = 0, g = 0;
+  (tags || []).forEach(t => { t = String(t).toLowerCase(); if (VIBE_FINE_ELEC_SET.has(t)) e++; else if (VIBE_FINE_ORG_SET.has(t)) g++; });
+  return e + g ? (e - g) / (e + g) : null;
+}
+function vibeFineClamp(n){ n = Math.round(Number(n)); return Number.isFinite(n) ? Math.max(-VIBE_FINE_MAX, Math.min(VIBE_FINE_MAX, n)) : 0; }
+function vibeFineCenter(list, energyOf){
+  const es = list.map(energyOf).filter(e => typeof e === 'number');
+  return es.length ? es.reduce((a, b) => a + b, 0) / es.length : 0.5;
+}
+function vibeFineSwap(o){
+  const mood = vibeFineClamp(o.shifts && o.shifts.mood), sound = vibeFineClamp(o.shifts && o.shifts.sound);
+  const empty = new Set();
+  const bl = o.blacklist || empty, lang = o.langBlocked || empty;
+  const dKey = o.declinedKeys || empty, dArt = o.declinedArtists || empty;
+  const open = o.open || [], pool = o.pool || [], fixed = o.fixed || [];
+  const ok = x => !dKey.has(o.keyOf(x)) && !dArt.has(o.artistOf(x)) && !(o.adjustOf && o.adjustOf(x) === -Infinity);
+  const tagsOf = x => Array.from(new Set((o.tagsOf(x) || []).map(t => String(t).toLowerCase()).filter(t => t && !bl.has(t))));
+  const stays = open.filter(ok);
+  if (!mood && !sound) return { picked: stays, reserve: [], needsMore: false, matchCount: stays.length };
+  const center = vibeFineCenter(open, o.energyOf);
+  const info = new Map();
+  const note = (x, isOpen) => {
+    const key = o.keyOf(x);
+    if (info.has(key)) return;
+    const tags = tagsOf(x), e = o.energyOf(x), s = vibeFineSoundOf(tags);
+    const matches = (!mood || (typeof e === 'number' && (mood > 0 ? e > center : e < center))) && (!sound || (s != null && (sound > 0 ? s > 0 : s < 0)));
+    let sc = o.baseOf(x) + (isOpen ? VIBE_FINE_STAY : 0) + (o.adjustOf ? o.adjustOf(x) : 0);
+    if (mood && typeof e === 'number') sc += VIBE_FINE_W * (mood / VIBE_FINE_MAX) * Math.max(-1, Math.min(1, (e - center) * 2));
+    if (sound && s != null) sc += VIBE_FINE_W * (sound / VIBE_FINE_MAX) * s;
+    info.set(key, { x, key, tags, matches, isOpen, sc, lang: tags.some(t => lang.has(t)) });
+  };
+  stays.forEach(x => note(x, true));
+  pool.forEach(x => { if (ok(x)) note(x, false); });
+  const cands = Array.from(info.values()).filter(c => c.isOpen || (c.matches && !c.lang));
+  const matchCount = Array.from(info.values()).filter(c => c.matches && !c.lang).length;
+  const ranked = cands.sort((a, b) => b.sc - a.sc || (a.key < b.key ? -1 : 1));
+  const artists = new Map();
+  fixed.forEach(x => { const a = o.artistOf(x); artists.set(a, (artists.get(a) || 0) + 1); });
+  const want = open.length, picked = [], rest = [];
+  ranked.forEach(c => {
+    const a = o.artistOf(c.x);
+    if (picked.length < want && (artists.get(a) || 0) < VIBE_FINE_PER_ARTIST){ artists.set(a, (artists.get(a) || 0) + 1); picked.push(c); }
+    else rest.push(c);
+  });
+  // Break my bubble keeps its share: outside-history songs the vibe already held stay in number
+  const seedSet = new Set((o.seedTags || []).map(t => String(t).toLowerCase()));
+  const outside = c => !!(o.outsideOf && o.outsideOf(c.x));
+  if (o.bubbleMin > 0 && o.outsideOf){
+    let have = picked.filter(outside).length;
+    const spare = rest.filter(c => outside(c) && !c.lang && (!seedSet.size || c.tags.some(t => seedSet.has(t))));
+    while (have < o.bubbleMin && spare.length){
+      let drop = -1;
+      for (let i = picked.length - 1; i >= 0; i--) if (!outside(picked[i])){ drop = i; break; }
+      if (drop < 0) break;
+      const add = spare.shift();
+      rest.splice(rest.indexOf(add), 1);
+      rest.unshift(picked[drop]);
+      picked.splice(drop, 1, add);
+      have++;
+    }
+  }
+  return { picked: picked.map(c => c.x), reserve: rest.slice(0, 24).map(c => c.x), needsMore: matchCount < VIBE_FINE_MIN_MATCH, matchCount };
+}
+// The picked songs onto the unplayed slots: lowest energy to the slot the arc
+// wants lowest. No known arc (arcAt missing), or too few energies known: keep the order.
+function vibeFinePlace(o, picked){
+  const n = picked.length, base = (o.fixed || []).length;
+  if (!o.arcAt || n < 2) return picked.slice();
+  const known = picked.map(o.energyOf).filter(e => typeof e === 'number').length;
+  if (known < Math.min(n, 6)) return picked.slice();
+  const c = vibeFineCenter(picked, o.energyOf), total = base + n;
+  const eff = picked.map((x, i) => { const e = o.energyOf(x); return { x, i, e: typeof e === 'number' ? e : c }; }).sort((a, b) => a.e - b.e || a.i - b.i);
+  const slots = picked.map((x, i) => ({ i, t: o.arcAt((base + i) / Math.max(1, total - 1)) })).sort((a, b) => a.t - b.t || a.i - b.i);
+  const out = new Array(n);
+  slots.forEach((s, k) => { out[s.i] = eff[k].x; });
+  return out;
+}
+/* VIBE-SLIDER:END */
+
+/* vibe-fine (the app's side of vibeFineSwap, above). Fine-tune sits under the
+   queue header while a typed vibe plays; one tap on it opens the two sliders.
+   Moving one waits 400ms after the last move, then re-scores the vibe's pool
+   (its cached /vibe-interpret answer, the same one anchoring uses) and swaps
+   the UNPLAYED vibe songs; the playing and played songs never change. The
+   swap always starts from the vibe's own list (snapshot, kept for this vibe
+   session), so the middle position gets the vibe back. Cost per settle: no
+   request when the pool already has matches; otherwise at most one
+   /vibe-interpret (the sentence plus the shift in words, edge-cached by the
+   worker, remembered here by vibe and positions), one /metrics call for up to
+   12 songs not yet looked up (once per song), and one /search per new song
+   (capped at 12, cached on device). No worker change. */
+const LS_VIBE_FINE = 'ebbless:vibefine';   // this vibe session only: { text, plId, mood, sound, snap: [song keys] }
+const VIBE_FINE_DEBOUNCE_MS = 400;
+const VIBE_FINE_NEW_MAX = 12;
+const VIBE_FINE_PHRASES = {
+  mood: { '-2': 'much softer, slower and mellower', '-1': 'softer and mellower', '1': 'more upbeat', '2': 'much more upbeat and energetic' },
+  sound: { '-2': 'acoustic and organic, folk and soul', '-1': 'more acoustic and organic', '1': 'more electronic, with synths', '2': 'electronic, synths and house' },
+};
+const vibeFine = { text: '', plId: '', mood: 0, sound: 0, token: 0, timer: 0, snap: null, savedSnap: null, extra: new Map(), tried: new Set() };
+function vibeFineSentence(text, mood, sound){
+  const add = [mood && VIBE_FINE_PHRASES.mood[mood], sound && VIBE_FINE_PHRASES.sound[sound]].filter(Boolean).join(', ');
+  return text.slice(0, Math.max(40, 300 - add.length - 2)) + ', ' + add;
+}
+function vibeFineSave(){
+  const f = vibeFine;
+  try { lsSet(LS_VIBE_FINE, { text: f.text, plId: f.plId, mood: f.mood, sound: f.sound, snap: f.snap ? f.snap.items.map(x => x.key).slice(0, 60) : (f.savedSnap || []) }); } catch(e){}
+}
+// A new vibe was generated: back to the middle, nothing remembered.
+function vibeFineReset(){
+  const f = vibeFine;
+  clearTimeout(f.timer); f.token++;
+  f.text = ''; f.plId = ''; f.mood = 0; f.sound = 0; f.snap = null; f.savedSnap = null; f.extra.clear(); f.tried.clear();
+  try { lsDel(LS_VIBE_FINE); } catch(e){}
+  try { renderVibeFine(); } catch(e){}
+}
+function vibeFineSyncUi(){
+  const f = vibeFine;
+  $('fineMood').value = f.mood; $('fineSound').value = f.sound;
+  $('fineResetBtn').hidden = !(f.mood || f.sound);
+  $('fineToggleBtn').classList.toggle('is-set', !!(f.mood || f.sound));
+}
+function vibeFineStatus(msg){ const el = $('fineStatus'); if (el){ el.textContent = msg || ''; applyUiLang(el); } }
+// Called from renderQueuePanel (wrapped in try: the consts above may not exist yet at startup).
+function renderVibeFine(){
+  const row = $('queueFineRow');
+  if (!row) return;
+  const text = state.queuePos >= 0 ? currentVibeText() : '';
+  row.hidden = !text;
+  const f = vibeFine;
+  if (!text){ if (f.text){ clearTimeout(f.timer); f.token++; f.text = ''; } return; }
+  const plId = discoverOriginId();
+  if (f.text === text && f.plId === plId) return;
+  clearTimeout(f.timer); f.token++;
+  const s = lsGet(LS_VIBE_FINE, null), same = s && s.text === text && s.plId === plId;
+  Object.assign(f, { text, plId, snap: null, extra: new Map(), tried: new Set(), mood: same ? vibeFineClamp(s.mood) : 0, sound: same ? vibeFineClamp(s.sound) : 0, savedSnap: same && Array.isArray(s.snap) ? s.snap.filter(k => typeof k === 'string').slice(0, 60) : null });
+  vibeFineSyncUi();
+  vibeFineStatus('');
+}
+async function vibeFinePoolFor(text){
+  let interp = vibeAnchorMemo.get(text);
+  if (!interp){
+    interp = await fetchVibeInterpretation(text).catch(() => null);
+    if (interp && Array.isArray(interp.tracks)) vibeAnchorMemo.set(text, interp);
+  }
+  return interp && Array.isArray(interp.tracks) ? interp : null;
+}
+async function vibeFineApply(){
+  const f = vibeFine, text = currentVibeText();
+  if (!text || state.queuePos < 0) return;
+  const tok = ++f.token, alive = () => tok === f.token && currentVibeText() === text;
+  const originId = discoverOriginId(), mood = f.mood, sound = f.sound;
+  const pl = playlistById(originId);
+  if (!pl) return;
+  const entryTrack = e => { const p = playlistById(e.plId); return p && p.tracks[e.idx] || null; };
+  const slotsNow = () => { const out = []; for (let i = state.queuePos + 1; i < state.queue.length; i++){ const e = state.queue[i]; if (e.plId === originId && !e.discover) out.push(i); } return out; };
+  const rowItem = (t, idx) => ({ key: tagCacheKey(t), title: t.title, artist: t.artist, image: t.art || t.image || null, row: t, idx });
+  const slots = slotsNow();
+  if (!slots.length){ vibeFineStatus('No songs left to change'); return; }
+  // the vibe's own unplayed songs, in the vibe's order
+  const played = new Set(), others = new Set();
+  state.queue.forEach((e, i) => { const t = entryTrack(e); if (!t) return; if (i <= state.queuePos) played.add(tagCacheKey(t)); else if (!slots.includes(i)) others.add(tagCacheKey(t)); });
+  if (!f.snap || f.snap.plId !== originId || f.snap.text !== text){
+    let items = null;
+    if (f.savedSnap && f.savedSnap.length) items = f.savedSnap.map(k => { const i = pl.tracks.findIndex(t => t && t.videoId && tagCacheKey(t) === k); return i < 0 ? null : rowItem(pl.tracks[i], i); }).filter(Boolean);
+    if (!items || !items.length) items = slots.map(i => rowItem(entryTrack(state.queue[i]), state.queue[i].idx)).filter(x => x.row);
+    f.snap = { plId: originId, text, items };
+    vibeFineSave();
+  }
+  let open = f.snap.items.filter(x => !played.has(x.key) && !others.has(x.key));
+  const have = new Set(open.map(x => x.key));
+  slots.forEach(i => { const t = entryTrack(state.queue[i]); if (t && !have.has(tagCacheKey(t))){ have.add(tagCacheKey(t)); open.push(rowItem(t, state.queue[i].idx)); } });
+  open = open.slice(0, slots.length);
+  const slotKeys = new Set(slots.map(i => tagCacheKey(entryTrack(state.queue[i]) || {})));
+  const interp = await vibeFinePoolFor(text);
+  if (!alive()) return;
+  const prof = tasteProfile(), taste = vibeTasteFor(text), recent = vibeRecentlyPlayed(text), dv = prof.declined;
+  const tagMemo = lsGet(LS_TAG_CACHE, {}) || {};
+  const seedTags = ((interp && interp.tags) || []).map(x => String(x).toLowerCase());
+  const bubble = bubbleOn() ? bubbleBase(seedTags, [], seedTags.join(',')) : null;
+  const fixed = state.queue.slice(0, state.queuePos + 1).map(entryTrack).filter(Boolean).map(t => ({ key: tagCacheKey(t), artist: t.artist }));
+  // Builds everything from what is known now; run again once more songs arrive.
+  const compute = () => {
+    const fromOf = new Map(), rawFrom = new Map(), openKeys = new Set(open.map(x => x.key)), seen = new Set(), pool = [];
+    const raw = ((interp && interp.tracks) || []).concat(...Array.from(f.extra.values()));
+    raw.forEach(t => { if (t && t.title && t.artist && t.from){ const k = tagCacheKey(t); rawFrom.set(k, t.from); fromOf.set(k, /^tag:/.test(t.from) ? String(t.from).slice(4).toLowerCase() : ''); } });
+    // one score for a pool song, whether it is still just a name or already a playable row from an earlier swap
+    const baseFor = key => {
+      const from = rawFrom.get(key), fit = interp ? vibeMetricFit(metricMemo.get(key) || null, interp) : null;
+      return (from === undefined ? 0.45 : from === 'seed' ? 0.5 : 0.4) + (fit == null ? 0 : (fit - 0.5) * 0.4) - (recent.has(key) ? 0.4 : 0);
+    };
+    const addPool = x => {
+      if (!x.key || seen.has(x.key) || openKeys.has(x.key) || played.has(x.key) || others.has(x.key)) return;
+      seen.add(x.key); x.base = baseFor(x.key); pool.push(x);
+    };
+    pl.tracks.forEach((t, idx) => { if (t && t.videoId && t.title && t.artist) addPool(rowItem(t, idx)); });   // earlier swaps and the vibe's other songs: already playable
+    raw.forEach(t => { if (t && t.title && t.artist) addPool({ key: tagCacheKey(t), title: t.title, artist: t.artist, image: t.image || null, row: null, idx: -1 }); });
+    open.forEach((x, i) => { x.base = 0.75 - 0.2 * (i / Math.max(1, open.length)); });
+    const o = {
+      shifts: { mood, sound }, fixed, open, pool,
+      keyOf: x => x.key, artistOf: x => primaryArtistKey(x.artist),
+      tagsOf: x => tagNameList(tagMemo[x.key]).concat(fromOf.get(x.key) ? [fromOf.get(x.key)] : []),
+      energyOf: x => vibeArcEnergy(metricMemo.get(x.key) || null),
+      baseOf: x => x.base, adjustOf: x => vibeTasteAdjust(x, taste, prof),
+      blacklist: DISCOVER_TAG_BLACKLIST, langBlocked: bubbleLangBlocked(),
+      declinedKeys: dv.keys, declinedArtists: new Set(Object.keys(dv.a).filter(a => dv.a[a] > 0)),
+      seedTags, arcAt: p => vibeArcTarget(p, vibeArcShape(text)),
+    };
+    if (bubble){ o.outsideOf = x => !bubble.historyArtists.has(primaryArtistKey(x.artist)); o.bubbleMin = open.filter(o.outsideOf).length; }
+    return o;
+  };
+  let o = compute(), r = vibeFineSwap(o);
+  const exKey = text + '|' + mood + '|' + sound;
+  if (mood || sound){
+    // songs not looked up yet: one /metrics call, once per song
+    const need = o.pool.concat(o.open).filter(x => !metricMemo.has(x.key) && !f.tried.has(x.key)).slice(0, 12);
+    if (need.length){
+      vibeFineStatus('Checking songs');
+      need.forEach(x => f.tried.add(x.key));
+      await fetchTrackMetrics(need).catch(() => []);
+      if (!alive()) return;
+      o = compute(); r = vibeFineSwap(o);
+    }
+    if (r.needsMore && !f.extra.has(exKey)){
+      vibeFineStatus('Finding more songs');
+      f.extra.set(exKey, []);
+      const more = await fetchVibeInterpretation(vibeFineSentence(text, mood, sound)).catch(() => null);
+      if (more && Array.isArray(more.tracks)) f.extra.set(exKey, more.tracks.filter(t => t && t.title && t.artist)); else f.extra.delete(exKey);
+      if (!alive()) return;
+      o = compute(); r = vibeFineSwap(o);
+    }
+  }
+  // new songs need a playable match; one that has none gives its place to the next best
+  const target = r.picked.length, reserve = r.reserve.slice(), failed = new Set();
+  let list = r.picked.slice(), budget = VIBE_FINE_NEW_MAX;
+  for (let round = 0; round < 3 && budget > 0; round++){
+    const todo = list.filter(x => !x.row && !x.match && !failed.has(x.key)).slice(0, budget);
+    if (!todo.length) break;
+    budget -= todo.length;
+    vibeFineStatus('Finding songs');
+    for (let k = 0; k < todo.length; k += 3){
+      await Promise.all(todo.slice(k, k + 3).map(async x => {
+        const [m, art] = await Promise.all([searchYouTubeCached(x.title, x.artist).catch(() => null), x.image ? Promise.resolve(x.image) : resolveTrackArt('applemusic', x.title, x.artist, null).catch(() => null)]);
+        if (m && m.videoId){ x.match = m; x.image = art || null; } else failed.add(x.key);
+      }));
+      if (!alive()) return;
+    }
+    list = list.filter(x => x.row || x.match);
+    while (list.length < target && reserve.length){ const y = reserve.shift(); if (!failed.has(y.key)) list.push(y); }
+  }
+  list = list.filter(x => x.row || x.match);
+  while (list.length < target && reserve.length){ const y = reserve.shift(); if (y.row) list.push(y); }
+  let placed = mood || sound ? vibeFinePlace(o, list) : list;   // the middle is the vibe's own order, untouched
+  const nowT = entryTrack(state.queue[state.queuePos]);
+  if (nowT){ const lead = [{ artist: nowT.artist }].concat(placed); vibeSpreadArtists(lead); placed = lead.slice(1); }
+  if (!alive()) return;
+  // the queue may have moved on while songs were being found: use what is unplayed now
+  const slots2 = slotsNow(), playedNow = new Set();
+  for (let i = 0; i <= state.queuePos; i++){ const t = entryTrack(state.queue[i]); if (t) playedNow.add(tagCacheKey(t)); }
+  placed = placed.filter(x => !playedNow.has(x.key)).slice(0, slots2.length);
+  let added = 0;
+  placed.forEach(x => {
+    if (x.row) return;
+    pl.tracks.push({ title: x.title, artist: x.artist, videoId: x.match.videoId, matchedTitle: x.match.title || '', channel: x.match.channel || '', plays: 0, art: x.image || null, duration: x.match.duration || 0 });
+    x.row = pl.tracks[pl.tracks.length - 1]; added++;
+  });
+  if (added) persistPlaylistObj(pl);
+  const idxOf = x => pl.tracks.indexOf(x.row);
+  let swapped = 0;
+  placed.forEach((x, k) => { if (!slotKeys.has(x.key)) swapped++; state.queue[slots2[k]] = { plId: originId, idx: idxOf(x) }; });
+  for (let k = slots2.length - 1; k >= placed.length; k--) state.queue.splice(slots2[k], 1);
+  renderQueuePanel();
+  schedulePreload(state.queuePos);
+  persistResume();
+  vibeFineSave();
+  vibeFineStatus(!(mood || sound) ? 'Back to the vibe' : swapped ? (swapped === 1 ? '1 song swapped' : swapped + ' songs swapped') : 'Already the best fit I have');
+}
+function vibeFineSchedule(now){
+  const f = vibeFine;
+  clearTimeout(f.timer);
+  f.timer = setTimeout(() => { vibeFineApply().catch(() => vibeFineStatus('Couldn’t change the songs just now')); }, now ? 0 : VIBE_FINE_DEBOUNCE_MS);
+}
+$('fineToggleBtn').addEventListener('click', () => {
+  const body = $('fineBody'), open = body.hidden;
+  body.hidden = !open;
+  $('fineToggleBtn').setAttribute('aria-expanded', String(open));
+});
+['fineMood', 'fineSound'].forEach(id => $(id).addEventListener('input', () => {
+  vibeFine.mood = vibeFineClamp($('fineMood').value); vibeFine.sound = vibeFineClamp($('fineSound').value);
+  vibeFineSyncUi(); vibeFineSave(); vibeFineSchedule(false);
+}));
+$('fineResetBtn').addEventListener('click', () => {
+  vibeFine.mood = 0; vibeFine.sound = 0;
+  vibeFineSyncUi(); vibeFineSave(); vibeFineSchedule(true);
+});
+
 function noteDiscoverEmpty(){
   discoverEmptyTs = Date.now();
   clearTimeout(discoverRetryTimer);
@@ -26527,6 +26880,7 @@ function renderQueuePanel(){
   fsTimelineSync();
   renderDiscoverToggle();
   renderSetArcRow();
+  try { renderVibeFine(); } catch(e){}   // its consts come later in the file; at startup this just skips
   markNowPlaying();
   const head = state.queue.length ? state.queue[0].plId + '|' + state.queue[0].idx : '';
   const sc = queueBody.closest('.queue-scroll');
