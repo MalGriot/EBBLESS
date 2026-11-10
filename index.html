@@ -226,8 +226,8 @@ html.ebb-android #splash .splash-tint, html.ebb-android .lib-bg-tint{mix-blend-m
 html.ebb-android #splash .splash-poster{display:none}
 html.ebb-android #splash .splash-tint{opacity:0}
 html.ebb-android #splash.is-active:not(:has(.splash-video.ebb-ready)) .splash-black{animation:none;opacity:1}
-html.ebb-android #splash:not(:has(.splash-video.ebb-ready)) img{animation:none!important;opacity:0}
-html.ebb-android #splash:not(:has(.splash-video.ebb-ready)) .splash-choice{opacity:0!important;pointer-events:none!important;transition:none!important}
+html.ebb-android #splash:not(.is-return):not(:has(.splash-video.ebb-ready)) img{animation:none!important;opacity:0}
+html.ebb-android #splash:not(.is-return):not(:has(.splash-video.ebb-ready)) .splash-choice{opacity:0!important;pointer-events:none!important;transition:none!important}
 /* the app's startup cover (grey ground + mark) sits above the splash: skip it so black goes straight to the splash */
 html.ebb-android body:not(.onb-active) #onbBackdrop, html.ebb-android body:not(.onb-active) #onbMark, html.ebb-android body:not(.onb-active) #onbSkip, html.ebb-android body:not(.onb-active) #onbCapture{display:none!important}
 html.ebb-android{background:#000}
@@ -285,7 +285,7 @@ html.ebb-android.ebb-covered body > *:not(#splash):not(script):not(style){visibi
   --r-sm:6px; --r-md:8px; --r-lg:14px;
   --ease-out:cubic-bezier(.16,1,.3,1); --ease-in-out:cubic-bezier(.65,0,.35,1);
   --dur-ui:180ms; --dur-surface:500ms;
-  --nav-h:64px; --topbar-h:60px;
+  --nav-h:64px; --topbar-h:calc(60px + var(--safe-t));   /* #782: the bar sits below the phone's status bar, so everything keyed to its height moves down with it */
   --native-t:0px; --native-b:0px;
   --safe-b:max(env(safe-area-inset-bottom,0px),var(--native-b)); --safe-t:max(env(safe-area-inset-top,0px),var(--native-t));
 }
@@ -849,6 +849,7 @@ body.onb-active .paste-guide{display:none}
 .lib-filter-more:hover{color:var(--text)}
 .lib-filter-more svg{width:20px;height:20px}
 .lib-filter-more.is-back svg{transform:rotate(180deg)}
+@media (min-width:860px){.lib-filter-more{display:none!important}}   /* #774: desktop has room, no chevron squeezing the pills */
 .lib-filter-btn{position:relative;flex:1 1 auto;min-width:0;white-space:nowrap;height:32px;padding:0 clamp(3px,2.4cqw,12px);border-radius:16px;border:1px solid var(--border-2);
   font-size:clamp(8.5px,4.2cqw,12.5px);font-weight:600;color:var(--faint);transition:background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out)}
 .lib-filter-btn:hover{color:var(--text)}
@@ -2077,7 +2078,10 @@ body.split-desktop .ads-report-btn{margin-bottom:20px}
 .decline-why button:hover,.decline-why button:focus-visible{background:var(--accent);color:var(--on-accent,#151107)}
 .decline-why .decline-why-x{margin-left:auto;padding:4px 10px;font-size:16px;line-height:1;color:var(--faint)}
 /* #692 (desktop): dislike in the art's bottom-right, heart steps left of it while it shows; "more" in the top-left (cast shifts right of it) */
-.art-fs-btn.art-decline-btn{top:auto;bottom:10px;color:var(--faint)}
+.art-fs-btn.art-decline-btn{top:auto;bottom:10px;width:32px;height:32px;background:rgba(10,10,10,.6);color:var(--faint)}
+.art-fs-btn.art-decline-btn svg{width:15px;height:15px}
+.art-fs-btn.art-decline-btn:hover{background:rgba(10,10,10,.78);color:var(--text)}
+.artwork-wrap.mode-viz .art-fs-btn.art-decline-btn{right:auto;left:50px}
 .art-fs-btn.art-decline-btn[hidden]{display:none}
 .art-decline-btn:not([hidden]) ~ .art-like-btn{right:50px}
 .art-fs-btn.art-more-btn{right:auto;left:10px}
@@ -3201,7 +3205,7 @@ body:has(#danger-scrim.is-open) .tester-banner{display:none}
 .install-banner .ib-close:hover{background:var(--panel-3);color:var(--text)}
 .install-banner .ib-close svg{width:14px;height:14px}
 body{--ib-h:44px}
-body.install-banner-on:not(.onb-active):not(.desktop-fs){--topbar-h:calc(60px + var(--ib-h))}
+body.install-banner-on:not(.onb-active):not(.desktop-fs){--topbar-h:calc(60px + var(--safe-t) + var(--ib-h))}
 body.install-banner-on.split-desktop:not(.onb-active):not(.desktop-fs){--topbar-h:calc(52px + var(--ib-h))}
 body.install-banner-on:not(.onb-active):not(.desktop-fs) #topbar{padding-bottom:var(--ib-h)}
 /* the absolutely-positioned paste/search bar centers in the topbar box; keep it above the banner strip */
@@ -3288,7 +3292,7 @@ body.split-desktop .install-banner{padding-left:24px;padding-right:12px}
 
 /* ---------- responsive layout switches ---------- */
 @media (max-width:859.98px){
-  #topbar{padding:0 18px}
+  #topbar{padding:var(--safe-t) 18px 0}
   #topnav{display:none}
   .view,#import-overlay{bottom:calc(var(--nav-h) + var(--safe-b))}
   .view-scroll{--vs-pad:18px;padding:4px 18px calc(120px + var(--safe-b))}
@@ -11998,7 +12002,7 @@ const libFilterMore = $('libFilterMore');
 function updateLibFilterMore(){
   // #632: judge by the pills' own boxes. libFilter.scrollWidth also counts a label slipping out of its pill, which (Podcasts, the last and longest, first) lit this arrow, took 38px from the row, shrank every pill and made the row scrollable
   const lastPill = Array.from(libFilter.querySelectorAll('.lib-filter-btn:not(.hidden)')).pop();
-  const over = !libFilter.classList.contains('hidden') && !!lastPill && lastPill.getBoundingClientRect().right > libFilter.getBoundingClientRect().right + 2;
+  const over = !window.matchMedia('(min-width:860px)').matches && !libFilter.classList.contains('hidden') && !!lastPill && lastPill.getBoundingClientRect().right > libFilter.getBoundingClientRect().right + 2;
   libFilterMore.classList.toggle('hidden', !over);
   if (!over) return;
   const atEnd = libFilter.scrollLeft + libFilter.clientWidth >= libFilter.scrollWidth - 2;
