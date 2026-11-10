@@ -12489,7 +12489,7 @@ Add entries in this shape:
 - **Description:** Idea, Geethub #758. Library h1 moves up to line up exactly with the Queue h1; the library filter buttons line up with the Discover buttons in the queue window.
 - **Touches:** index.html (desktop library and queue headers), sw.js cache bump
 - **Branch:**
-- **Notes:** Merged v509. Library title row now centers on the 26px action row: library h2 top 74.2 = queue h2 top 74.2; filter pills 26px tall like Discover and the queue icon buttons.
+- **Notes:** Merged v509. Library title row now centers on the 26px action row: library h2 top 74.2 = queue h2 top 74.2; filter pills 26px tall like Discover and the queue icon buttons. Follow-up v510: owner said align them horizontally and keep vertical positions, so pills now use the same 10px spacing as Discover and the queue icon buttons (desktop only).
 
 ### play-button-white-icons-757: When the play button is white, the other player icons match instead of clashing (Geethub #757)
 - **Status:** merged

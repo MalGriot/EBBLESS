@@ -866,6 +866,7 @@ body.onb-active .paste-guide{display:none}
   .lib-top>.queue-head{grid-column:1;grid-row:1;padding-top:0;padding-bottom:0;min-height:26px}   /* #758: title centers on the 26px action row, like the Queue title beside Discover */
   .lib-top>.section-label-row{grid-column:2;grid-row:1;align-self:center}
   .lib-top{padding-top:10px}
+  body.split-desktop .lib-filter{gap:10px}   /* #758: same 10px spacing between pills as between Discover and the Queue icon buttons */
   body.split-desktop .lib-filter-btn{height:26px}   /* #758: pills match the 26px Discover / icon buttons in the Queue header */
 }
 .lib-menu-head{padding:8px 10px 4px;font-size:11px;font-weight:600;color:var(--faint-2);letter-spacing:.02em}
@@ -22165,6 +22166,9 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
+  { version: 510, date: '2026-11-10', items: [
+    'Desktop: the Library filter pills are spaced like the Discover and icon buttons in the Queue header.',
+  ]},
   { version: 509, date: '2026-11-10', items: [
     'On desktop, no more sliver of a hidden window beside Library and Queue, and the Library title and filter buttons now line up with the Queue header.',
   ]},
