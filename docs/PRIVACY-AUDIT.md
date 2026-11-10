@@ -19,6 +19,7 @@ step when a data practice changes.
 | Visible play history `ebbless:playhistory` (500 plays) | localStorage | No | User-facing list. Not gated, not reset. |
 | Pool signal: up to 8 tags + weight | `POST /pool/signal` -> KV `TASTE_POOL` counters | Yes, unless switch off | No identifier sent or stored (IP is visible to Cloudflare) |
 | Tag lookups: title + artist | `GET /tags` | Yes | Only when a play/like/skip needs tags |
+| Picture vibe (#744): one picture a listener picks, shrunk to ~512 px JPEG on the device (EXIF and GPS dropped by the canvas re-encode) | `POST /vibe-picture` -> Workers AI vision model (`vibe-picture.js`) | Yes, only on tap, paste or drop | Never stored: no KV, R2, cache or log of the bytes. Only a derived one-sentence description continues into `/vibe-interpret`'s edge cache (no identifier). Per-IP throttle uses the IP in a short-lived cache entry. Notice shown in the app until first use, and on the button. |
 | Beta usage counts (`ebbless:stats`) | `POST /beta/activity` -> Google Sheet | Yes, only with tester token, not localhost | Counts only. **No UI opt-out** (console `ebblessStats.off()` only). |
 | Beta sign-up: name, email, answers, user agent | `/beta/signup` -> Google Sheet | Yes | Manual deletion only |
 | Feedback / tester / wrong-song reports | `/report`, `/tester-report` -> KV `MATCH_REPORTS` / Sheet | Yes, when sent | Include device/OS/browser/viewport |

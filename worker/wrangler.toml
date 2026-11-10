@@ -29,6 +29,9 @@ id = "7ba1ba2734224136b5e998365a37ea67"
 # the route falls back to its keyword heuristic.
 [ai]
 binding = "AI"
+# POST /vibe-picture (src/vibe-picture.js) also uses this binding (a vision model)
+# and counts its neurons in a VoiceQuota instance named "p:<UTC date>". It needs
+# the Llama 3.2 licence accepted once on the account (README, "Picture vibes").
 
 # Background podcast captions for iPhone (src/pod-captioner.js): one
 # PodCaptioner per episode (a short-lived handoff buffer, never kept) and

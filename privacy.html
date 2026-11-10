@@ -26,7 +26,7 @@ code{font-size:13px;background:rgba(255,255,255,.08);padding:1px 5px;border-radi
 <a class="back" href="./">&larr; Back to EBBLESS</a>
 
 <h1>Privacy Policy</h1>
-<p class="meta">Last updated 2026-11-09. EBBLESS is in open beta, so this will change. Written from what the app's code actually does, not from a template.</p>
+<p class="meta">Last updated 2026-11-10. EBBLESS is in open beta, so this will change. Written from what the app's code actually does, not from a template.</p>
 
 <div class="box"><strong>The short version.</strong>
 <ul>
@@ -102,6 +102,15 @@ code{font-size:13px;background:rgba(255,255,255,.08);padding:1px 5px;border-radi
 <li><strong>If you are not signed in, or have not allowed voice requests,</strong> a spoken sentence that is not a simple command still goes through the existing vibe search, which sends the sentence to our server and the same AI service to find matching songs.</li>
 <li><strong>Your sign-in</strong> is used only to count your daily limit (7 voice requests a day on free accounts). The server keeps that day's count against your account ID and clears older days. It is not used for anything else in voice requests.</li>
 <li><strong>Withdrawing consent.</strong> In <strong>Settings &rarr; Voice</strong> you can review this and withdraw. After that, nothing you say is sent to the voice service; simple commands keep working on your device.</li>
+</ul>
+
+<h2>5b. Pictures as a vibe</h2>
+<p>On Home you can tap the camera button (or paste or drop a picture on a computer) to get songs that match a photo or movie still. Only the picture you choose is sent.</p>
+<ul>
+<li><strong>Shrunk on your device first.</strong> EBBLESS reduces the picture to about 512 pixels on its longest side and re-saves it as a small JPEG. That drops the picture's hidden details, including any location.</li>
+<li><strong>Sent once, then thrown away.</strong> The small picture goes to our server, which shows it once to a Cloudflare Workers AI model that writes one or two sentences about its feel (light, colour, mood). The picture is not saved anywhere: not in storage, not in a cache, not in our logs. Only that sentence goes on to find songs, and it is not tied to who sent it.</li>
+<li><strong>No identification.</strong> The model is told not to name or identify anyone. Nothing else is sent with the picture: no name, no email, no library.</li>
+<li>Cloudflare may keep standard request logs (see section 6). Your IP address is used for a short-lived limit on how many pictures one connection can send per hour.</li>
 </ul>
 
 <h2>6. Analytics and tracking</h2>
