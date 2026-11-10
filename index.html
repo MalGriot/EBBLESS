@@ -585,6 +585,15 @@ video.lib-bg-video.is-playing{opacity:1}
 #view-home .hm-vibe-pic:hover,#view-home .hm-vibe-pic:focus-visible{background:rgba(255,255,255,.18)}
 #view-home .hm-vibe-pic svg{width:22px;height:22px}
 #view-home .hm-vibe-note{margin:8px 4px 0;font-size:12px;line-height:1.4;color:var(--faint)}
+/* #761: Home's add-music block: two big taps plus a few genre chips (static, no motion) */
+#view-home .hm-add-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+#view-home .hm-add-btn{display:flex;flex-direction:column;gap:3px;text-align:left;padding:14px 16px;border-radius:16px;background:var(--panel-2);border:1px solid var(--border);color:var(--text);cursor:pointer;font:inherit}
+#view-home .hm-add-btn:hover,#view-home .hm-add-btn:focus-visible{background:var(--panel-3)}
+#view-home .hm-add-btn b{font-size:15.5px}
+#view-home .hm-add-btn span{font-size:12.5px;color:var(--faint)}
+#view-home .hm-add-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+#view-home .hm-add-chip{font:inherit;font-size:13.5px;font-weight:600;padding:8px 14px;border-radius:999px;background:var(--panel-2);border:1px solid var(--border);color:var(--text);cursor:pointer}
+#view-home .hm-add-chip:hover,#view-home .hm-add-chip:focus-visible{background:var(--panel-3)}
 #view-home .hm-vibe-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
 #view-home .hm-vibe-chip{display:inline-flex;align-items:baseline;gap:6px;font:inherit;font-size:13.5px;font-weight:600;padding:8px 14px;border-radius:999px;background:rgba(255,255,255,.10);color:var(--text);cursor:pointer;text-align:left}
 #view-home .hm-vibe-chip:hover{background:rgba(255,255,255,.18)}
@@ -9639,7 +9648,11 @@ const libSearchBox = $('libSearchBox'), libSearchToggle = $('libSearchToggle');
 const libSearchTracks = $('libSearchTracks'), libSearchTracksList = $('libSearchTracksList');
 const importOverlay = $('import-overlay'), importStage = $('importStage');
 const trackTitle = $('trackTitle'), trackArtist = $('trackArtist');
-$('emptyFindBtn').addEventListener('click', () => openFindMusic());
+// #761: with no songs of your own yet, Find music lands on Home, where import and genres sit together
+$('emptyFindBtn').addEventListener('click', () => {
+  const mine = getLibrary().filter(id => ![SWELL_ID, BLEND_ID, NP_ID, LIKED_ID].includes(id));
+  if (mine.length) openFindMusic(); else { leaveFullscreen(true); setView('home'); }
+});
 $('emptyVibeBtn').addEventListener('click', () => openHomeVibe());
 $('browseBtn').addEventListener('click', () => openFindMusic());
 $('hubBringMusic').addEventListener('click', () => openBring());
@@ -19571,6 +19584,22 @@ function renderHome(){
   };
   const row = (sec, cards) => { const r = mk('div', 'hm-row'); cards.forEach(c => r.appendChild(c)); sec.appendChild(r); };
   renderHomeVibe(body, mk);
+  // #761: every way to get songs in lives here: import, or pick a genre
+  {
+    const sec = section('Add songs');
+    const r = mk('div', 'hm-add-row');
+    const big = (t, sub, fn) => { const b = mk('button', 'hm-add-btn'); b.type = 'button'; b.appendChild(mk('b', '', t)); b.appendChild(mk('span', '', sub)); b.addEventListener('click', fn); return b; };
+    r.appendChild(big('Import your music', 'Spotify, YouTube Music and more', () => openBring()));
+    r.appendChild(big('Browse by genre', 'Hip-Hop, Soul, Funk and more', () => openFindMusic()));
+    sec.appendChild(r);
+    const chips = mk('div', 'hm-add-chips');
+    Object.keys(FM_GENRES).slice(0, 6).forEach(g => {
+      const c = mk('button', 'hm-add-chip', g); c.type = 'button';
+      c.addEventListener('click', () => { openFindMusic(); fmTab = 'genres'; fmOpenGenre = g; fmRender(); });
+      chips.appendChild(c);
+    });
+    sec.appendChild(chips);
+  }
   const coverOf = (pl) => pl.image ? { art: pl.image } : (pl.tracks.find(t => t && (t.videoId || t.art)) || null);
   const plays = (pl) => totalPlaylistPlays(pl);
   // recently played: playlists and albums you played last, newest first (one tap plays)
