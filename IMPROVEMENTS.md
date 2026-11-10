@@ -12506,3 +12506,27 @@ Add entries in this shape:
 - **Touches:** index.html (GPU budget: blurs, animations, custom cursor, liquid waves), sw.js cache bump
 - **Branch:**
 - **Notes:** Merged v507: cursor canvas now clears only its dirty box per frame (was full 2x viewport). Audit found the cursor, liquid-waves and ambient loops already idle/pause per GPU budget; no backdrop-filter over moving content. Not changed: ambient drift + veil still composite full screen while playing. Synced from Geethub #756. Related to mobile-moves-really-slow (in-progress, #635) and desktop-liquid-waves-698 and custom-cursor (the likely suspects). Check against the GPU budget rules in CLAUDE.md.
+
+### link-arrival-branding-746: A music link that opens in EBBLESS arrives with EBBLESS branding (follow-up to #746)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** When a Spotify, Apple Music or YouTube Music link opens in EBBLESS (tap or Share sheet), show a short EBBLESS-branded moment instead of dropping the user into a foreign link: logo and a line like "Playing from Apple Music in EBBLESS" while the song is matched, then the normal player. Android app only; no new animation beyond what the GPU budget allows (transform and opacity only, paused when hidden).
+- **Touches:** index.html (link arrival handler near the NATIVE-LINK block), no worker change.
+- **Branch:**
+- **Notes:** Owner asked 2026-11-11 after seeing the one-tap link prompt. Queue behind `link-spotify-746` (same area of index.html and same 2.19.0 Android build); claim its lane once that one is merged. Cannot change how Apple's or YouTube's own links look in other apps (Android gives no way, and faking them would be impersonation); this only brands the moment the link lands in EBBLESS.
+
+### branded-share-links: Songs shared from EBBLESS get their own link preview (EBBLESS logo, song art, title)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Today `buildShareUrl` makes an EBBLESS link but every link shows the same generic preview image (`og-image.png`). Add a small worker route that serves a page with per-song Open Graph tags (EBBLESS logo over the song's art, the title and artist) and then redirects into the app or site, so a link dropped in a chat looks like EBBLESS and not Apple Music or YouTube.
+- **Touches:** worker/ (new public route, additive), index.html (`buildShareUrl`, share paths), brand assets for the preview image.
+- **Branch:**
+- **Notes:** **Blocked on the owner getting a domain** (see `own-domain-app-links`). Owner said 2026-11-11: activate this and the domain item once the domain exists. Needs the security checklist when built: size caps and a per-IP throttle on the new anonymous route, escape every title and artist in the HTML, allowlist the art host, no storing anything, generic errors. Design with the domain in mind so the same links can open straight in the app.
+
+### own-domain-app-links: Own domain with verified app links, so EBBLESS links open in the app with no Settings step
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Point an owner-bought domain (for example ebbless.com) at the site, host `/.well-known/assetlinks.json` at its root with the Android app's package and signing-key fingerprint, and mark the matching intent filter `android:autoVerify="true"`. Links on that domain then open in the Android app on tap on Android 12+, with no "Add links" step.
+- **Touches:** DNS and GitHub Pages custom domain (CNAME), `.well-known/assetlinks.json`, android-webview manifest (new filter), a new versionName bump, update the PWA/site base URLs and share URLs, privacy/terms text if they name the old address.
+- **Branch:**
+- **Notes:** **Blocked on the owner buying and choosing the domain**; a domain is a recurring cost and a commitment, so the owner decides. Today the site is `malgriot.github.io/EBBLESS` (no custom domain, no CNAME), and the verification file must sit at a domain root, which a GitHub project page cannot provide. Moving the site's address has knock-on effects (service worker scope, existing installs, Google sign-in redirect origins, worker CORS allowlist): list and check each when activating. Activate together with `branded-share-links` when the owner has the domain.
