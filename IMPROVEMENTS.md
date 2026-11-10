@@ -12538,3 +12538,211 @@ Add entries in this shape:
 - **Touches:** index.html only (`beginImportNow`, new LINK-COLLECTION block with `showCollectionLanding`, `openAddCollectionToPlaylistPicker`, `queuePlayNextCollection`), `tools/link-collection.test.js`. No worker change.
 - **Branch:** agent/link-album-actions-746
 - **Notes:** Built: with a queue going, albums, playlists and artists (any source, pasted, shared or from search) show the sheet at the end of matching; with nothing playing they start playing as before and a toast says what matched and where it was filed, with an Add to playlist button. Single songs and podcasts are unchanged. Add to playlist puts every matched song on a playlist in one tap (or a new playlist named after the album). Untested: a real phone, real Apple Music albums and real matching results (browser-checked with a stubbed resolver only). Imported Spotify playlists as targets skip the "make an editable copy" prompt single songs show. Alternative not built: always show the sheet, even with nothing playing (one more tap to start music).
+
+### on-first-open-find-music-should-brin-761: On first open: "find music" should bring you to home page. home page should handle all import options and genr (Geethub #761)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #761. See the issue for references.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #761.
+
+### h-should-toggle-between-home-and-pla-762: H should toggle between home and player (Geethub #762)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #762. See the issue for references.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #762.
+
+### music-map-should-start-from-current-763: Music map should start from current artist or have an artist input box - not just starting from meltt automati (Geethub #763)
+- **Status:** draft
+- **Priority:** high
+- **Description:** Bug, Geethub issue #763. See the issue for references.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #763.
+
+### lp-should-spin-slower-than-cd-764: Lp should spin slower than cd (Geethub #764)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #764. See the issue for references.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #764.
+
+### recently-edited-playlists-should-go-765: Recently edited playlists should go to the top of the list below pinned unless the sorting is on alphabetical, (Geethub #765)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #765. See the issue for references.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #765.
+
+### add-to-playlist-window-should-have-766: "add to playlist" window should have sorting options and a search function (Geethub #766)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #766. See the issue for references.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #766.
+
+### even-if-a-playlist-is-updated-via-sp-767: Even if a playlist is updated via spotify, songs added on ebbless shouldn't be affected (Geethub #767)
+- **Status:** draft
+- **Priority:** high
+- **Description:** Bug, Geethub issue #767. See the issue for references.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #767.
+
+### the-light-show-should-be-inside-the-768: The light show should be inside the same player section at first. how it is currently is what fullscreen mode  (Geethub #768)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #768. See the issue for references.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #768.
+
+### switching-discovery-mode-shouldn-t-s-769: Switching discovery mode shouldn't switch the current song, just the upcoming queue (Geethub #769)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #769. See the issue for references.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #769.
+
+### if-the-queue-has-been-cleared-it-sho-770: If the queue has been cleared, it should immediately refresh with new music by the time the current song is ov (Geethub #770)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #770. See the issue for references.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #770.
+
+### library-scroll-bar-should-be-the-sam-771: Library scroll bar should be the same as the queue scroll bar (Geethub #771)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #771. See the issue for references.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #771.
+
+### main-cymatics-should-be-ui-color-772: Main cymatics should be ui color (Geethub #772)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #772. See the issue for references.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #772.
+
+### cymatics-rainbow-mode-773: Cymatics rainbow mode (Geethub #773)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #773. See the issue for references.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #773.
+
+### desktop-library-when-podcasts-is-sel-774: Desktop: library: when podcasts is selected, a left chevron button appears and squeezes the other buttons. rem (Geethub #774)
+- **Status:** draft
+- **Priority:** high
+- **Description:** Bug, Geethub issue #774. See the issue for references.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #774.
+
+### bring-your-music-should-be-import-y-775: "bring your music" should be "import your music" (Geethub #775)
+- **Status:** draft
+- **Priority:** high
+- **Description:** Bug, Geethub issue #775. See the issue for references.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #775.
+
+### video-button-selecting-it-while-acti-776: Video button: selecting it while active should toggle cinema mode. the video button should turn into the cinem (Geethub #776)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #776. See the issue for references.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #776.
+
+### i-wish-song-info-showed-more-info-li-777: I wish song info showed more info like the producer and trivia and had more interactivity like opening the alb (Geethub #777)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #777. See the issue for references.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #777.
+
+### cd-mode-fullscreen-the-lines-look-to-778: Cd mode fullscreen: the lines look too cartoonish. make them beautiful (Geethub #778)
+- **Status:** draft
+- **Priority:** high
+- **Description:** Bug, Geethub issue #778. See the issue for references.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #778.
+
+### visualizer-should-be-called-cymatics-779: Visualizer should be called cymatics. fLUX is already a visualizer (Geethub #779)
+- **Status:** draft
+- **Priority:** high
+- **Description:** Bug, Geethub issue #779. See the issue for references.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #779.
+
+### on-mobile-when-i-go-to-the-splash-fr-780: On mobile when i go to the splash from inside the app, it doesn't show the buttons on the splash to return (Geethub #780)
+- **Status:** draft
+- **Priority:** high
+- **Description:** Bug, Geethub issue #780. See the issue for references.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #780.
+
+### when-video-is-selected-offer-to-watc-781: When video is selected, offer to watch the official video (only if there is an official video) (Geethub #781)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #781. See the issue for references.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #781.
+
+### on-mobile-the-top-nav-is-so-high-it-782: On mobile: the top nav is so high, it's blocked by the phone's clock and top icons (Geethub #782)
+- **Status:** draft
+- **Priority:** high
+- **Description:** Bug, Geethub issue #782. See the issue for references.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #782.
+
+### thumbs-down-button-missing-from-desk-784: Thumbs down button missing from desktop (Geethub #784)
+- **Status:** draft
+- **Priority:** high
+- **Description:** Bug, Geethub issue #784. See the issue for references.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #784.
+
+### dragging-a-song-from-anywhere-into-t-785: Dragging a song from anywhere into the unliked playlist unlikes it (Geethub #785)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #785. See the issue for references.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #785.
+
+### fullscreen-cassette-animation-the-ma-786: Fullscreen cassette animation: the main cassette should be a bit larger. the other tapes can stay the same siz (Geethub #786)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #786. See the issue for references.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #786.
+
+### small-icons-lowres-727: Small icons use the lowest-res image versions so they load fast (Geethub #727)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #727. Small icons (library, queue, pills, etc) should load the smallest available image size so they appear fast.
+- **Touches:** index.html (image URL sizing)
+- **Branch:**
+- **Notes:** Synced from Geethub #727. Not the waveform work: entry `waveform-real-peaks-727` reused the same number for a different idea.
