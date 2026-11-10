@@ -10226,15 +10226,23 @@ async function spotifyImportSelected(){
   if (!chosen.length) return;
   fmPicker.busy = true;
   let made = 0;
-  const ids = [];
+  const ids = [], viaLink = [];
   try {
     for (let i = 0; i < chosen.length; i++){
       const it = chosen[i];
       fmPicker.note = 'Importing ' + (i + 1) + ' of ' + chosen.length + ': ' + it.label;
       fmRender();
-      const rows = it.songs
-        ? it.songs.filter(t => t.on).map(t => { const o = Object.assign({}, t); delete o.on; return o; })
-        : it.kind === 'liked' ? await spotifyLikedRows() : await spotifyPlaylistRows(it.id);
+      let rows;
+      try {
+        rows = it.songs
+          ? it.songs.filter(t => t.on).map(t => { const o = Object.assign({}, t); delete o.on; return o; })
+          : it.kind === 'liked' ? await spotifyLikedRows() : await spotifyPlaylistRows(it.id);
+      } catch(e){
+        if (String(e.message) === 'signed out') throw e;
+        // Spotify will not hand this one's songs to an app (not yours, or made by Spotify): try its public link instead of stopping.
+        if (it.kind === 'playlist') viaLink.push(it.id);
+        continue;
+      }
       const tracks = rows.filter(Boolean);
       if (!tracks.length) continue;
       const id = 'custom-sp-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
@@ -10249,9 +10257,10 @@ async function spotifyImportSelected(){
   fmPicker = null;
   closeFindMusic();
   renderLibrary();
-  if (made){
-    showToast('Added ' + made + (made === 1 ? ' playlist' : ' playlists') + ' from Spotify. Matching songs in the background.');
+  if (made || viaLink.length){
+    showToast((made ? 'Added ' + made + (made === 1 ? ' playlist' : ' playlists') + ' from Spotify. Matching songs in the background.' : '') + (viaLink.length ? (made ? ' ' : '') + viaLink.length + (viaLink.length === 1 ? ' playlist Spotify would not share directly is' : ' playlists Spotify would not share directly are') + ' loading from ' + (viaLink.length === 1 ? 'its' : 'their') + ' public link' + (viaLink.length === 1 ? '' : 's') + '.' : ''));
     (async () => { for (const id of ids){ try { await rematchUnmatchedInBackground(id); } catch(e){} } })();
+    viaLink.forEach((pid, i) => setTimeout(() => { try { beginImportFromParsedLink({ source: 'spotify', type: 'playlist', id: pid }); } catch(e){} }, 1500 + i * 1500));
   }
 }
 setTimeout(() => { spotifyHandleReturn(); }, 1200);
@@ -22131,6 +22140,9 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 const WHATS_NEW = [
   { version: 504, date: '2026-11-10', items: [
     'Picture vibes: tap the camera button next to the vibe box and pick a photo or a movie still, and EBBLESS plays songs that match its feel. Your picture is sent once to describe its mood, then thrown away.',
+  ]},
+  { version: 504, date: '2026-11-10', items: [
+    'Spotify sign-in import no longer stops when Spotify refuses one playlist: it moves on, and loads that one from its public link instead.'
   ]},
   { version: 503, date: '2026-11-10', items: [
     'Spotify sign-in picker: playlist song counts are right again, tap the arrow on any row to see its songs and untick the ones you do not want, and Select all / Select none work on the whole list.'
