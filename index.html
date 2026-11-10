@@ -1480,6 +1480,10 @@ body:has(#musicMap:not([hidden])):has(#mini-bar:not([hidden])) .mm-foot{padding-
 .beta-invite .bi-title{font-size:14px;font-weight:600}
 .beta-invite .bi-text{line-height:1.45}
 .beta-invite .bi-join{background:var(--accent);border-color:var(--accent);color:var(--on-accent,#151107);font-weight:600}
+/* #746: "Open music links in EBBLESS" card (LINK PROMPT in the script): the sign-in nudge's card, static */
+.link-prompt .lp-title{font-size:14px;font-weight:600}
+.link-prompt .lp-text{line-height:1.45}
+.link-prompt .lp-go{background:var(--accent);border-color:var(--accent);color:var(--on-accent,#151107);font-weight:600}
 /* the beta pages in the app (openBetaFrame): solid, no video; the covered app stops painting, the players stay */
 #betaJoin{position:fixed;inset:0;z-index:30001;background:#121212;color:#f2f2f2;display:flex;flex-direction:column}
 #betaJoin .bj-bar{display:flex;align-items:center;justify-content:space-between;padding:calc(14px + var(--safe-t)) 16px 4px;max-width:560px;width:100%;margin:0 auto;box-sizing:border-box}
@@ -5461,6 +5465,13 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
             <div class="desc">Tell someone else about the app. Opens your device's share sheet, or copies the link if that's not available.</div>
           </div>
           <button class="btn-ghost" id="shareAppBtn">Share</button>
+        </div>
+        <div class="settings-row" id="linkRow" hidden>
+          <div>
+            <div class="label">Open music links in EBBLESS</div>
+            <div class="desc" id="linkDesc" role="status" aria-live="polite"></div>
+          </div>
+          <button class="btn-ghost" id="linkBtn" type="button">Turn on</button>
         </div>
         <div class="settings-row">
           <div>
@@ -18887,6 +18898,105 @@ function nativeLinkAllowed(u){
 }
 /* NATIVE-LINK:END */
 
+/* LINK-PROMPT:BEGIN */
+// #746: the one-time "open music links in EBBLESS" prompt in the Android app.
+// Pure decisions only; the card, the Settings row and the native calls are in
+// LINK PROMPT below. state is what EbbNative.linkState() returns:
+// "unsupported" (Android 11 and below ask each time anyway), "all", "some",
+// "none", or "unknown".
+const LINK_PROMPT_SNOOZE_MS = 14 * 24 * 60 * 60 * 1000;
+function linkPromptLabel(state){
+  return state === 'all' ? 'On' : state === 'some' ? 'Partly on' : state === 'none' ? 'Off' : '';
+}
+// o: { state, isNative, songsPlayed, dismissedAt (ms, 0 = never), now (ms), loading (a song is mid-load), confirmed (links were seen on) }
+function linkPromptShow(o){
+  if (!o || o.isNative !== true) return false;
+  if (o.state !== 'none' && o.state !== 'some') return false;
+  if (o.confirmed === true || o.loading === true) return false;
+  if (!(Number(o.songsPlayed) >= 1)) return false;
+  const d = Number(o.dismissedAt) || 0, now = Number(o.now) || 0;
+  if (d > 0 && d <= now && now - d < LINK_PROMPT_SNOOZE_MS) return false;
+  return true;
+}
+/* LINK-PROMPT:END */
+
+/* LINK PROMPT (#746): Android app only. The native bridge says whether music
+   links open in EBBLESS (EbbNative.linkState) and opens Android's "Open by
+   default" page (EbbNative.openLinkSettings); Android makes the user tick the
+   links themselves. The card waits for a first song and a calm moment, "Not
+   now" snoozes it 14 days, and coming back with all links on swaps it for one
+   line and ends it for good. Device-only state, never synced. */
+const LS_LINK_PROMPT = 'ebbless:linkPrompt';   // { dismissedAt, shownAt, plays, confirmed }
+function linkNative(){ return !!(window.EbbNative && typeof EbbNative.linkState === 'function' && typeof EbbNative.openLinkSettings === 'function'); }
+function linkPromptData(){ const d = lsGet(LS_LINK_PROMPT, {}); return d && typeof d === 'object' ? d : {}; }
+function linkPromptSave(patch){ lsSet(LS_LINK_PROMPT, Object.assign(linkPromptData(), patch)); }
+function linkPromptState(){ try { return String(EbbNative.linkState()); } catch(e){ return 'unknown'; } }
+function linkPromptOpenSettings(){
+  try { EbbNative.openLinkSettings(); } catch(e){ showToast('Open Android Settings, then Apps, EBBLESS, Open by default.'); }
+}
+let linkPromptTimer = 0;
+// counted when a song starts; the card waits for the first one
+function linkPromptNotePlay(){
+  if (!linkNative()) return;
+  const n = linkPromptData().plays | 0;
+  if (n >= 3) return;
+  linkPromptSave({ plays: n + 1 });
+  if (n === 0) setTimeout(linkPromptCheck, 8000);
+}
+function linkPromptCalm(){
+  return vibeCheckCalm() && !document.getElementById('signinNudge') && !document.getElementById('betaInvite') && !document.getElementById('linkPrompt');
+}
+function showLinkPrompt(){
+  if (document.getElementById('linkPrompt')) return;
+  linkPromptSave({ shownAt: Date.now() });
+  const card = document.createElement('div');
+  card.className = 'signin-nudge link-prompt';
+  card.id = 'linkPrompt';
+  card.setAttribute('role', 'region');
+  card.setAttribute('aria-label', 'Open music links in EBBLESS');
+  card.innerHTML = '<div class="lp-title">Open music links in EBBLESS</div>' +
+    '<div class="lp-text">Tap a Spotify, Apple Music or YouTube Music link anywhere and the song plays here. On the next screen tap Add links and tick all three.</div>' +
+    '<button type="button" class="btn-ghost lp-go">Turn on</button>' +
+    '<button type="button" class="link-btn lp-later">Not now</button>';
+  card.querySelector('.lp-go').addEventListener('click', linkPromptOpenSettings);
+  card.querySelector('.lp-later').addEventListener('click', () => { linkPromptSave({ dismissedAt: Date.now() }); card.remove(); });
+  document.body.appendChild(card);
+}
+function linkPromptRenderRow(st){
+  const row = $('linkRow'); if (!row) return;
+  row.hidden = !linkNative() || st === 'unsupported';
+  if (row.hidden) return;
+  const lab = linkPromptLabel(st);
+  $('linkDesc').textContent = (lab ? lab + '. ' : '') + 'Tap a Spotify, Apple Music or YouTube Music link anywhere and the song plays here.';
+  $('linkBtn').textContent = st === 'all' ? 'Change' : 'Turn on';
+}
+function linkPromptCheck(){
+  if (!linkNative()) return;
+  const st = linkPromptState(), card = document.getElementById('linkPrompt');
+  linkPromptRenderRow(st);
+  if (st === 'all'){
+    if (linkPromptData().confirmed !== true) linkPromptSave({ confirmed: true });
+    if (card && !card.classList.contains('lp-done')){
+      card.classList.add('lp-done');
+      card.innerHTML = '<div class="lp-text">Links will open in EBBLESS</div>';
+      setTimeout(() => card.remove(), 3500);
+    }
+    return;
+  }
+  if (card) return;   // still not all: leave it
+  const d = linkPromptData();
+  if (linkPromptShow({ state: st, isNative: true, songsPlayed: d.plays, dismissedAt: d.dismissedAt, now: Date.now(), loading: activeLoadProgress() !== null, confirmed: d.confirmed === true }) && linkPromptCalm()) showLinkPrompt();
+}
+function initLinkPrompt(){
+  if (!linkNative()) return;
+  const later = ms => { clearTimeout(linkPromptTimer); linkPromptTimer = setTimeout(linkPromptCheck, ms); };
+  const btn = $('linkBtn'); if (btn) btn.addEventListener('click', linkPromptOpenSettings);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') later(600); });
+  window.addEventListener('focus', () => later(600));
+  linkPromptRenderRow(linkPromptState());
+  [15000, 45000, 90000].forEach(ms => setTimeout(linkPromptCheck, ms));
+}
+
 // #746: the Android app calls this when a music link is opened with or shared
 // to EBBLESS (MainActivity.takeLink). Checked again here, then held until
 // startApp() is done (a cold start) and put through the paste box like any
@@ -23526,7 +23636,7 @@ function betaInviteEligible(){
   return (vibeState().days || 0) >= BETA_INVITE_MIN_DAYS && hasEverPlayed();
 }
 function betaInviteCalm(){
-  return vibeCheckCalm() && !document.getElementById('signinNudge') && !document.getElementById('weekUp') && !document.getElementById('betaJoin');
+  return vibeCheckCalm() && !document.getElementById('signinNudge') && !document.getElementById('weekUp') && !document.getElementById('betaJoin') && !document.getElementById('linkPrompt');
 }
 // The beta pages (signup, feedback survey) inside the app, over everything,
 // while the music keeps playing. The covered app stops painting (body.beta-join-on).
@@ -33908,6 +34018,7 @@ function bumpPlayCount(entry){
   t.plays = (t.plays || 0) + 1;
   persistPlaylistObj(pl);
   recordLatestPlayed(t);
+  try{ linkPromptNotePlay(); }catch(e){}
   npSchedulePublish(4000);
   if (!isPodcastPlaylistId(entry.plId)) noteTaste(t, 'play');
 }
@@ -40553,6 +40664,7 @@ function startApp(){
   try{ scheduleVibeCheck(); } catch(e){}
   try{ initTesterBanner(); } catch(e){}
   try{ scheduleBetaInvite(); } catch(e){}
+  try{ initLinkPrompt(); } catch(e){}
   try{ initBetaCommunityRow(); } catch(e){}
   // the Android app always has the feedback button, tester or not, trial or not
   if (document.documentElement.classList.contains('ebb-android')){ const fbNav = $('navFeedbackBtn'); if (fbNav) fbNav.hidden = false; if (testerBanner) testerBanner.hidden = false; }   // desktop nav button + the phone header icon
