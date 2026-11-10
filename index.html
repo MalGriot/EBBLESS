@@ -3781,6 +3781,8 @@ body.split-desktop .install-banner{padding-left:24px;padding-right:12px}
 #splashLogoBtn{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:14px;background:none;border:none;padding:0;cursor:default;-webkit-tap-highlight-color:transparent}
 #splash img{width:min(320px,70vw);height:auto;opacity:0}
 #splash.is-active img{animation:splash-logo-in 1800ms var(--ease-out) 900ms forwards}
+#splash .splash-plan{font-size:16px;font-weight:600;letter-spacing:.12em;line-height:1;text-transform:lowercase;color:rgba(255,255,255,.9);margin-top:-4px}
+#splash .splash-plan[hidden]{display:none}
 #splash .splash-install-label{opacity:0;font-size:13px;letter-spacing:.4px;color:var(--text);background:rgba(255,255,255,.12);padding:9px 20px;border-radius:20px;transition:opacity 600ms var(--ease-out)}
 #splash.is-install #splashLogoBtn{cursor:pointer}
 #splash.is-install .splash-install-label{opacity:1}
@@ -4604,6 +4606,7 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
   <div class="splash-black"></div>
   <button id="splashLogoBtn" type="button" aria-label="Install EBBLESS">
     <img src="brand/assets/wordmark-white.png" alt="EBBLESS">
+    <span class="splash-plan" id="splashPlan" hidden></span>
     <span class="splash-install-label">Add to Home Screen</span>
   </button>
   <div id="splashChoice" class="splash-choice">
@@ -8101,12 +8104,13 @@ async function mintSession(credential, sub){
 const LS_TIER = 'ebbless:tier';   // { t: tier, sub }
 const TIER_RANK = { discovery: 0, flow: 1, deep: 2, horizon: 3 };
 function lsDelRaw(k){ try { localStorage.removeItem(k); } catch(e){} }
-// The plan's name under the E logo, for a signed-in account only.
+// The plan's name under the E logo and on the splash, for a signed-in account only.
 function renderPlanBadge(){
-  const b = document.getElementById('planBadge'); if (!b) return;
   const name = profileIdToken ? PLAN_NAMES[state.tier] : '';
-  b.textContent = name || ''; b.hidden = !name;
-  b.title = name ? 'Your plan: ' + name : '';
+  const b = document.getElementById('planBadge');
+  if (b){ b.textContent = name || ''; b.hidden = !name; b.title = name ? 'Your plan: ' + name : ''; }
+  const sp = document.getElementById('splashPlan');   // the same name on the splash, under the wordmark
+  if (sp){ sp.textContent = name || ''; sp.hidden = !name; }
 }
 function hasTier(min){
   const need = TIER_RANK[min];
@@ -22681,7 +22685,7 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
   { version: 523, date: '2026-11-11', items: [
-    'Your plan name now shows under the E logo once you are signed in.'
+    'Your plan name now shows under the E logo and on the opening screen once you are signed in.'
   ]},
   { version: 521, date: '2026-11-11', items: [
     'Plans are now discover, flowwww, deeeep and horizonnn. Backing on Patreon sets yours automatically, and each plan has a welcome hello from MAL GRIOT.'
