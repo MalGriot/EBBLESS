@@ -1585,8 +1585,12 @@ body:has(#import-overlay.is-open) #fsBtn{display:none}
    lives inside #view-player so ytPanelSync's #735 cover check still counts it as the player. Solid fill, no
    backdrop-filter (video moves above it), opacity-only fade, hidden after it. Covered means stopped: #ambient pauses. */
 #cinemaBtn{display:none}
-.player-stage:has(> #artworkWrap.yt-video) #cinemaBtn{display:flex}
-#cinemaBtn[aria-pressed="true"]{color:var(--accent)}
+/* #776: with the video showing, the Video tab becomes the Cinema button (#cinemaBtn stays for the T key only) */
+.yt-cin-ico,.yt-cin-label{display:none}
+.player-stage:has(> #artworkWrap.yt-video) #ytPanelBtn.is-active :is(svg:not(.yt-cin-ico),.v-tab-label:not(.yt-cin-label)){display:none}
+.player-stage:has(> #artworkWrap.yt-video) #ytPanelBtn.is-active .yt-cin-ico{display:block}
+.player-stage:has(> #artworkWrap.yt-video) #ytPanelBtn.is-active .yt-cin-label{display:inline}
+#ytPanelBtn.is-active[data-cinema="1"]{color:var(--accent)}
 #cinemaDim{position:fixed;inset:0;z-index:46;background:rgba(0,0,0,.86);opacity:0;visibility:hidden;pointer-events:none;
   transition:opacity var(--dur-surface) var(--ease-in-out),visibility 0s var(--dur-surface)}
 html.ebb-cinema:not(.ebb-pip) body:has(#artworkWrap.yt-video) #cinemaDim{opacity:1;visibility:visible;pointer-events:auto;cursor:pointer;
@@ -4875,7 +4879,8 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
           </button>
           <button class="v-tab" id="ytPanelBtn" title="Watch the video" aria-label="Watch the video for this song in the player" aria-pressed="false" disabled aria-disabled="true">
             <svg viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" clip-rule="evenodd" d="M3 7.5A2.5 2.5 0 015.5 5h13A2.5 2.5 0 0121 7.5v9a2.5 2.5 0 01-2.5 2.5h-13A2.5 2.5 0 013 16.5zm7.2 1.3v6.4l5.3-3.2z"/></svg>
-            <span class="v-tab-label">Video</span>
+            <svg class="yt-cin-ico" viewBox="0 0 24 24" fill="currentColor"><path d="M20.5 14.6A8.5 8.5 0 019.4 3.5a8.5 8.5 0 1011.1 11.1z"/></svg>
+            <span class="v-tab-label">Video</span><span class="v-tab-label yt-cin-label">Cinema</span>
           </button>
           <button class="v-tab" id="cinemaBtn" title="Cinema mode: dim the rest of the page" aria-label="Cinema mode: dim everything but the video" aria-pressed="false">
             <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.5 14.6A8.5 8.5 0 019.4 3.5a8.5 8.5 0 1011.1 11.1z"/></svg>
@@ -5550,7 +5555,7 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
           <li><span><kbd>&larr;</kbd> <kbd>&rarr;</kbd></span>With the video open: back / forward 5s</li>
           <li><span><kbd>Shift</kbd>+<kbd>&larr;</kbd> <kbd>&rarr;</kbd></span>With the video open: restart the song / next song</li>
           <li><span><kbd>0</kbd> or <kbd>Home</kbd></span>With the video open: back to the start</li>
-          <li><span><kbd>H</kbd></span>Home: back to the player</li>
+          <li><span><kbd>H</kbd></span>Home (again: back to the player)</li>
           <li><span><kbd>P</kbd> or <kbd>L</kbd></span>Library</li>
           <li><span><kbd>Shift</kbd>+<kbd>L</kbd></span>Paste a link</li>
           <li><span><kbd>Q</kbd></span>Queue</li>
@@ -5562,7 +5567,7 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
           <li><span><kbd>3</kbd></span>fLUX (inside it: <kbd>&uarr;</kbd> <kbd>&darr;</kbd> change the look, other keys work as usual)</li>
           <li><span><kbd>4</kbd></span>Lyrics</li>
           <li><span><kbd>5</kbd></span>Video</li>
-          <li><span><kbd>T</kbd></span>With the video showing: cinema mode (dim the rest)</li>
+          <li><span><kbd>T</kbd></span>With the video showing: cinema mode (dim the rest; the Video button does the same)</li>
           <li><span><kbd>I</kbd></span>Cymatics: hold pattern on / off</li>
           <li><span><kbd>K</kbd></span>Shuffle</li>
           <li><span><kbd>O</kbd></span>Repeat</li>
@@ -22638,7 +22643,7 @@ function closeYtPanel(auto){
   ytPanelTimer = null;
   ytPanelSync();
 }
-ytPanelBtn.addEventListener('click', (e) => { e.stopPropagation(); if (ytOn) closeYtPanel(); else openYtPanel(); });
+ytPanelBtn.addEventListener('click', (e) => { e.stopPropagation(); if (ytOn && artworkWrap.classList.contains('yt-video') && !state.flowOpen) cinemaBtn.click(); else if (ytOn) closeYtPanel(); else openYtPanel(); }); // #776: showing the video, this button is Cinema
 // #751: a click on the video puts keyboard focus inside YouTube's iframe, where
 // the app's shortcuts never arrive (#467). Once the click has landed, focus
 // comes back to the page; the click itself still reaches YouTube's controls.
@@ -22658,6 +22663,7 @@ const cinemaBtn = $('cinemaBtn');
 function setCinema(on, save){
   document.documentElement.classList.toggle('ebb-cinema', !!on);
   cinemaBtn.setAttribute('aria-pressed', String(!!on));
+  ytPanelBtn.dataset.cinema = on ? '1' : '';
   if (save !== false) lsSet(LS_CINEMA, !!on);
 }
 function cinemaActive(){
@@ -35619,10 +35625,11 @@ document.addEventListener('keydown', (e) => {
       // every fullscreen layer closed, then setView('player')
       // (closes the queue / playlist panel, steps out of Settings). Settings
       // opened from desktop fullscreen would otherwise restore it.
+      // #762: pressed again from Home, it goes back to the player
       if (e.repeat) break;
       leaveFullscreen(true);
       state.settingsFromDeskFs = false;
-      setView('player'); // not the wordmark click: that returns to the splash where the mini player is supported (#661)
+      setView(state.currentView === 'home' ? 'player' : 'home'); // not the wordmark click: that returns to the splash where the mini player is supported (#661)
       break;
     case 'Escape':
       // The YouTube video card first (Geethub #249: it sits over everything,
