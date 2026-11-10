@@ -12412,12 +12412,12 @@ Add entries in this shape:
 - **Notes:** Split from #744. Fits the mission (effortless discovery). Cheapest of the three: the app already has discover toggles and tag data. "Zero-stream" songs cannot be checked for a playable link, so aim for low-listener songs that still match to a playable source. Respect thumbs-downs and the Unliked list. Recommended first. Built: setting "Break my bubble" (Settings > Playback, plus a small icon beside Discover in the queue), default off, synced with the profile. On, about a third of Discover batches and typed-vibe lists come from artists with no history, sharing a seed tag and sound band, lower Last.fm play counts and a different top tag preferred; thumbs-downs, blacklisted tags and unpicked languages stay out. Logic in the BREAK-MY-BUBBLE block, tools/bubble-break.test.js. Cost: one extra /metrics request (up to 8 songs) per Discover batch while on; no new worker route. Swirl is built from the library only, so it is untouched; CuRRentSSsss slots pick one song each, so no bubble share there.
 
 ### vibe-slider-744a: Vibe slider: nudge a vibe's mood live (Geethub #744)
-- **Status:** draft
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #744 part 1 of 3. On a vibe, one or two sliders (for example more melancholy / more electronic) re-shape the playlist as you move them, swapping songs, not just reordering.
 - **Touches:** index.html (vibe UI and generation), worker/ (/vibe-interpret)
-- **Branch:**
-- **Notes:** Split from #744. The app has no per-song mood vectors, only energy estimates and tags, so build it as tag and energy shifts on the vibe (re-pull and re-rank), not "real-time vector adjustments". Debounce slider moves so a drag costs one worker call at most; reuse cached answers. Keep the surface simple (least clicks): the sliders hide until asked for.
+- **Branch:** agent/vibe-slider-744a
+- **Notes:** Split from #744. The app has no per-song mood vectors, only energy estimates and tags, so build it as tag and energy shifts on the vibe (re-pull and re-rank), not "real-time vector adjustments". Debounce slider moves so a drag costs one worker call at most; reuse cached answers. Keep the surface simple (least clicks): the sliders hide until asked for. Built (client only, no worker change): Fine-tune pill under the queue header while a typed vibe plays; Mood (Mellow/Upbeat, energy shift) and Sound (Organic/Electronic, tag-family shift) sliders, 400ms debounce, only unplayed vibe songs swapped, reset returns the vibe, thumbs-down/blacklist/languages/Break my bubble respected. VIBE-SLIDER block + tools/vibe-slider.test.js (12 tests). Thin pool costs one extra /vibe-interpret call per settle (shared Workers AI allowance). Verified on a throwaway copy with stubbed network; not verified with real worker, playback or touch.
 
 ### picture-to-playlist-744b: Picture, movie frame or poem becomes a playlist (Geethub #744)
 - **Status:** draft
