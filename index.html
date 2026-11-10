@@ -24580,18 +24580,19 @@ function toggleShuffle(){
     if (!(o && isDiscoverOn(o))) removeDiscoverFromQueue();
   }
   if (!state.playlist || state.queuePos < 0) return;
-  const upcoming = state.queue.slice(state.queuePos + 1);
+  const keep = soundingQueuePos();   // #769: a song already fading in stays where it is
+  const upcoming = state.queue.slice(keep + 1);
   if (state.shuffle){
-    state.queue = state.queue.slice(0, state.queuePos + 1).concat(shuffleTail(upcoming, 0));
+    state.queue = state.queue.slice(0, keep + 1).concat(shuffleTail(upcoming, 0));
   } else if (state.playlist && upcoming.every(e => e.discover || e.plId === state.playlist.id)){
     /* everything upcoming came from the viewed playlist (plus Discover's
        additions): restore its natural order, with the discovered tracks -
        which only ever extend the listener's queue - back after it */
     const pl = state.playlist;
     const valid = validIndices(pl);
-    const played = new Set(state.queue.slice(0, state.queuePos + 1).filter(e => !e.discover && e.plId === pl.id).map(e => e.idx));
+    const played = new Set(state.queue.slice(0, keep + 1).filter(e => !e.discover && e.plId === pl.id).map(e => e.idx));
     const rest = valid.filter(i => !played.has(i)).map(idx => ({ plId: pl.id, idx }));
-    state.queue = state.queue.slice(0, state.queuePos + 1).concat(rest, upcoming.filter(e => e.discover));
+    state.queue = state.queue.slice(0, keep + 1).concat(rest, upcoming.filter(e => e.discover));
   }
   /* otherwise the queue mixes tracks manually added from other playlists —
      there's no single canonical order to restore, so leave it as-is */
@@ -26946,6 +26947,14 @@ function renderRadioSteer(){
     b.title = on ? 'Back to the usual mix' : 'Steer the radio: ' + b.textContent;
   });
 }
+// #769: the last queue position a Discover/steer switch must leave alone. In a
+// track-end crossfade the next song is already sounding on the standby deck
+// while queuePos still points at the outgoing one (finishCrossfade moves it),
+// so that song counts as the current one too.
+function soundingQueuePos(){
+  const nd = standbyDeck();
+  return (swapInProgress && crossfadeTriggered && nd.pos > state.queuePos) ? nd.pos : state.queuePos;
+}
 // Takes out what Discover/radio added after the playing song (never the
 // listener's own entries), then refills with the new steer.
 function setRadioSteer(id){
@@ -26954,8 +26963,8 @@ function setRadioSteer(id){
   renderRadioSteer();
   const originPlId = discoverOriginId();
   if (!originPlId || state.queuePos < 0) return;
-  const cur = state.queue[state.queuePos];
-  state.queue = state.queue.filter((e, i) => i <= state.queuePos || !(e.discover || /^radio:/.test(String(e.plId))));
+  const cur = state.queue[state.queuePos], keep = soundingQueuePos();
+  state.queue = state.queue.filter((e, i) => i <= keep || !(e.discover || /^radio:/.test(String(e.plId))));
   state.queuePos = state.queue.indexOf(cur);
   discoverPrefetch = null;
   discoverEmptyTs = 0;
@@ -26980,11 +26989,13 @@ $('radioSteerRow').addEventListener('click', (e) => {
 function removeDiscoverFromQueue(){
   if (state.queuePos < 0) return 0;
   const before = state.queue.length;
-  const cur = state.queue[state.queuePos];
-  const kept = state.queue.filter(e => e === cur || !e.discover);
+  const cur = state.queue[state.queuePos], keep = soundingQueuePos();
+  const sounding = keep > state.queuePos ? state.queue[keep] : null;
+  const kept = state.queue.filter((e, i) => (i >= state.queuePos && i <= keep) || !e.discover);
   if (kept.length === before) return 0;
   state.queue = kept;
   state.queuePos = kept.indexOf(cur);
+  if (sounding) standbyDeck().pos = kept.indexOf(sounding);   // the song fading in keeps its deck
   renderQueuePanel();
   schedulePreload(state.queuePos);
   persistResume();
@@ -34715,7 +34726,8 @@ function runCrossfade(nd, nextPos){
     const p = Math.min(1, (Date.now() - start) / durationMs);
     if (old.player && old.player.setVolume) old.player.setVolume(Math.round(effectiveVolume(old) * (1 - p)));
     if (nd.player && nd.player.setVolume) nd.player.setVolume(Math.round(effectiveVolume(nd) * p));
-    if (p >= 1){ clearInterval(old.fadeTimer); old.fadeTimer = null; finishCrossfade(old, nd, nextPos); }
+    // nd.pos, not nextPos: a queue edit mid-fade (#769) may have re-indexed the incoming song
+    if (p >= 1){ clearInterval(old.fadeTimer); old.fadeTimer = null; finishCrossfade(old, nd, nd.pos >= 0 ? nd.pos : nextPos); }
   }, 100);
 }
 
