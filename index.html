@@ -5509,11 +5509,12 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
           <li><span><kbd>F</kbd></span>Fullscreen</li>
           <li><span><kbd>Esc</kbd></span>Close the video, leave fullscreen, close a playlist</li>
           <li><span><kbd>Z</kbd></span>Art (again to change style)</li>
-          <li><span><kbd>X</kbd></span>Visualizer</li>
-          <li><span><kbd>C</kbd></span>Lyrics</li>
+          <li><span><kbd>X</kbd></span>fLUX</li>
+          <li><span><kbd>C</kbd></span>Cymatics</li>
+          <li><span><kbd>B</kbd></span>Lyrics</li>
           <li><span><kbd>V</kbd></span>Video</li>
           <li><span><kbd>T</kbd></span>With the video showing: cinema mode (dim the rest)</li>
-          <li><span><kbd>I</kbd></span>Visualizer: hold pattern on / off</li>
+          <li><span><kbd>I</kbd></span>Cymatics: hold pattern on / off</li>
           <li><span><kbd>K</kbd></span>Shuffle</li>
           <li><span><kbd>O</kbd></span>Repeat</li>
           <li><span><kbd>M</kbd></span>Mini player (desktop)</li>
@@ -22175,6 +22176,9 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
+  { version: 512, date: '2026-11-11', items: [
+    'New keyboard shortcuts: Z Art, X fLUX, C Cymatics, V Video, B Lyrics.'
+  ]},
   { version: 511, date: '2026-11-11', items: [
     'The light show is now fLUX, the Generative Visual Universe. Never the same twice. It melts in from whatever you were looking at.'
   ]},
@@ -30917,7 +30921,7 @@ document.addEventListener('keydown', (e) => {
   else if (e.key === 'ArrowLeft' && !e.shiftKey) milkPrev();
   else if (e.key === 'Escape'){ if (!$('milkPanel').hidden) $('milkPanel').hidden = true; else closeMilk(); }
   else if (e.key === 'f' || e.key === 'F'){ if (!e.repeat) milkToggleFs(); }
-  else if (e.key === 'd' || e.key === 'D'){ if (!e.repeat) closeMilk(); }
+  else if (e.key === 'x' || e.key === 'X'){ if (!e.repeat) closeMilk(); }
   else used = false;
   if (used){ e.preventDefault(); e.stopPropagation(); milkPoke(); }
 }, true);
@@ -34976,13 +34980,10 @@ document.addEventListener('keydown', (e) => {
       break;
     }
     case 'x': case 'X':
-      if (!e.repeat) kbToggleVisual('viz');
-      break;
-    case 'd': case 'D':
-      if (!e.repeat) openMilk(); // light show; inside it D closes (see the LIGHT SHOW keydown)
+      if (!e.repeat) openMilk(); // fLUX; inside it X closes (see the LIGHT SHOW keydown)
       break;
     case 'c': case 'C':
-      if (!e.repeat && (visualMode === 'lyrics' || !$('lyricsTabBtn').disabled)) kbToggleVisual('lyrics');
+      if (!e.repeat) kbToggleVisual('viz'); // cymatics
       break;
     case 'v': case 'V':
       // toggles the YouTube tab's card; openYtPanel is a no-op while the
@@ -34998,7 +34999,9 @@ document.addEventListener('keydown', (e) => {
       else { const b = document.querySelector('#topnav [data-view="settings"]'); if (b) b.click(); }
       break;
     case 'b': case 'B':
-      if (e.shiftKey && !e.repeat) window.open('https://github.com/MalGriot/EBBLESS/issues/new?template=bug-report.yml&labels=bug', '_blank', 'noopener'); // owner-only, unlisted
+      if (e.repeat) break;
+      if (e.shiftKey) window.open('https://github.com/MalGriot/EBBLESS/issues/new?template=bug-report.yml&labels=bug', '_blank', 'noopener'); // owner-only, unlisted
+      else if (visualMode === 'lyrics' || !$('lyricsTabBtn').disabled) kbToggleVisual('lyrics');
       break;
     case 'h': case 'H':
       // home (Geethub #245): back to the main player view from anywhere -
@@ -35043,9 +35046,9 @@ if (window.matchMedia('(hover:hover) and (pointer:fine)').matches){
     ['#topnav [data-action="toggle-queue"]', 'Q'],
     ['#topnav [data-view="settings"]', 'S'],
     ['#visualTabs .v-tab[data-mode="art"]', 'Z'],
-    ['#visualTabs .v-tab[data-mode="viz"]', 'X'],
-    ['#milkTabBtn', 'D'],
-    ['#visualTabs .v-tab[data-mode="lyrics"]', 'C'],
+    ['#visualTabs .v-tab[data-mode="viz"]', 'C'],
+    ['#milkTabBtn', 'X'],
+    ['#visualTabs .v-tab[data-mode="lyrics"]', 'B'],
     ['#ytPanelBtn', 'V'],
     ['#cinemaBtn', 'T'],
     ['#reportBugBtn', 'Shift+B'],
