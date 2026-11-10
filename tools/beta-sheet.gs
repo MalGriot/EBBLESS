@@ -217,7 +217,10 @@ const FROM_EMAIL = 'ebbless.music@gmail.com';
 function sendMail_(to, subject, text, html) {
   try {
     const opts = { to: to, subject: subject, body: text, htmlBody: html || undefined, name: SENDER_NAME };
-    const me = String(Session.getEffectiveUser().getEmail() || '').toLowerCase();
+    // Asking who we run as needs the userinfo.email permission, which a deployed web app may not have: then
+    // skip the check and send as the running account with Reply-To set (still works, replies land in FROM_EMAIL).
+    let me = '';
+    try { me = String(Session.getEffectiveUser().getEmail() || '').toLowerCase(); } catch (err) {}
     if (me === FROM_EMAIL) { MailApp.sendEmail(opts); return ''; }
     let alias = false;
     try { alias = GmailApp.getAliases().map(function (x) { return x.toLowerCase(); }).indexOf(FROM_EMAIL) >= 0; } catch (err) {}
