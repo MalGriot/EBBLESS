@@ -24513,6 +24513,9 @@ function queueClearUpcoming(){
   queueHistSnapshot();
   const cleared = state.queue.slice(state.queuePos + 1);
   state.queue = state.queue.slice(0, state.queuePos + 1);
+  // #770: with Discover on, new songs start filling in right away (the
+  // schedulePreload below kicks it off); an earlier empty try doesn't hold it back
+  discoverEmptyTs = 0;
   renderQueuePanel();
   // Undo puts the cleared songs back right after whatever's playing now
   showToast('Queue cleared', cleared.length ? { label: 'Undo', run: () => {
@@ -25514,7 +25517,9 @@ function bubbleLookupSet(pool, base){
    opts.preferYear (optional): nudge the ranking toward the seed's release
    era (see applyYearPreference); a no-op when years aren't available.
    opts.timeBias (optional): 0..1 strength of the time-of-day lean (see
-   applyTimePreference); defaults to TIME_QUEUE_SCALE. */
+   applyTimePreference); defaults to TIME_QUEUE_SCALE.
+   opts.onTrack (optional): called with each song the moment it resolves,
+   so a caller can queue it before the rest of the batch is done (#770). */
 async function fetchDiscoverCandidates(seedTracks, excludeVideoIds, count, allowLong, opts){
   const steer = opts && opts.steer;
   let skipArtists = opts && opts.skipArtists;
@@ -25622,6 +25627,7 @@ async function fetchDiscoverCandidates(seedTracks, excludeVideoIds, count, allow
       resolved.push({ title: meta.title, artist: meta.artist, videoId: c.videoId, matchedTitle: c.title, channel: c.artist, plays: 0, art: meta.art, duration: c.duration || 0, tags: tagNames });
       pickedKeys.push(dupeKey);
       took();
+      if (opts && opts.onTrack) opts.onTrack(resolved[resolved.length - 1]);
       continue;
     }
     try{
@@ -25632,6 +25638,7 @@ async function fetchDiscoverCandidates(seedTracks, excludeVideoIds, count, allow
       resolved.push({ title: meta.title, artist: meta.artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '', plays: 0, art: meta.art, duration: match.duration || 0, tags: tagNames });
       pickedKeys.push(dupeKey);
       took();
+      if (opts && opts.onTrack) opts.onTrack(resolved[resolved.length - 1]);
     } catch(e){ /* discover is best-effort - a miss here never blocks playback */ }
   }
   rememberDiscoverPicks(seedKey, pickedKeys);
@@ -26197,6 +26204,8 @@ const DISCOVER_RETRY_MS = 20000;
 // is still long, and keeps the result for the extension to use. One prefetch at
 // a time, keyed by origin + track: a track change replaces it (the stale result
 // is simply never used), and the same track never fetches twice.
+// #770: it also keeps each song as it resolves (got), so an extension that
+// takes it over queues those at once and the rest as they land (listen).
 let discoverPrefetch = null;
 function discoverPrefetchKey(originPlId, t){ return originPlId + '|' + (t && t.videoId || '') + '|' + currentRadioSteer(); }
 function prefetchDiscover(originPlId){
@@ -26211,14 +26220,63 @@ function prefetchDiscover(originPlId){
   }
   const allowLong = discoverQueuedThisSession >= DISCOVER_LONG_AFTER;
   const steer = currentRadioSteer();
-  const promise = fetchDiscoverCandidates(seedTracks, libraryVideoIdSet(), DISCOVER_BATCH, allowLong, { steer, vibe: discoverVibeFor(originPlId), alive: () => steer === currentRadioSteer() }).catch(() => []);
-  discoverPrefetch = { key, promise };
+  const pf = { key, promise: null, got: [], listen: null };
+  pf.promise = fetchDiscoverCandidates(seedTracks, libraryVideoIdSet(), DISCOVER_BATCH, allowLong, { steer, vibe: discoverVibeFor(originPlId), alive: () => steer === currentRadioSteer(),
+    onTrack: t => { pf.got.push(t); if (pf.listen) pf.listen(t); } }).catch(() => []);
+  discoverPrefetch = pf;
+}
+// #770: songs join the queue one by one as they resolve, not after the whole
+// batch (28 songs at ~4s each took about two minutes before the first one
+// showed). Anyone waiting on "is there a next song yet" (playNext at the end
+// of the queue) is told on each one through discoverAddWaiters.
+let discoverAddWaiters = [];
+function notifyDiscoverAdd(){ const w = discoverAddWaiters; discoverAddWaiters = []; w.forEach(f => f()); }
+// Resolves once a song is queued after the current one, or the extension ends.
+function discoverNextReady(){
+  if (state.queue.length > state.queuePos + 1 || !discoverExtendPromise) return Promise.resolve();
+  return new Promise(res => discoverAddWaiters.push(res));
 }
 function extendQueueWithDiscover(originPlId){
   if (discoverExtendPromise) return discoverExtendPromise;
   discoverExtendPromise = (async () => {
+    // yield first, so an early return can't run the finally (which clears
+    // discoverExtendPromise) before the assignment above has happened
+    await null;
+    const steer = currentRadioSteer();
+    const vibeText = discoverVibeFor(originPlId);
+    const extId = discoverExtId(originPlId);
+    const added = [];
+    // Discover may have been switched off, a steering chip tapped, or the
+    // queue replaced while songs were still resolving - those land nowhere.
+    const live = () => steer === currentRadioSteer() && (isDiscoverOn(originPlId) || state.shuffleDiscover) && discoverOriginId() === originPlId && state.queuePos >= 0;
+    let queued = null;   // videoIds already in the queue, built on the first song
+    const add = (t) => {
+      if (!t || !t.videoId || !live()) return;
+      if (!queued) queued = new Set(state.queue.map((e, i) => { const x = trackAt(i); return x && x.videoId; }));
+      if (queued.has(t.videoId)) return;
+      queued.add(t.videoId);
+      const ext = getOrCreateDiscoverExt(originPlId);
+      ext.tracks.push(t);
+      lsSet(LS_PL(extId), ext);
+      // Queue entries Discover adds are tagged `discover: true` (not just
+      // inferred from the discover-ext plId - the listener can queue a
+      // discovered song themselves from its menu, and that entry is theirs)
+      // so switching Discover off can take exactly these back out
+      // (removeDiscoverFromQueue). They always go after the listener's own
+      // queue; with shuffle on, each lands at a random spot in what is
+      // coming up, never ahead of the immediate next entry (it may already
+      // be buffering on the standby deck for a gapless/crossfaded handoff).
+      const entry = { plId: extId, idx: ext.tracks.length - 1, discover: true };
+      const from = state.queuePos + 2;
+      if (state.shuffle && state.queue.length > from) state.queue.splice(from + Math.floor(Math.random() * (state.queue.length - from + 1)), 0, entry);
+      else state.queue.push(entry);
+      added.push(t);
+      discoverQueuedThisSession++;
+      renderQueuePanel();
+      schedulePreload(state.queuePos);
+      notifyDiscoverAdd();
+    };
     try{
-      const steer = currentRadioSteer();
       const seedTracks = [];
       for (let p = state.queuePos; p >= 0 && seedTracks.length < 5; p--){
         const t = trackAt(p);
@@ -26226,49 +26284,25 @@ function extendQueueWithDiscover(originPlId){
       }
       if (!seedTracks.length) return;
       const allowLong = discoverQueuedThisSession >= DISCOVER_LONG_AFTER;
-      // Reuse the fetch started when this track loaded (prefetchDiscover) if it
-      // is for the same track, so the batch is usually already there.
+      // Take over the fetch started when this track loaded (prefetchDiscover)
+      // if it is for the same track: what it has already resolved goes in now.
       const pf = discoverPrefetch;
       discoverPrefetch = null;
-      const found = (pf && pf.key === discoverPrefetchKey(originPlId, seedTracks[0])) ? await pf.promise
-        : await fetchDiscoverCandidates(seedTracks, libraryVideoIdSet(), DISCOVER_BATCH, allowLong, { steer, vibe: discoverVibeFor(originPlId), alive: () => steer === currentRadioSteer() });
-      // A steering chip was tapped mid-fetch: drop this batch, the chip refetches.
+      if (pf && pf.key === discoverPrefetchKey(originPlId, seedTracks[0])){
+        pf.got.forEach(add);
+        pf.listen = add;
+        await pf.promise;
+      } else {
+        await fetchDiscoverCandidates(seedTracks, libraryVideoIdSet(), DISCOVER_BATCH, allowLong, { steer, vibe: vibeText, alive: live, onTrack: add });
+      }
+      // A steering chip was tapped mid-fetch: the chip refetches.
       if (steer !== currentRadioSteer()) return;
-      // Discover may have been switched off (or the queue replaced) while
-      // the fetch was in flight - don't append a batch nobody asked for.
-      if (!found.length || !(isDiscoverOn(originPlId) || state.shuffleDiscover) || discoverOriginId() !== originPlId){
-        if (!found.length) noteDiscoverEmpty();
-        return;
-      }
+      if (!added.length){ noteDiscoverEmpty(); return; }
       discoverEmptyTs = 0;
-      discoverQueuedThisSession += found.length;
-      const vibeText = discoverVibeFor(originPlId);
-      if (vibeText) vibeRememberPlayed(vibeText, found, { noWhen: true });
-      const extId = discoverExtId(originPlId);
-      const ext = getOrCreateDiscoverExt(originPlId);
-      const startIdx = ext.tracks.length;
-      found.forEach(t => ext.tracks.push(t));
-      lsSet(LS_PL(extId), ext);
-      // Queue entries Discover adds are tagged `discover: true` (not just
-      // inferred from the discover-ext plId - the listener can queue a
-      // discovered song themselves from its menu, and that entry is theirs)
-      // so switching Discover off can take exactly these back out
-      // (removeDiscoverFromQueue). They always go after the listener's own
-      // queue; with shuffle on, the upcoming part is reshuffled so shuffle
-      // draws from both the original queue and the discovered tracks.
-      if (state.queuePos < 0) return;
-      found.forEach((t, i) => state.queue.push({ plId: extId, idx: startIdx + i, discover: true }));
-      if (state.shuffle){
-        const head = state.queue.slice(0, state.queuePos + 1);
-        // The immediate next entry stays put - it may already be buffering
-        // on the standby deck for a gapless/crossfaded handoff.
-        state.queue = head.concat(shuffleTail(state.queue.slice(state.queuePos + 1), 1));
-      }
-      renderQueuePanel();
-      schedulePreload(state.queuePos);
+      if (vibeText) vibeRememberPlayed(vibeText, added, { noWhen: true });
     } catch(e){
-      noteDiscoverEmpty();
-    } finally { discoverExtendPromise = null; }
+      if (!added.length) noteDiscoverEmpty();
+    } finally { discoverExtendPromise = null; notifyDiscoverAdd(); }
   })();
   return discoverExtendPromise;
 }
@@ -26957,14 +26991,27 @@ function soundingQueuePos(){
 }
 // Takes out what Discover/radio added after the playing song (never the
 // listener's own entries), then refills with the new steer.
+// #770: the songs a switch takes out are kept per steer (this queue only, in
+// memory), so switching back puts them straight back in - no new requests,
+// and the upcoming list is there at once. A steer tried for the first time
+// still has to fetch; its songs then stream in one by one.
+let radioSteerStash = { origin: null, bySteer: {} };
 function setRadioSteer(id){
-  const next = currentRadioSteer() === id ? '' : id;
+  const prev = currentRadioSteer();
+  const next = prev === id ? '' : id;
   lsSet(LS_RADIO_STEER, next);
   renderRadioSteer();
   const originPlId = discoverOriginId();
   if (!originPlId || state.queuePos < 0) return;
   const cur = state.queue[state.queuePos], keep = soundingQueuePos();
-  state.queue = state.queue.filter((e, i) => i <= keep || !(e.discover || /^radio:/.test(String(e.plId))));
+  const isRadioPart = e => e.discover || /^radio:/.test(String(e.plId));
+  if (radioSteerStash.origin !== originPlId) radioSteerStash = { origin: originPlId, bySteer: {} };
+  const out = state.queue.filter((e, i) => i > keep && isRadioPart(e));
+  if (out.length) radioSteerStash.bySteer[prev] = out;
+  state.queue = state.queue.filter((e, i) => i <= keep || !isRadioPart(e));
+  const back = radioSteerStash.bySteer[next] || [];
+  delete radioSteerStash.bySteer[next];
+  state.queue = state.queue.concat(back);
   state.queuePos = state.queue.indexOf(cur);
   discoverPrefetch = null;
   discoverEmptyTs = 0;
@@ -26972,7 +27019,7 @@ function setRadioSteer(id){
   schedulePreload(state.queuePos);
   persistResume();
   const d = radioSteerDefs().find(x => x.id === next);
-  showToast(d ? 'Finding ' + d.label + ' songs...' : 'Back to the usual mix');
+  showToast(d ? (back.length ? d.label + ' songs' : 'Finding ' + d.label + ' songs...') : 'Back to the usual mix');
   // an extension already in flight drops its batch (steer changed), then this refills
   (discoverExtendPromise || Promise.resolve()).then(() => {
     if (discoverOriginId() === originPlId) maybeExtendDiscoverQueue();
@@ -35541,7 +35588,9 @@ function playNext(auto){
   if (pos >= state.queue.length){
     const originPlId = discoverOriginId();
     if (originPlId && isDiscoverOn(originPlId)){
-      extendQueueWithDiscover(originPlId).then(() => finishQueueAtEnd(opts));
+      // #770: go as soon as the first new song is queued, not after the whole batch
+      extendQueueWithDiscover(originPlId);
+      discoverNextReady().then(() => finishQueueAtEnd(opts));
       return;
     }
     finishQueueAtEnd(opts);

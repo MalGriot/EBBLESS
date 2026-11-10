@@ -12604,20 +12604,20 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #768.
 
 ### switching-discovery-mode-shouldn-t-s-769: Switching discovery mode shouldn't switch the current song, just the upcoming queue (Geethub #769)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #769. See the issue for references.
 - **Touches:** index.html (UI)
-- **Branch:**
-- **Notes:** Synced from Geethub #769.
+- **Branch:** agent/discovery-queue
+- **Notes:** Synced from Geethub #769. Steer chip, Discover off and leaving shuffle+Discover keep a song already crossfading in (soundingQueuePos); before, it was cut and queuePos landed on another song. Verified in preview mid-crossfade.
 
 ### if-the-queue-has-been-cleared-it-sho-770: If the queue has been cleared, it should immediately refresh with new music by the time the current song is ov (Geethub #770)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #770. See the issue for references.
 - **Touches:** index.html (UI)
-- **Branch:**
-- **Notes:** Synced from Geethub #770.
+- **Branch:** agent/discovery-queue
+- **Notes:** Synced from Geethub #770. Discover songs stream into the queue as each resolves (first in ~5s, was ~140s for the full 28-song batch); Clear resets the empty-cooldown and refills at once; a song ending on an empty queue moves on with the first new song; steer switches stash their songs per steer so switching back is instant. No new requests. Clear refills only while Discover is on for that queue.
 
 ### library-scroll-bar-should-be-the-sam-771: Library scroll bar should be the same as the queue scroll bar (Geethub #771)
 - **Status:** merged
