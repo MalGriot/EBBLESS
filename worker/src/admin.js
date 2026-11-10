@@ -4,6 +4,8 @@
 //                         Analytics, Feedback, Bug Reports) + what's editable
 //   GET  /admin/linkfixes  recent manual link fixes (#596) + summary counts
 //   POST /admin/codes     { tier, count?, days?, uses?, expires_days?, note? } -> { codes } (shown once)
+//   GET  /admin/grants    who has flow/horizon and how (patreon, code, manual), with email
+//   POST /admin/revoke    { sub, undo? } -> switch one account back to ebbless (or undo that)
 //   POST /admin/update    { tab, id, column, value, prev } -> one cell
 //
 // Every route needs `Authorization: Bearer <ADMIN_TOKEN>` (worker secret,
@@ -16,7 +18,7 @@
 
 import { sheet as sheetCall } from './beta.js';
 import { summarizeLinkFixes } from './linkfix.js';
-import { mintCodes } from './codes.js';
+import { mintCodes, listGrants, setRevoked } from './codes.js';
 
 // What the admin page may change. Keep in sync with ADMIN_EDITABLE in
 // tools/beta-sheet.gs (the script checks again before writing).
@@ -96,7 +98,7 @@ async function route(request, url, env, ctx, deps) {
 
   if (!env.ADMIN_TOKEN || env.ADMIN_TOKEN.length < MIN_TOKEN_LEN) return json({ error: 'Admin isn\'t set up on the worker (ADMIN_TOKEN).' }, 503);
   const isLinkFixes = url.pathname === '/admin/linkfixes';
-  const noSheet = isLinkFixes || url.pathname === '/admin/codes';
+  const noSheet = isLinkFixes || ['/admin/codes', '/admin/grants', '/admin/revoke'].includes(url.pathname);
   if (!noSheet && (!env.SHEET_URL || !env.SHEET_SECRET)) return json({ error: 'beta not configured' }, 500);
 
   const { envCache } = deps;
@@ -128,6 +130,20 @@ async function route(request, url, env, ctx, deps) {
       let body;
       try { body = JSON.parse(text) || {}; } catch (e) { return json({ error: 'invalid json body' }, 400); }
       const out = await mintCodes(env, body);
+      return out.error ? json({ error: out.error }, 400) : json(out);
+    }
+    if (p === '/admin/grants') {
+      if (request.method !== 'GET') return json({ error: 'GET only' }, 405);
+      if (!env.PROFILES) return json({ error: 'profiles not configured' }, 500);
+      return json(await listGrants(env));
+    }
+    if (p === '/admin/revoke') {
+      if (request.method !== 'POST') return json({ error: 'POST only' }, 405);
+      const text = await request.text();
+      if (text.length > 500) return json({ error: 'too large' }, 413);
+      let body;
+      try { body = JSON.parse(text) || {}; } catch (e) { return json({ error: 'invalid json body' }, 400); }
+      const out = await setRevoked(env, body.sub, body.undo === true);
       return out.error ? json({ error: out.error }, 400) : json(out);
     }
     if (p === '/admin/testers') {

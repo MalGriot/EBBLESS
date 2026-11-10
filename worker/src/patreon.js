@@ -119,6 +119,7 @@ export async function readEnt(env, sub) {
 // Idempotent: same input, same record (apart from `at`). Never lowers a hand-written grant.
 export async function writeTier(env, sub, tier, now = Date.now()) {
   const cur = await readEnt(env, sub);
+  if (cur && cur.src === 'revoked') return 'free';   // switched off by the owner: no sync or code brings it back
   if (cur && cur.src !== 'patreon' && (TIER_RANK[entTier(cur, now)] || 0) > TIER_RANK[tier]) return entTier(cur, now);
   await env.PROFILES.put('ent:' + sub, JSON.stringify({ tier, src: 'patreon', at: now }));
   return tier;
@@ -228,7 +229,7 @@ export async function handlePatreon(request, url, env, ctx, deps) {
   }
   if (path === '/entitlement') {
     let ent = await readEnt(env, sub);
-    const hand = ent && ent.src !== 'patreon' && publicTier(entTier(ent)) !== 'ebbless';
+    const hand = ent && ent.src === 'revoked' || ent && ent.src !== 'patreon' && publicTier(entTier(ent)) !== 'ebbless';
     if (cfg && !hand && (!ent || !ent.at || Date.now() - ent.at > RECHECK_MS)) {
       const t = await syncTier(env, cfg, sub, fetchFn);
       if (t) ent = { tier: t };

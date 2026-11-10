@@ -97,3 +97,40 @@ test('admin mint needs the owner token and never touches the Sheet', async () =>
   assert.equal((await ok.json()).codes.length, 2);
   assert.equal((await call('x'.repeat(40), { tier: 'free' })).status, 400);
 });
+
+import { listGrants, setRevoked } from '../src/codes.js';
+import { writeTier, handlePatreon } from '../src/patreon.js';
+test('owner undo: revoke blocks sync and codes, undo lets them back, list shows who and how', async () => {
+  const kv = fakeKV(); kv.list = async ({ prefix }) => ({ keys: [...kv.m.keys()].filter((k) => k.startsWith(prefix)).map((name) => ({ name })), list_complete: true });
+  const env = { PROFILES: kv };
+  await writeTier(env, 'ua', 'flow', 5);
+  kv.m.set('profile:ua', '{"email":"a@b.com"}');
+  kv.m.set('ent:ufree', '{"tier":"free","src":"patreon","at":1}');
+  let g = await listGrants(env);
+  assert.deepEqual(g.grants.map((x) => [x.sub, x.email, x.tier, x.src]), [['ua', 'a@b.com', 'flow', 'patreon']]);
+  assert.ok((await setRevoked(env, '../x', false)).error);
+  await setRevoked(env, 'ua', false);
+  assert.equal(await writeTier(env, 'ua', 'horizon'), 'free');
+  const { codes: [c] } = await mintCodes(env, { tier: 'flow' });
+  assert.equal((await redeem(env, 'a', c)).status, 400);
+  g = await listGrants(env);
+  assert.equal(g.grants[0].src, 'revoked');
+  const ent2 = await handlePatreon(new Request('https://w.test/entitlement', { method: 'POST', body: '{"idToken":"a"}' }), new URL('https://w.test/entitlement'), env, {}, { json, verifyIdentity, overIpLimit: async () => false });
+  assert.deepEqual(await ent2.json(), { tier: 'ebbless' });
+  await setRevoked(env, 'ua', true);
+  assert.equal(kv.m.has('ent:ua'), false);
+  assert.equal((await redeem(env, 'a', c)).status, 200);
+});
+test('admin grants and revoke need the owner token', async () => {
+  const kv = fakeKV(); kv.list = async () => ({ keys: [], list_complete: true });
+  const env = { PROFILES: kv, ADMIN_TOKEN: 'x'.repeat(40) };
+  const envCache = { match: async () => null, put: async () => {} };
+  const call = (path, method, auth, body) => handleAdmin(new Request('https://w.test' + path, { method, headers: auth ? { Authorization: 'Bearer ' + auth } : {}, body: body ? JSON.stringify(body) : undefined }),
+    new URL('https://w.test' + path), env, { waitUntil() {} }, { envCache });
+  assert.equal((await call('/admin/grants', 'GET', null)).status, 401);
+  assert.equal((await call('/admin/revoke', 'POST', 'bad', { sub: 'ua' })).status, 401);
+  assert.equal(kv.m.size, 0);
+  assert.equal((await call('/admin/grants', 'GET', 'x'.repeat(40))).status, 200);
+  assert.equal((await call('/admin/revoke', 'POST', 'x'.repeat(40), { sub: 'ua' })).status, 200);
+  assert.equal(JSON.parse(kv.m.get('ent:ua')).src, 'revoked');
+});

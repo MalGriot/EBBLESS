@@ -75,6 +75,7 @@ export async function handleRedeem(request, env, ctx, deps) {
   if (!mine && used.length >= rec.max) return json({ error: 'invalid code' }, 400);
   const until = rec.days ? now + rec.days * DAY : 0;
   const cur = await readEnt(env, sub);
+  if (cur && cur.src === 'revoked') return json({ error: 'invalid code' }, 400);
   const curRank = RANK[entTier(cur, now)] || 0;
   // Same account again: never extends a timed grant; answers with what is in force, or nothing once it ended.
   if (mine) return curRank >= RANK[rec.tier] ? json({ tier: entTier(cur, now), already: true }) : json({ error: 'invalid code' }, 400);
@@ -85,4 +86,35 @@ export async function handleRedeem(request, env, ctx, deps) {
   if (until) ent.until = until;
   await env.PROFILES.put('ent:' + sub, JSON.stringify(ent));
   return json({ tier: rec.tier === 'horizon' ? 'horizon' : 'flow', until: until || null });
+}
+
+// ---- owner undo (admin routes) ---------------------------------------------------
+// GET  /admin/grants           every non-free entitlement (and revoked ones), newest first, with email
+// POST /admin/revoke { sub }   switch one account back to ebbless for good: Patreon sync and codes
+//                              cannot restore it until undone
+// POST /admin/revoke { sub, undo: true }  removes the block; the next check-in (or a new code) restores
+//                              whatever they are entitled to
+export async function listGrants(env, limit = 200) {
+  const out = [];
+  const list = await env.PROFILES.list({ prefix: 'ent:', limit });
+  for (const k of list.keys) {
+    const sub = k.name.slice(4);
+    let rec = null;
+    try { rec = JSON.parse(await env.PROFILES.get(k.name)); } catch (e) {}
+    if (!rec) continue;
+    const tier = entTier(rec);
+    if (tier === 'free' && rec.src !== 'revoked') continue;
+    let email = null;
+    try { const p = JSON.parse(await env.PROFILES.get('profile:' + sub)); email = (p && p.email) || null; } catch (e) {}
+    out.push({ sub, email, tier, src: rec.src || 'manual', until: rec.until || null, at: rec.at || null });
+  }
+  out.sort((a, b) => (b.at || 0) - (a.at || 0));
+  return { grants: out, truncated: !list.list_complete };
+}
+export async function setRevoked(env, sub, undo, now = Date.now()) {
+  sub = String(sub || '');
+  if (!/^[A-Za-z0-9_.-]{1,64}$/.test(sub)) return { error: 'bad sub' };
+  if (undo) { const cur = await readEnt(env, sub); if (cur && cur.src === 'revoked') await env.PROFILES.delete('ent:' + sub); return { ok: true, revoked: false }; }
+  await env.PROFILES.put('ent:' + sub, JSON.stringify({ tier: 'free', src: 'revoked', at: now }));
+  return { ok: true, revoked: true };
 }
