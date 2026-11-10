@@ -9762,7 +9762,8 @@ function bringRender(){
   if (bringView === 'spotify'){
     $('bmTitle').textContent = 'Bring your Spotify';
     const nativeSp = !!(window.EbbNative && window.EbbNative.spotifyImport);
-    sc.innerHTML = (nativeSp ? '<div class="bm-lead">Sign in to Spotify and your whole library comes over: Liked Songs, albums, followed artists, podcasts and every playlist.</div><div class="bm-user" style="margin-bottom:14px"><button type="button" class="bm-btn bm-btn-go" data-bm="spapp">Sign in to Spotify</button></div><div class="bm-note">Your password goes to Spotify only, and nothing is read until you tap Bring my music. Signed up with Google or Facebook? Choose the one-time code option on Spotify\'s page: same account. EBBLESS signs you out of Spotify here when it is done.</div><div class="bm-h" style="margin-top:18px">Or another way</div>' : '') + '<div class="bm-lead">Paste your playlist links and they come over in seconds. Liked Songs and everything else come from a file Spotify sends you.</div>' +
+    const refusedNote = spRefused.length ? '<div class="bm-note" style="margin-bottom:14px">Spotify would not share these directly: ' + spRefused.slice(0, 12).map(n => escapeHtml(n)).join(', ') + (spRefused.length > 12 ? ' and ' + (spRefused.length - 12) + ' more' : '') + '. ' + (nativeSp ? 'Sign in below and EBBLESS reads them with your own Spotify session.' : 'The computer snippet below reads them with your own Spotify session.') + '</div>' : '';
+    sc.innerHTML = refusedNote + (nativeSp ? '<div class="bm-lead">Sign in to Spotify and your whole library comes over: Liked Songs, albums, followed artists, podcasts and every playlist.</div><div class="bm-user" style="margin-bottom:14px"><button type="button" class="bm-btn bm-btn-go" data-bm="spapp">Sign in to Spotify</button></div><div class="bm-note">Your password goes to Spotify only, and nothing is read until you tap Bring my music. Signed up with Google or Facebook? Choose the one-time code option on Spotify\'s page: same account. EBBLESS signs you out of Spotify here when it is done.</div><div class="bm-h" style="margin-top:18px">Or another way</div>' : '') + '<div class="bm-lead">Paste your playlist links and they come over in seconds. Liked Songs and everything else come from a file Spotify sends you.</div>' +
       '<div class="bm-steps">' +
       '<div class="bm-step" style="display:block"><div style="display:flex;gap:12px;align-items:center"><span class="bm-num">1</span><div><div class="bm-st">Paste your playlist links or library</div><div class="bm-sd">On a computer, select your playlists in Spotify (Ctrl or Cmd + click), copy them, and paste here. On a phone, Share, Copy link, one at a time.</div></div></div><textarea id="bmSpLinks" rows="4" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="open.spotify.com/playlist/... or your copied library" style="width:100%;margin-top:10px;box-sizing:border-box;border-radius:12px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);color:inherit;font:inherit;padding:10px 12px;resize:vertical"></textarea><div class="bm-user"><button type="button" class="bm-btn bm-btn-go" data-bm="spgo">Bring them in</button></div></div>' +
       (nativeSp ? '' : '<div class="bm-step" style="display:block"><div style="display:flex;gap:12px;align-items:center"><span class="bm-num">+</span><div><div class="bm-st">On a computer: everything, right now</div><div class="bm-sd">Liked Songs, albums and all playlists, from your own signed-in Spotify tab. Copy the snippet, open open.spotify.com, open the browser console (F12, or Cmd + Option + J), paste it and press Enter, click Liked Songs, press Copy my library, then paste into the box above. If the console says to type allow pasting, do that first.</div></div></div><div class="bm-user"><button type="button" class="bm-btn" data-bm="spsnip">Copy the snippet</button></div></div>') +
@@ -10220,13 +10221,14 @@ async function spotifyPickerOpen(key){
   }
   if (fmPicker) fmRender();
 }
+let spRefused = [];
 async function spotifyImportSelected(){
   if (!fmPicker || fmPicker.busy) return;
   const chosen = fmPicker.items.filter(x => x.on);
   if (!chosen.length) return;
   fmPicker.busy = true;
   let made = 0;
-  const ids = [], viaLink = [];
+  const ids = [], viaLink = [], refusedNames = [];
   try {
     for (let i = 0; i < chosen.length; i++){
       const it = chosen[i];
@@ -10240,7 +10242,7 @@ async function spotifyImportSelected(){
       } catch(e){
         if (String(e.message) === 'signed out') throw e;
         // Spotify will not hand this one's songs to an app (not yours, or made by Spotify): try its public link instead of stopping.
-        if (it.kind === 'playlist') viaLink.push(it.id);
+        if (it.kind === 'playlist'){ viaLink.push(it.id); refusedNames.push(it.label); }
         continue;
       }
       const tracks = rows.filter(Boolean);
@@ -10261,6 +10263,10 @@ async function spotifyImportSelected(){
     showToast((made ? 'Added ' + made + (made === 1 ? ' playlist' : ' playlists') + ' from Spotify. Matching songs in the background.' : '') + (viaLink.length ? (made ? ' ' : '') + viaLink.length + (viaLink.length === 1 ? ' playlist Spotify would not share directly is' : ' playlists Spotify would not share directly are') + ' loading from ' + (viaLink.length === 1 ? 'its' : 'their') + ' public link' + (viaLink.length === 1 ? '' : 's') + '.' : ''));
     (async () => { for (const id of ids){ try { await rematchUnmatchedInBackground(id); } catch(e){} } })();
     viaLink.forEach((pid, i) => setTimeout(() => { try { beginImportFromParsedLink({ source: 'spotify', type: 'playlist', id: pid }); } catch(e){} }, 1500 + i * 1500));
+    if (viaLink.length){
+      spRefused = refusedNames.slice();
+      setTimeout(() => showToast('Any that come up empty (Daily Mixes and other private ones) can finish through Spotify sign-in.', { label: 'Finish', run: () => openBring('spotify') }), 2500 + viaLink.length * 1500);
+    }
   }
 }
 setTimeout(() => { spotifyHandleReturn(); }, 1200);
@@ -22141,8 +22147,8 @@ const WHATS_NEW = [
   { version: 504, date: '2026-11-10', items: [
     'Picture vibes: tap the camera button next to the vibe box and pick a photo or a movie still, and EBBLESS plays songs that match its feel. Your picture is sent once to describe its mood, then thrown away.',
   ]},
-  { version: 504, date: '2026-11-10', items: [
-    'Spotify sign-in import no longer stops when Spotify refuses one playlist: it moves on, and loads that one from its public link instead.'
+  { version: 505, date: '2026-11-10', items: [
+    'Spotify sign-in import no longer stops when Spotify refuses one playlist: it moves on, tries its public link, and offers to finish the rest with the Spotify sign-in window.'
   ]},
   { version: 503, date: '2026-11-10', items: [
     'Spotify sign-in picker: playlist song counts are right again, tap the arrow on any row to see its songs and untick the ones you do not want, and Select all / Select none work on the whole list.'
