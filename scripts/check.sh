@@ -6,3 +6,4 @@ scripts/check-whats-new.sh
 node scripts/check-html.js
 node scripts/check-security.js
 if git diff --cached --name-only | grep -q '^worker/'; then (cd worker && npm test --silent); fi
+node scripts/test-manual-carry.js >/dev/null

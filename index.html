@@ -8971,19 +8971,36 @@ const RESOLVE_LOGIC_VERSION = 8;
 // #550: the cache is overwritten mid-resolve by in-progress snapshots, so the
 // hand-added songs are captured once when a resolve starts (manualCarry) and
 // every payload written during it carries them.
+// #767: also kept: (a) songs added while a resolve is running (read from the
+// cache too, not only the start-of-resolve capture), (b) hand-added songs
+// that never matched a video, and (c) a hand-added song the source now also
+// lists: that row stays marked as added, so the source dropping it later
+// doesn't take the user's song with it. No duplicates either way.
 const manualCarry = new Map();
+function manualNameKey(t){ return '?' + String(t.title || '').trim().toLowerCase() + '|' + String(t.artist || '').trim().toLowerCase(); }
 function withManualTracks(playlistId, resolvedTracks){
   const old = getCachedPlaylist(playlistId);
-  const carried = manualCarry.get(playlistId) || (old ? old.tracks.filter(t => t.manual && t.videoId) : []);
+  // a song is the same song by video or by title + artist
+  const keys = (t) => [t.videoId, manualNameKey(t)].filter(k => k && k !== '?|');
+  const seen = new Set(), carried = [];
+  (old ? old.tracks.filter(t => t && t.manual) : []).concat((manualCarry.get(playlistId) || []).filter(t => keys(t).length)).forEach(t => {
+    if (keys(t).some(k => seen.has(k))) return;
+    keys(t).forEach(k => seen.add(k));
+    carried.push(t);
+  });
   if (!carried.length) return resolvedTracks;
-  const known = new Set(resolvedTracks.filter(t => t.videoId).map(t => t.videoId));
-  const manual = carried.filter(t => !known.has(t.videoId));
-  return manual.length ? resolvedTracks.concat(manual) : resolvedTracks;
+  const hit = new Set();
+  const out = resolvedTracks.map(t => {
+    if (!t || !keys(t).some(k => seen.has(k))) return t;
+    keys(t).forEach(k => hit.add(k));
+    return t.manual ? t : Object.assign({}, t, { manual: true });
+  });
+  return out.concat(carried.filter(t => !keys(t).some(k => hit.has(k))));
 }
 async function resolvePlaylist(playlistId, type, onProgress, onFirstTrack){
   const old = getCachedPlaylist(playlistId);
   const had = manualCarry.has(playlistId);
-  if (!had) manualCarry.set(playlistId, old ? old.tracks.filter(t => t.manual && t.videoId) : []);
+  if (!had) manualCarry.set(playlistId, old ? old.tracks.filter(t => t && t.manual) : []);
   try { return await resolvePlaylistInner(playlistId, type, onProgress, onFirstTrack); }
   finally { if (!had) manualCarry.delete(playlistId); }
 }
