@@ -1553,6 +1553,30 @@ body:has(#import-overlay.is-open) #fsBtn{display:none}
 .visual-tabs .v-tab.is-active{background:var(--accent);color:var(--on-accent,#151107)}
 .visual-tabs.yt-on .v-tab:not(#ytPanelBtn).is-active{background:none;color:var(--faint)}
 .visual-tabs .v-tab:disabled{opacity:.35;pointer-events:none}
+/* fLUX tab: glow + twinkling sparkles on hover. Transform/opacity only, and the
+   keyframes run only while hovered/focused, so nothing animates at rest (GPU budget). */
+#milkTabBtn{position:relative;isolation:isolate}
+#milkTabBtn::before{content:"";position:absolute;inset:-5px;border-radius:20px;pointer-events:none;z-index:-1;opacity:0;
+  background:radial-gradient(closest-side,color-mix(in srgb,var(--accent) 55%,transparent),transparent);transition:opacity .25s var(--ease-out)}
+#milkTabBtn::after{content:"";position:absolute;top:2px;right:6px;width:9px;height:9px;pointer-events:none;opacity:0;background:var(--accent);
+  clip-path:polygon(50% 0,60% 40%,100% 50%,60% 60%,50% 100%,40% 60%,0 50%,40% 40%)}
+#milkTabBtn svg{transition:transform .5s var(--ease-out)}
+#milkTabBtn svg circle{transform-box:fill-box;transform-origin:center}
+@media (hover:hover){
+  #milkTabBtn:hover,#milkTabBtn:focus-visible{color:var(--accent)}
+  #milkTabBtn:hover::before,#milkTabBtn:focus-visible::before{opacity:1}
+  #milkTabBtn:hover svg,#milkTabBtn:focus-visible svg{transform:rotate(90deg) scale(1.12)}
+  #milkTabBtn:hover::after,#milkTabBtn:focus-visible::after{animation:fluxSpark 1.3s ease-in-out infinite}
+  #milkTabBtn:hover svg circle,#milkTabBtn:focus-visible svg circle{animation:fluxTwinkle 1.3s ease-in-out .5s infinite}
+}
+#milkTabBtn.is-active::before,#milkTabBtn.is-active::after{display:none}
+@keyframes fluxSpark{0%,100%{opacity:0;transform:scale(.2) rotate(0)}50%{opacity:1;transform:scale(1) rotate(45deg)}}
+@keyframes fluxTwinkle{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.25;transform:scale(.4)}}
+@media (prefers-reduced-motion:reduce){
+  #milkTabBtn:hover::after,#milkTabBtn:focus-visible::after{animation:none;opacity:1;transform:none}
+  #milkTabBtn:hover svg,#milkTabBtn:focus-visible svg{transform:none}
+  #milkTabBtn:hover svg circle,#milkTabBtn:focus-visible svg circle{animation:none}
+}
 /* #747 cinema mode: the Cinema tab shows only while the video is on screen. On (html.ebb-cinema), one static
    dim layer covers the page and only the video, the visual tabs and the transport sit above it. #cinemaDim
    lives inside #view-player so ytPanelSync's #735 cover check still counts it as the player. Solid fill, no
