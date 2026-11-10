@@ -12620,11 +12620,11 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #770.
 
 ### library-scroll-bar-should-be-the-sam-771: Library scroll bar should be the same as the queue scroll bar (Geethub #771)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #771. See the issue for references.
 - **Touches:** index.html (UI)
-- **Branch:**
+- **Branch:** agent/queue-small-fixes
 - **Notes:** Synced from Geethub #771.
 
 ### main-cymatics-should-be-ui-color-772: Main cymatics should be ui color (Geethub #772)
@@ -12652,11 +12652,11 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #774.
 
 ### bring-your-music-should-be-import-y-775: "bring your music" should be "import your music" (Geethub #775)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** high
 - **Description:** Bug, Geethub issue #775. See the issue for references.
 - **Touches:** index.html (UI)
-- **Branch:**
+- **Branch:** agent/queue-small-fixes
 - **Notes:** Synced from Geethub #775.
 
 ### video-button-selecting-it-while-acti-776: Video button: selecting it while active should toggle cinema mode. the video button should turn into the cinem (Geethub #776)
@@ -12740,9 +12740,9 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #786.
 
 ### small-icons-lowres-727: Small icons use the lowest-res image versions so they load fast (Geethub #727)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #727. Small icons (library, queue, pills, etc) should load the smallest available image size so they appear fast.
 - **Touches:** index.html (image URL sizing)
-- **Branch:**
+- **Branch:** agent/queue-small-fixes
 - **Notes:** Synced from Geethub #727. Not the waveform work: entry `waveform-real-peaks-727` reused the same number for a different idea.
