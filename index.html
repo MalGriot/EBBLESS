@@ -1298,6 +1298,14 @@ html.reduce-motion .lib-grid:not(.is-list) .lib-card .info .name{display:block;w
 .fm-pick.is-on .fm-box{background:var(--accent);border-color:var(--accent);color:var(--on-accent,#151107)}
 .fm-pick-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;font-size:14.5px}
 .fm-pick-sub{flex:none;color:var(--faint);font-size:12.5px}
+.fm-row{display:flex;gap:6px;align-items:stretch}
+.fm-row .fm-pick{flex:1;min-width:0}
+.fm-exp{flex:none;width:46px;border-radius:12px;background:var(--panel-2);border:1px solid var(--border);color:var(--text);font:inherit;font-size:13px}
+.fm-songs{display:flex;flex-direction:column;gap:2px;margin:0 0 8px 14px;max-height:52vh;overflow:auto}
+.fm-songs .fm-pick{padding:8px 10px;background:transparent;border-color:transparent}
+.fm-songs .fm-pick-name{font-weight:500;font-size:13.5px}
+.fm-all{display:flex;justify-content:flex-end;margin:0 0 8px}
+.fm-all .fm-disc{margin:0}
 .fm-go{position:sticky;bottom:0;background:var(--accent);color:var(--on-accent,#151107);border-color:var(--accent)}
 .fm-go:disabled{opacity:.5}
 .fm-disc{display:block;margin:14px auto 0;color:var(--faint);font:inherit;font-size:13px;text-decoration:underline}
@@ -9529,7 +9537,12 @@ function fmBuild(){
     else if (k === 'pick') fmShowArtists(v, t.dataset.t, t.dataset.g, fmTab === 'vibe' ? (FM_TEMPOS.find(x => x[0] === fmTempo) || [])[2] : null);
     else if (k === 'tempo'){ fmTempo = v; fmRender(); }
     else if (k === 'bring'){ closeFindMusic(); openBring(); }
-    else if (k === 'ck'){ const it = fmPicker && fmPicker.items.find(x => x.key === v); if (it){ it.on = !it.on; fmRender(); } }
+    else if (k === 'ck'){ const it = fmPicker && fmPicker.items.find(x => x.key === v); if (it){ it.on = !it.on; if (it.songs) it.songs.forEach(t => { t.on = it.on; }); fmRender(); } }
+    else if (k === 'all'){ if (fmPicker){ const to = !fmPicker.items.every(x => x.on); fmPicker.items.forEach(x => { x.on = to; if (x.songs) x.songs.forEach(t => { t.on = to; }); }); fmRender(); } }
+    else if (k === 'exp') spotifyPickerOpen(v);
+    else if (k === 'sk'){ const it = fmPicker && fmPicker.items.find(x => x.key === v), sg = it && it.songs && it.songs[+t.dataset.i]; if (sg){ sg.on = !sg.on; it.on = it.songs.some(x => x.on); fmRender(); } }
+    else if (k === 'skall'){ const it = fmPicker && fmPicker.items.find(x => x.key === v); if (it && it.songs){ const to = !it.songs.every(x => x.on); it.songs.forEach(x => { x.on = to; }); it.on = to; fmRender(); } }
+    else if (k === 'skmore'){ const it = fmPicker && fmPicker.items.find(x => x.key === v); if (it){ it.shown = (it.shown || 300) + 300; fmRender(); } }
     else if (k === 'import') (fmPicker && fmPicker.svc === 'youtube' ? youtubeImportSelected() : fmPicker && fmPicker.svc === 'lastfm' ? lastfmImportSelected() : spotifyImportSelected());
     else if (k === 'spdisc'){ const yt = fmPicker && fmPicker.svc === 'youtube', lf = fmPicker && fmPicker.svc === 'lastfm'; if (lf){ lastfmStart(true); return; } if (yt) ytDisconnect(); else spotifyDisconnect(); fmPicker = null; fmRender(); showToast('Disconnected from ' + (yt ? 'YouTube' : 'Spotify')); }
     else if (k === 'lfgo'){ const u = ($('lfUser') || {}).value; lastfmLoad(u); }
@@ -9563,8 +9576,24 @@ function fmRender(){
   if (fmPicker){
     if (fmPicker.loading){ sc.innerHTML = '<div class="fm-note">' + escapeHtml(fmPicker.note || 'Loading') + '&hellip;</div>'; return; }
     const n = fmPicker.items.filter(x => x.on).length;
-    sc.innerHTML = '<div class="fm-picks">' + fmPicker.items.map(x =>
-      '<button type="button" class="fm-pick' + (x.on ? ' is-on' : '') + '" role="checkbox" aria-checked="' + !!x.on + '" data-fm="ck" data-v="' + escapeHtml(x.key) + '"' + (fmPicker.busy ? ' disabled' : '') + '><span class="fm-box">' + (x.on ? '\u2713' : '') + '</span><span class="fm-pick-name">' + escapeHtml(x.label) + '</span><span class="fm-pick-sub">' + escapeHtml(x.sub) + '</span></button>').join('') + '</div>' +
+    const dis = fmPicker.busy ? ' disabled' : '';
+    const rowHtml = (x) => {
+      const pick = '<button type="button" class="fm-pick' + (x.on ? ' is-on' : '') + '" role="checkbox" aria-checked="' + !!x.on + '" data-fm="ck" data-v="' + escapeHtml(x.key) + '"' + dis + '><span class="fm-box">' + (x.on ? '\u2713' : '') + '</span><span class="fm-pick-name">' + escapeHtml(x.label) + '</span><span class="fm-pick-sub">' + escapeHtml(x.sub) + '</span></button>';
+      if (!x.expandable) return pick;
+      let songs = '';
+      if (x.open){
+        if (x.loadingSongs) songs = '<div class="fm-note" style="padding:6px 0 10px 14px">Loading songs' + (x.loaded ? ' (' + x.loaded + ')' : '') + '&hellip;</div>';
+        else if (x.songs){
+          const allOn = x.songs.every(t => t.on);
+          songs = '<div class="fm-songs"><div class="fm-all"><button type="button" class="fm-disc" data-fm="skall" data-v="' + escapeHtml(x.key) + '"' + dis + '>' + (allOn ? 'Select no songs' : 'Select all songs') + '</button></div>' +
+            x.songs.slice(0, x.shown || 300).map((t, i) => '<button type="button" class="fm-pick' + (t.on ? ' is-on' : '') + '" role="checkbox" aria-checked="' + !!t.on + '" data-fm="sk" data-v="' + escapeHtml(x.key) + '" data-i="' + i + '"' + dis + '><span class="fm-box">' + (t.on ? '\u2713' : '') + '</span><span class="fm-pick-name">' + escapeHtml(t.title) + '</span><span class="fm-pick-sub">' + escapeHtml(t.artist) + '</span></button>').join('') +
+            (x.songs.length > (x.shown || 300) ? '<button type="button" class="fm-disc" data-fm="skmore" data-v="' + escapeHtml(x.key) + '">Show ' + Math.min(300, x.songs.length - (x.shown || 300)) + ' more</button>' : '') + '</div>';
+        }
+      }
+      return '<div class="fm-row">' + pick + '<button type="button" class="fm-exp" data-fm="exp" data-v="' + escapeHtml(x.key) + '" aria-expanded="' + !!x.open + '" aria-label="' + (x.open ? 'Hide' : 'Show') + ' songs in ' + escapeHtml(x.label) + '"' + dis + '>' + (x.open ? '\u25B4' : '\u25BE') + '</button></div>' + songs;
+    };
+    const allOnTop = fmPicker.items.every(x => x.on);
+    sc.innerHTML = '<div class="fm-all"><button type="button" class="fm-disc" data-fm="all"' + dis + '>' + (allOnTop ? 'Select none' : 'Select all') + '</button></div><div class="fm-picks">' + fmPicker.items.map(rowHtml).join('') + '</div>' +
       '<button type="button" class="fm-load fm-go" data-fm="import"' + (n && !fmPicker.busy ? '' : ' disabled') + '>' + (fmPicker.busy ? escapeHtml(fmPicker.note || 'Importing') + '&hellip;' : 'Import ' + n + (n === 1 ? ' item' : ' items')) + '</button>' +
       '<button type="button" class="fm-disc" data-fm="spdisc">' + (fmPicker.svc === 'lastfm' ? 'Use a different username' : 'Disconnect ' + (fmPicker.svc === 'youtube' ? 'YouTube' : 'Spotify')) + '</button>';
     return;
@@ -10125,8 +10154,10 @@ async function spotifyLoadMusic(){
       spotifyPages('/me/playlists?limit=50', 300),
     ]);
     const items = [];
-    if (liked.total) items.push({ key: 'liked', label: 'Liked Songs', sub: liked.total + (liked.total === 1 ? ' song' : ' songs'), on: true, kind: 'liked' });
-    lists.filter(p => p && p.id).forEach(p => items.push({ key: 'pl:' + p.id, label: p.name || 'Playlist', sub: (((p.tracks && p.tracks.total) || 0) === 1 ? '1 song' : ((p.tracks && p.tracks.total) || 0) + ' songs'), on: true, kind: 'playlist', id: p.id, image: p.images && p.images[0] && p.images[0].url }));
+    const songsSub = (n) => n == null ? 'Playlist' : n === 1 ? '1 song' : n + ' songs';
+    if (liked.total) items.push({ key: 'liked', label: 'Liked Songs', sub: songsSub(liked.total), count: liked.total, on: true, kind: 'liked', expandable: true });
+    // Spotify renamed a playlist's `tracks` summary to `items`; read either, and never show a made-up 0.
+    lists.filter(p => p && p.id).forEach(p => { const n = [p.items, p.tracks].map(o => o && typeof o.total === 'number' ? o.total : null).find(v => v != null); items.push({ key: 'pl:' + p.id, label: p.name || 'Playlist', sub: songsSub(n == null ? null : n), count: n, on: true, kind: 'playlist', id: p.id, image: p.images && p.images[0] && p.images[0].url, expandable: true }); });
     fmPicker = { loading: false, items };
     if (!items.length) fmPicker = { loading: true, note: 'Nothing found in your Spotify library', items: [] };
   } catch(e){
@@ -10140,6 +10171,51 @@ function spotifyTrackRow(t){
   const art = t.album && t.album.images && (t.album.images[1] || t.album.images[0]);
   return { title: t.name, artist: (t.artists || []).map(a => a.name).join(', '), art: art ? art.url : null, srcDuration: Math.round((t.duration_ms || 0) / 1000), videoId: null, plays: 0 };
 }
+// One playlist's songs (Spotify now serves them from /items; older apps still from /tracks).
+async function spotifyPlaylistRows(id, onPage){
+  const fetchAll = async (path) => {
+    const out = []; let next = path;
+    while (next && out.length < IMPORT_MAX_SONGS){
+      const d = await spotifyApi(next);
+      (d.items || []).forEach(x => { const t = x && (x.item || x.track); if (t && t.type !== 'episode') out.push(spotifyTrackRow(t)); });
+      next = d.next;
+      if (onPage) onPage(out.length);
+    }
+    return out.filter(Boolean);
+  };
+  try { return await fetchAll('/playlists/' + id + '/items?limit=100'); }
+  catch(e){ if (String(e.message) === 'signed out') throw e; return fetchAll('/playlists/' + id + '/tracks?limit=100'); }
+}
+async function spotifyLikedRows(onPage){
+  const out = []; let next = '/me/tracks?limit=50';
+  while (next && out.length < IMPORT_MAX_SONGS){
+    const d = await spotifyApi(next);
+    (d.items || []).forEach(x => out.push(spotifyTrackRow(x && x.track)));
+    next = d.next;
+    if (onPage) onPage(out.length);
+  }
+  return out.filter(Boolean);
+}
+// Opens a picker row to list its songs (loaded once); each song can be ticked off.
+async function spotifyPickerOpen(key){
+  const it = fmPicker && fmPicker.items.find(x => x.key === key);
+  if (!it || !it.expandable) return;
+  it.open = !it.open;
+  if (it.open && !it.songs && !it.loadingSongs){
+    it.loadingSongs = true; it.loaded = 0; fmRender();
+    try {
+      const rows = it.kind === 'liked' ? await spotifyLikedRows(n => { it.loaded = n; fmRender(); }) : await spotifyPlaylistRows(it.id, n => { it.loaded = n; fmRender(); });
+      it.songs = rows.map(r => Object.assign({}, r, { on: true }));
+      it.shown = 300;
+      it.sub = it.songs.length === 1 ? '1 song' : it.songs.length + ' songs';
+    } catch(e){
+      it.open = false;
+      showToast(String(e.message) === 'signed out' ? 'Spotify signed you out. Sign in again.' : 'Could not read those songs');
+    }
+    it.loadingSongs = false;
+  }
+  if (fmPicker) fmRender();
+}
 async function spotifyImportSelected(){
   if (!fmPicker || fmPicker.busy) return;
   const chosen = fmPicker.items.filter(x => x.on);
@@ -10152,9 +10228,9 @@ async function spotifyImportSelected(){
       const it = chosen[i];
       fmPicker.note = 'Importing ' + (i + 1) + ' of ' + chosen.length + ': ' + it.label;
       fmRender();
-      const rows = it.kind === 'liked'
-        ? (await spotifyPages('/me/tracks?limit=50', IMPORT_MAX_SONGS)).map(x => spotifyTrackRow(x.track))
-        : (await spotifyPages('/playlists/' + it.id + '/tracks?limit=100&fields=items(track(name,is_local,duration_ms,artists(name),album(images))),next', IMPORT_MAX_SONGS)).map(x => spotifyTrackRow(x.track));
+      const rows = it.songs
+        ? it.songs.filter(t => t.on).map(t => { const o = Object.assign({}, t); delete o.on; return o; })
+        : it.kind === 'liked' ? await spotifyLikedRows() : await spotifyPlaylistRows(it.id);
       const tracks = rows.filter(Boolean);
       if (!tracks.length) continue;
       const id = 'custom-sp-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
@@ -21909,6 +21985,9 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
+  { version: 503, date: '2026-11-10', items: [
+    'Spotify sign-in picker: playlist song counts are right again, tap the arrow on any row to see its songs and untick the ones you do not want, and Select all / Select none work on the whole list.'
+  ]},
   { version: 502, date: '2026-11-10', items: [
     'Fine-tune for vibes: while a vibe you typed is playing, a Fine-tune button under the queue lets you slide Mellow to Upbeat and Organic to Electronic. Songs you haven\'t heard yet change, the rest stay.',
   ]},
