@@ -12466,3 +12466,43 @@ Add entries in this shape:
 - **Touches:** index.html (library, thumbs down, Swirl/Currents)
 - **Branch:** agent/unliked-playlist-739
 - **Notes:** Synced from Geethub #739. Related: thumbs-down-reasons-715 (merged). Built: Unliked is a derived view of LS_DECLINED (UNLIKED_ID, unlikedPlaylist()), last card in Playlists, recycle glyph; Restore per song via removeDecline + recordListenSignal; Artists chips (2+ thumbs-downs) clear via clearDeclinedArtist. Excluded from play counts, recents, play history, play log, stats, skip/taste signals; Swirl buildBlendTracks now drops declined songs. Verified render/restore with seeded data; playback from Unliked checked by code reading only.
+
+### nav-grey-to-white-760: Top nav buttons that are grey become white so they are easy to select (Geethub #760)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Bug, Geethub #760. Grey top nav buttons should be white so they read as selectable.
+- **Touches:** index.html (top nav styles), sw.js cache bump
+- **Branch:**
+- **Notes:** Synced from Geethub #760. Issue has no further detail.
+
+### library-queue-edge-peek-759: Edge of another window peeks out and can't be reached, left of Library and right of Queue (Geethub #759)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Bug, Geethub #759. On desktop, the edge of another window shows on the left of the library window and on the right of the queue window, and it can't be clicked.
+- **Touches:** index.html (library and queue panel layout), sw.js cache bump
+- **Branch:**
+- **Notes:** Synced from Geethub #759. Possibly related to home-edge-breathing-room-583f and hover-boxes-full-width (both in review).
+
+### library-queue-align-758: Desktop: Library heading and filters line up with Queue heading and Discover buttons (Geethub #758)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea, Geethub #758. Library h1 moves up to line up exactly with the Queue h1; the library filter buttons line up with the Discover buttons in the queue window.
+- **Touches:** index.html (desktop library and queue headers), sw.js cache bump
+- **Branch:**
+- **Notes:** Synced from Geethub #758. Same area as library-queue-edge-peek-759; consider one lane.
+
+### play-button-white-icons-757: When the play button is white, the other player icons match instead of clashing (Geethub #757)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Bug, Geethub #757. When the play button turns white, the other player icons also turn white, which doesn't match the rest of the UI.
+- **Touches:** index.html (player button colors), sw.js cache bump
+- **Branch:**
+- **Notes:** Synced from Geethub #757. Follow-up to player-button-colors (merged).
+
+### gui-too-heavy-756: The GUI is too heavy, the mouse lags on desktop app and browser (Geethub #756)
+- **Status:** draft
+- **Priority:** high
+- **Description:** Bug, Geethub #756. Mouse movement often lags on the desktop app and in the browser.
+- **Touches:** index.html (GPU budget: blurs, animations, custom cursor, liquid waves), sw.js cache bump
+- **Branch:**
+- **Notes:** Synced from Geethub #756. Related to mobile-moves-really-slow (in-progress, #635) and desktop-liquid-waves-698 and custom-cursor (the likely suspects). Check against the GPU budget rules in CLAUDE.md.
