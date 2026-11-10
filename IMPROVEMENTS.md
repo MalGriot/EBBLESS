@@ -12436,12 +12436,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #743. Bug, ahead of features. Built (worker only): the AI model named Skinny Love as its first seed for mellow vibes and seeds lead the list. Seeds now get a per-sentence stable shuffle (house seeds still lead), prompt asks for 8 artists and no most-obvious pick, VIBE_CACHE_VERSION v3 to v4. 3 new tests, 197 pass. Needs a worker deploy to see live. Left alone: client energy arc can still open on it if it is in the user history.
 
 ### liked-first-in-picker-742: Add-to-playlist list shows Liked Songs at the top (Geethub #742)
-- **Status:** in-progress
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #742. When adding a song to a playlist, Liked Songs is the first option.
 - **Touches:** index.html (add-to-playlist picker)
 - **Branch:** agent/liked-first-742
-- **Notes:** Synced from Geethub #742.
+- **Notes:** Synced from Geethub #742. Already on main (commit f8a5595): Liked Songs is the first row in the picker and adds through the like path. Closed out in v507.
 
 ### recents-open-not-play-741: Tapping a recent in the library opens it instead of playing (Geethub #741)
 - **Status:** merged
@@ -12468,12 +12468,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #739. Related: thumbs-down-reasons-715 (merged). Built: Unliked is a derived view of LS_DECLINED (UNLIKED_ID, unlikedPlaylist()), last card in Playlists, recycle glyph; Restore per song via removeDecline + recordListenSignal; Artists chips (2+ thumbs-downs) clear via clearDeclinedArtist. Excluded from play counts, recents, play history, play log, stats, skip/taste signals; Swirl buildBlendTracks now drops declined songs. Verified render/restore with seeded data; playback from Unliked checked by code reading only.
 
 ### nav-grey-to-white-760: Top nav buttons that are grey become white so they are easy to select (Geethub #760)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Bug, Geethub #760. Grey top nav buttons should be white so they read as selectable.
 - **Touches:** index.html (top nav styles), sw.js cache bump
-- **Branch:**
-- **Notes:** Synced from Geethub #760. Issue has no further detail.
+- **Branch:** agent/colors-and-liked
+- **Notes:** Synced from Geethub #760. Issue has no further detail. Top nav buttons use --text (white) instead of grey; verified in browser. v507.
 
 ### library-queue-edge-peek-759: Edge of another window peeks out and can't be reached, left of Library and right of Queue (Geethub #759)
 - **Status:** ready
@@ -12492,12 +12492,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #758. Same area as library-queue-edge-peek-759; consider one lane.
 
 ### play-button-white-icons-757: When the play button is white, the other player icons match instead of clashing (Geethub #757)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Bug, Geethub #757. When the play button turns white, the other player icons also turn white, which doesn't match the rest of the UI.
 - **Touches:** index.html (player button colors), sw.js cache bump
-- **Branch:**
-- **Notes:** Synced from Geethub #757. Follow-up to player-button-colors (merged).
+- **Branch:** agent/colors-and-liked
+- **Notes:** Synced from Geethub #757. Follow-up to player-button-colors (merged). Dull/gray art no longer forces player icons to plain white; ensureLegibleAccent returns null so they use the UI accent like the play button. v507.
 
 ### gui-too-heavy-756: The GUI is too heavy, the mouse lags on desktop app and browser (Geethub #756)
 - **Status:** merged

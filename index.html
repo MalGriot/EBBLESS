@@ -392,7 +392,7 @@ body:has(#milkLayer.is-open) #ambient .ambient-veil,body:has(#flow-layer.is-open
    cold-start logo reveal. */
 #splash.is-return .splash-choice{transition-delay:250ms}
 #topnav{display:flex;align-items:center;gap:4px}
-.nav-btn{display:flex;align-items:center;gap:7px;padding:8px 12px;border-radius:20px;font-size:13px;font-weight:500;color:var(--faint);transition:background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out),transform var(--dur-ui) var(--ease-out)}
+.nav-btn{display:flex;align-items:center;gap:7px;padding:8px 12px;border-radius:20px;font-size:13px;font-weight:500;color:var(--text);transition:background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out),transform var(--dur-ui) var(--ease-out)}
 .nav-btn:hover{color:var(--text);background:rgba(255,255,255,.05)}
 .nav-btn.is-active{color:var(--text);background:var(--panel-2)}
 .nav-btn svg{width:16px;height:16px}
@@ -11492,7 +11492,7 @@ function crossfadeAltArt(track, durationMs){
    to see against the surrounding dark UI. ensureLegibleAccent() checks the
    sampled color's brightness/contrast and, if it's too dull, brightens it
    (raising lightness/saturation in HSL) or - if it's so dark or gray that
-   brightening still wouldn't read - falls back to white. This runs only on
+   brightening still wouldn't read - falls back to the UI accent (#757). This runs only on
    album-art-sampled colors; the --accent color-clock fallback (used when
    there's no art at all) is left as-is, since that's a deliberately tuned
    brand color, not an arbitrary photo sample.
@@ -11610,8 +11610,9 @@ function ensureLegibleAccent(rgbStr){
   if (lum >= PLAYER_ACCENT_MIN_LUM) return rgbStr;
   let [h, s, l] = rgbToHsl(r, g, b);
   if (s < PLAYER_ACCENT_MIN_SAT){
-    // dull/gray art - brightening keeps it muddy, white reads best
-    return '#fff';
+    // dull/gray art - brightening keeps it muddy. Use the UI accent (what the play
+    // button wears) instead of white so the icons match it (#757).
+    return null;
   }
   l = Math.max(l, PLAYER_ACCENT_TARGET_L);
   s = Math.max(s, 0.45);
@@ -22159,6 +22160,10 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
+  { version: 508, date: '2026-11-10', items: [
+    'Top menu buttons are white now, so they are easy to see and tap.',
+    'Player icons no longer turn plain white on dull album art. They match the play button color instead.',
+  ]},
   { version: 507, date: '2026-11-10', items: [
     'Smoother mouse on desktop: the custom cursor now redraws only the small patch around it instead of the whole screen, so the pointer lags less.',
   ]},
