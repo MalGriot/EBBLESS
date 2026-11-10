@@ -392,7 +392,7 @@ body:has(#milkLayer.is-open) #ambient .ambient-veil,body:has(#flow-layer.is-open
    cold-start logo reveal. */
 #splash.is-return .splash-choice{transition-delay:250ms}
 #topnav{display:flex;align-items:center;gap:4px}
-.nav-btn{display:flex;align-items:center;gap:7px;padding:8px 12px;border-radius:20px;font-size:13px;font-weight:500;color:var(--faint);transition:background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out),transform var(--dur-ui) var(--ease-out)}
+.nav-btn{display:flex;align-items:center;gap:7px;padding:8px 12px;border-radius:20px;font-size:13px;font-weight:500;color:var(--text);transition:background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out),transform var(--dur-ui) var(--ease-out)}
 .nav-btn:hover{color:var(--text);background:rgba(255,255,255,.05)}
 .nav-btn.is-active{color:var(--text);background:var(--panel-2)}
 .nav-btn svg{width:16px;height:16px}
@@ -11497,7 +11497,7 @@ function crossfadeAltArt(track, durationMs){
    to see against the surrounding dark UI. ensureLegibleAccent() checks the
    sampled color's brightness/contrast and, if it's too dull, brightens it
    (raising lightness/saturation in HSL) or - if it's so dark or gray that
-   brightening still wouldn't read - falls back to white. This runs only on
+   brightening still wouldn't read - falls back to the UI accent (#757). This runs only on
    album-art-sampled colors; the --accent color-clock fallback (used when
    there's no art at all) is left as-is, since that's a deliberately tuned
    brand color, not an arbitrary photo sample.
@@ -11615,8 +11615,9 @@ function ensureLegibleAccent(rgbStr){
   if (lum >= PLAYER_ACCENT_MIN_LUM) return rgbStr;
   let [h, s, l] = rgbToHsl(r, g, b);
   if (s < PLAYER_ACCENT_MIN_SAT){
-    // dull/gray art - brightening keeps it muddy, white reads best
-    return '#fff';
+    // dull/gray art - brightening keeps it muddy. Use the UI accent (what the play
+    // button wears) instead of white so the icons match it (#757).
+    return null;
   }
   l = Math.max(l, PLAYER_ACCENT_TARGET_L);
   s = Math.max(s, 0.45);
@@ -22164,6 +22165,13 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
+  { version: 508, date: '2026-11-10', items: [
+    'Top menu buttons are white now, so they are easy to see and tap.',
+    'Player icons no longer turn plain white on dull album art. They match the play button color instead.',
+  ]},
+  { version: 507, date: '2026-11-10', items: [
+    'Smoother mouse on desktop: the custom cursor now redraws only the small patch around it instead of the whole screen, so the pointer lags less.',
+  ]},
   { version: 506, date: '2026-11-10', items: [
     'When SoundCloud blocks a song or only plays a short preview, EBBLESS now plays a matching copy from Audius instead, so you get the whole song.',
     'The Mac dock icon is smoother around the edges of the e.',
@@ -42338,13 +42346,14 @@ else { markInviteShown(TUTORIAL_INVITE_DAY_KEY); showSplashChoice(); }
   var mx = 0, my = 0, x = 0, y = 0, vx = 0, vy = 0, r = 5, tr = 5;
   var style = 'drop';
   try { var ap = JSON.parse(localStorage.getItem('ebbless:advanced') || '{}'); if (ap && ['dot','ring','cross','native'].indexOf(ap.cursor) >= 0) style = ap.cursor; } catch (e) {}
-  var trail = [], raf = 0, color = '#e0b26a', lastCol = 0, seen = false, textMode = false;
+  var dirty = null, trail = [], raf = 0, color = '#e0b26a', lastCol = 0, seen = false, textMode = false;
   var root = document.documentElement;
   function size(){
     dpr = Math.min(window.devicePixelRatio || 1, 2);
     W = innerWidth; H = innerHeight;
     cv.width = W * dpr; cv.height = H * dpr;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    dirty = null;
   }
   function readColor(t){
     if (t - lastCol < 150) return;
@@ -42365,7 +42374,19 @@ else { markInviteShown(TUTORIAL_INVITE_DAY_KEY); showSplashChoice(); }
     var sp = Math.sqrt(vx * vx + vy * vy);
     if (sp > .05) trail.push({x: x, y: y});
     if (trail.length > 22) trail.shift();
-    ctx.clearRect(0, 0, W, H);
+    // #756: clear only the box the cursor drew in (old + new), not the whole 2x canvas
+    var bx0 = Math.min(x, mx), by0 = Math.min(y, my), bx1 = Math.max(x, mx), by1 = Math.max(y, my);
+    for (var ti = 0; ti < trail.length; ti++) {
+      var tp = trail[ti];
+      if (tp.x < bx0) bx0 = tp.x; if (tp.x > bx1) bx1 = tp.x;
+      if (tp.y < by0) by0 = tp.y; if (tp.y > by1) by1 = tp.y;
+    }
+    var pad = r + 24;
+    bx0 -= pad; by0 -= pad; bx1 += pad; by1 += pad;
+    var cx0 = dirty ? Math.min(bx0, dirty[0]) : 0, cy0 = dirty ? Math.min(by0, dirty[1]) : 0;
+    var cx1 = dirty ? Math.max(bx1, dirty[2]) : W, cy1 = dirty ? Math.max(by1, dirty[3]) : H;
+    ctx.clearRect(cx0, cy0, cx1 - cx0, cy1 - cy0);
+    dirty = [bx0, by0, bx1, by1];
     ctx.fillStyle = color; ctx.strokeStyle = color;
     // watery trail: shrinking, fading beads along the path
     for (var i = 0; style === 'drop' && i < trail.length; i++) {
