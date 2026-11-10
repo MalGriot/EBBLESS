@@ -4323,6 +4323,19 @@ body.week-up-on{overflow:hidden}
    the layer stops animating while it is up. */
 #milkLayer{position:fixed;inset:0;z-index:60;background:#000;display:none;touch-action:none;user-select:none;-webkit-user-select:none}
 #milkLayer.is-open{display:block}
+/* No loading screen: the page stays put while fLUX loads, then melts into it (opacity + a slow settle, transform/opacity only). */
+#milkLayer{opacity:0;transition:opacity 1.6s var(--ease-in-out,ease-in-out)}
+#milkLayer.milk-live{opacity:1}
+#milkCanvas{transform:scale(1.06);transition:transform 2.2s var(--ease-out,ease-out)}
+#milkLayer.milk-live #milkCanvas{transform:none}
+/* Reduced motion: no zoom. The page fades to black, then fLUX fades up from black; closing runs it backwards. */
+@media (prefers-reduced-motion:reduce){
+  #milkLayer{transition:opacity .5s linear}
+  #milkLayer.milk-dim{opacity:1}
+  #milkCanvas{transition:opacity .5s linear;opacity:0}
+  #milkLayer.milk-live #milkCanvas{opacity:1}
+  #milkLayer:not(.milk-live) .milk-ui{opacity:0}
+}
 #milkLayer.milk-idle{cursor:none}
 #milkCanvas{position:absolute;inset:0;width:100%;height:100%;display:block}
 .milk-ui{position:absolute;inset:0;pointer-events:none;opacity:1;visibility:visible;transition:opacity var(--dur-surface,.25s) var(--ease-in-out,ease-in-out),visibility 0s}
@@ -4330,6 +4343,8 @@ body.week-up-on{overflow:hidden}
 .milk-top{position:absolute;left:0;right:0;top:0;display:flex;align-items:flex-start;gap:12px;padding:calc(env(safe-area-inset-top,0px) + 14px) 16px 14px;pointer-events:none}
 .milk-titles{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
 .milk-name{font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 1px 3px #000}
+.milk-brand{font-size:11.5px;font-weight:700;letter-spacing:.04em;color:var(--text);text-shadow:0 1px 3px #000}
+.milk-brand span{font-weight:400;color:var(--faint)}
 .milk-signal{font-size:11.5px;color:var(--faint);text-shadow:0 1px 3px #000}
 .milk-signal.is-live{color:var(--text)}
 .milk-btn{pointer-events:auto;width:40px;height:40px;border-radius:50%;border:0;display:flex;align-items:center;justify-content:center;flex:none;
@@ -4362,11 +4377,6 @@ body.week-up-on{overflow:hidden}
 .milk-panel-foot{display:flex;gap:14px;flex-wrap:wrap;margin-top:4px}
 .milk-link{background:none;border:0;padding:0;color:var(--accent);font:500 12.5px/1.4 inherit;font-family:inherit;cursor:pointer}
 .milk-res{margin-top:10px;font-size:11px;color:var(--faint)}
-.milk-loading{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:180px;display:flex;flex-direction:column;align-items:center;gap:10px;color:var(--faint);font-size:12.5px}
-.milk-loading[hidden]{display:none}
-.milk-line{width:100%;height:2px;background:var(--panel-2);overflow:hidden;border-radius:1px}
-.milk-line div{height:100%;width:100%;background:var(--accent);transform-origin:left;animation:milk-fill 1.6s var(--ease-in-out,ease-in-out) infinite}
-@keyframes milk-fill{from{transform:scaleX(0)}to{transform:scaleX(1)}}
 @media (max-width:600px){
   .milk-panel{left:16px;right:16px;width:auto}
   .milk-bar{gap:6px}
@@ -4820,9 +4830,9 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
             </svg>
             <span class="v-tab-label">Visualizer</span>
           </button>
-          <button class="v-tab" id="milkTabBtn" title="Light show (MilkDrop)" aria-label="Open the light show">
+          <button class="v-tab" id="milkTabBtn" title="ENTER fLUX: Generative Visual Universe" aria-label="ENTER fLUX">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c.9 4.6 2.6 6.9 9 9-6.4 2.1-8.1 4.4-9 9-.9-4.6-2.6-6.9-9-9 6.4-2.1 8.1-4.4 9-9z"/><circle cx="18.5" cy="5.5" r="1.3" fill="currentColor" stroke="none"/></svg>
-            <span class="v-tab-label">Light show</span>
+            <span class="v-tab-label">fLUX</span>
           </button>
           <button class="v-tab" id="lyricsTabBtn" data-mode="lyrics" title="Lyrics" aria-label="Show lyrics">
             <svg viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" clip-rule="evenodd" d="M5 4h11l3 3v13H5zm2 5h9v2H7zm0 4h9v2H7zm0 4h6v2H7z"/></svg>
@@ -5983,13 +5993,12 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
 
   <!-- ===== FLOW / FULLSCREEN ===== -->
   <!-- LIGHT SHOW: MilkDrop presets via butterchurn, see the LIGHT SHOW script section -->
-  <div id="milkLayer" role="dialog" aria-label="Light show" aria-hidden="true">
+  <div id="milkLayer" role="dialog" aria-label="fLUX, Generative Visual Universe" aria-hidden="true">
     <canvas id="milkCanvas"></canvas>
-    <div class="milk-loading" id="milkLoading" hidden><div class="milk-line"><div></div></div><span>Loading the light show</span></div>
     <div class="milk-ui">
       <div class="milk-top">
-        <div class="milk-titles"><div class="milk-name" id="milkName"></div><div class="milk-signal" id="milkSignalNote"></div></div>
-        <button type="button" class="milk-btn" id="milkCloseBtn" title="Close (Esc)" aria-label="Close the light show">
+        <div class="milk-titles"><div class="milk-brand">fLUX <span>Generative Visual Universe</span></div><div class="milk-name" id="milkName"></div><div class="milk-signal" id="milkSignalNote"></div></div>
+        <button type="button" class="milk-btn" id="milkCloseBtn" title="Close (Esc)" aria-label="Close fLUX">
           <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.4 5L5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6z"/></svg>
         </button>
       </div>
@@ -22166,6 +22175,9 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
+  { version: 511, date: '2026-11-11', items: [
+    'The light show is now fLUX, the Generative Visual Universe. Never the same twice. It melts in from whatever you were looking at.'
+  ]},
   { version: 510, date: '2026-11-10', items: [
     'Desktop: the Library filter pills are spaced like the Discover and icon buttons in the Queue header.',
   ]},
@@ -30784,11 +30796,11 @@ async function openMilk(){
   if (milk.open) return;
   milk.open = true;
   milk.openedAt = performance.now();
-  milkLayer.classList.add('is-open');
+  clearTimeout(milk.closeTimer);
+  milkLayer.classList.add('is-open', 'milk-dim');
   milkLayer.setAttribute('aria-hidden', 'false');
   document.body.classList.add('milk-open');
   vizStop();                       // covered: the cymatics loop stops underneath
-  $('milkLoading').hidden = false;
   milkLoadMetrics();
   milkSongChanged();
   milkDesktopTap();
@@ -30798,25 +30810,39 @@ async function openMilk(){
   try { await milkLoadAll(); }
   catch (e){
     if (!milk.open) return;
-    showToast('Couldn’t load the light show. Check the connection and try again.');
+    showToast('Couldn’t load fLUX. Check the connection and try again.');
     closeMilk();
     return;
   }
   if (!milk.open) return;
-  $('milkLoading').hidden = true;
-  if (!window.WebGL2RenderingContext){ showToast('This browser can’t draw the light show.'); closeMilk(); return; }
+  if (!window.WebGL2RenderingContext){ showToast('This browser can’t draw fLUX.'); closeMilk(); return; }
   try { milkCreateViz(); }
-  catch (e){ showToast('This device can’t draw the light show.'); closeMilk(); return; }
+  catch (e){ showToast('This device can’t draw fLUX.'); closeMilk(); return; }
   if (milk.cur && milk.presets.has(milk.cur)) milkShow(milk.cur, 0); else milkNext();
   milkRenderPanel();
   milkStartLoop();
+  requestAnimationFrame(() => requestAnimationFrame(() => { if (milk.open) milkLayer.classList.add('milk-live'); }));
 }
+const milkReduced = matchMedia('(prefers-reduced-motion: reduce)');
 function closeMilk(){
+  if (!milk.open) return;
+  // Reduced motion: fLUX fades to black first, then the page fades back in.
+  if (milkReduced.matches && !milk.closing){
+    milk.closing = true;
+    milkLayer.classList.remove('milk-live');
+    milk.closeTimer = setTimeout(() => { milk.closing = false; closeMilkNow(); }, 500);
+    return;
+  }
+  if (!milk.closing) closeMilkNow();
+}
+function closeMilkNow(){
   if (!milk.open) return;
   milk.open = false;
   milkStopLoop();
   if (document.fullscreenElement === milkLayer) document.exitFullscreen().catch(() => {});
-  milkLayer.classList.remove('is-open');
+  milkLayer.classList.remove('milk-live', 'milk-dim');
+  if (milkReduced.matches){ clearTimeout(milk.closeTimer); milk.closeTimer = setTimeout(() => milkLayer.classList.remove('is-open'), 500); }
+  else milkLayer.classList.remove('is-open');
   milkLayer.setAttribute('aria-hidden', 'true');
   document.body.classList.remove('milk-open');
   $('milkPanel').hidden = true;
