@@ -863,8 +863,10 @@ body.onb-active .paste-guide{display:none}
 @media (min-width:860px){
   .lib-top{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center}
   .lib-top>*{grid-column:1/-1}
-  .lib-top>.queue-head{grid-column:1;grid-row:1;padding-bottom:0}
+  .lib-top>.queue-head{grid-column:1;grid-row:1;padding-top:0;padding-bottom:0;min-height:26px}   /* #758: title centers on the 26px action row, like the Queue title beside Discover */
   .lib-top>.section-label-row{grid-column:2;grid-row:1;align-self:center}
+  .lib-top{padding-top:10px}
+  body.split-desktop .lib-filter-btn{height:26px}   /* #758: pills match the 26px Discover / icon buttons in the Queue header */
 }
 .lib-menu-head{padding:8px 10px 4px;font-size:11px;font-weight:600;color:var(--faint-2);letter-spacing:.02em}
 .lib-menu-head ~ .lib-menu-head{margin-top:4px;border-top:1px solid var(--border);padding-top:10px}
@@ -3433,6 +3435,9 @@ body.split-desktop .install-banner{padding-left:24px;padding-right:12px}
      (rules further down), where only the inner-facing corners round. */
   body.split-desktop:not(.desktop-fs) :is(#view-library,#libpl-panel,#queue-panel){border-radius:var(--r-lg)}
   body.split-desktop:not(.desktop-fs) #hist-panel{border-radius:var(--r-lg)}
+  /* #759: closed side panels sat 8px inside the pane gap and kept their shadow, so a sliver showed left of Library and right of Queue. Park them a full gap further out and drop the shadow until open. */
+  body.split-desktop:not(.desktop-fs) #libpl-panel:not(.is-open){transform:translateX(calc(-100% - var(--pane-gap,8px)));box-shadow:none}
+  body.split-desktop:not(.desktop-fs) #hist-panel:not(.is-open){transform:translateX(calc(100% + var(--pane-gap,8px)));box-shadow:none}
   /* #583 tangibility: soft static drop shadows lift the panes off the backdrop. Static box-shadow only (never animated); kept inside the --pane-gap so #app's clip does not cut it. */
   body.split-desktop:not(.desktop-fs) :is(#view-library,#libpl-panel,#queue-panel,#hist-panel){box-shadow:0 2px 3px rgba(0,0,0,.18),0 4px 10px -2px rgba(0,0,0,.32)}
   body.split-desktop.desktop-fs:not(.view-settings-active) :is(#view-library,#libpl-panel){border-radius:0 var(--r-lg) var(--r-lg) 0}
