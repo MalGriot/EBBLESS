@@ -17156,7 +17156,7 @@ let relinkDragCtx = null; // { list, t } of the open matching-links window
   // dragover (many a second) froze the app on a big library. Ask once per drag.
   let addableIds = null;
   const addableSet = () => addableIds || (addableIds = new Set(addablePlaylists().map(p => p.id)));
-  const okTarget = (card) => !!card && addableSet().has(card.dataset.plId);
+  const okTarget = (card) => !!card && (card.dataset.plId === UNLIKED_ID || addableSet().has(card.dataset.plId));
   let hiCard = null, hiPanel = false;
   function clearHi(){
     if (hiCard){ hiCard.classList.remove('is-drop-target'); hiCard = null; }
@@ -17171,7 +17171,7 @@ let relinkDragCtx = null; // { list, t } of the open matching-links window
   // #548: the open playlist is itself a drop target (not the one the song is already dragged out of)
   function panelDropId(el){
     if (!el || !el.closest || !el.closest('#libpl-panel') || !openLibraryPanelId) return null;
-    if (!addableSet().has(openLibraryPanelId)) return null;
+    if (openLibraryPanelId !== UNLIKED_ID && !addableSet().has(openLibraryPanelId)) return null;
     if (dragFromLib && dragSrcPl === openLibraryPanelId) return null;
     return openLibraryPanelId;
   }
@@ -17264,6 +17264,13 @@ let relinkDragCtx = null; // { list, t } of the open matching-links window
     const card = cardOf(e.target);
     const panelId = panelDropId(e.target);
     clearHi();
+    // #785: a song dropped on Unliked (its card or its open list) is thumbed down, not added
+    if (panelId === UNLIKED_ID || (card && card.dataset.plId === UNLIKED_ID)){
+      e.preventDefault();
+      if (relinkDrag) closeImportOverlay();
+      unlikeDroppedSong(dragTrack);
+      return;
+    }
     if (panelId){
       e.preventDefault();
       const addViewOpen = !!$('asInput') && importOverlay.classList.contains('is-open');
@@ -25833,6 +25840,23 @@ function unlikedRefresh(){
   const sc = libplPanel.querySelector('.queue-scroll'), top = sc ? sc.scrollTop : 0;
   rerenderLibraryKeepPanel();
   if (sc) sc.scrollTop = top;
+}
+// #785: dragging any song onto Unliked thumbs it down: out of Liked, into Unliked, and into taste.
+function unlikeDroppedSong(t){
+  if (!t || !t.videoId){ showToast('That song cannot be unliked'); return; }
+  const wasLiked = isTrackLiked(t.videoId);
+  if (wasLiked) removeTrackFromPlaylistByVideoId(LIKED_ID, t.videoId);
+  addDecline(t, t.tags || []);
+  recordListenSignal(t, -3);
+  rerenderLibraryKeepPanel();
+  csMarksSync();
+  syncDeclineBtn();
+  showToast('Moved to Unliked', { label: 'Undo', run: () => {
+    removeDecline(t.videoId);
+    recordListenSignal(t, 3);
+    if (wasLiked) addTracksToPlaylist(LIKED_ID, [t]);
+    rerenderLibraryKeepPanel(); csMarksSync(); syncDeclineBtn();
+  } });
 }
 // Same path as the Undo on a thumbs-down (undoDeclineCurrents).
 function restoreUnlikedSong(t){
