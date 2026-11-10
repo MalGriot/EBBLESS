@@ -18256,6 +18256,133 @@ function playSingleSongLink(pl, targetIndex){
   $('ssNowBtn').addEventListener('click', () => { closeImportOverlay(); playNow(false); });
 }
 
+/* LINK-COLLECTION:BEGIN */
+// #746 follow-up: what happens after a pasted/shared link has been matched.
+// Pure decisions only; the sheet, the picker and the queue calls are in
+// showCollectionLanding below. A single song keeps its own flow
+// (playSingleSongLink). A collection (album, playlist, artist) with a queue
+// already going gets the actions sheet instead of a toast that vanishes; with
+// nothing playing it starts playing, as before, and a toast says where it went.
+function linkLandingMode(isSingle, queueActive, targetIndex){
+  if (isSingle) return 'single';
+  if (targetIndex || !queueActive) return 'play';
+  return 'sheet';
+}
+// tracks without a videoId did not match a playable version
+function linkMatchCounts(tracks){
+  const list = Array.isArray(tracks) ? tracks.filter(Boolean) : [];
+  const missing = list.filter(t => !t.videoId).map(t => String(t.title || '').trim()).filter(Boolean);
+  return { total: list.length, matched: list.filter(t => t.videoId).length, missing };
+}
+function linkResultLine(c){
+  if (!c || !c.total) return 'No songs found';
+  if (!c.matched) return 'None of the ' + c.total + (c.total === 1 ? ' song' : ' songs') + ' matched';
+  if (c.matched === c.total) return 'Matched ' + (c.total === 1 ? '1 song' : 'all ' + c.total + ' songs');
+  return 'Matched ' + c.matched + ' of ' + c.total + ' songs';
+}
+// up to three names, then "and N more"; '' when nothing is missing
+function linkMissingLine(c){
+  const m = c && Array.isArray(c.missing) ? c.missing : [];
+  if (!m.length) return '';
+  const shown = m.slice(0, 3).join(', ');
+  return 'Not found: ' + shown + (m.length > 3 ? ' and ' + (m.length - 3) + ' more' : '');
+}
+// libSectionOf's answer in words; the entry is already filed there when this shows
+function linkSavedLine(section){
+  const where = { album: 'Albums', playlist: 'Playlists', artist: 'Artists', set: 'Sets' }[section];
+  return where ? 'Saved in your Library under ' + where : 'Saved in your Library';
+}
+// the tiles of the sheet, in order; none when no song matched
+function linkCollectionActions(matched){
+  if (!(matched > 0)) return [];
+  return [
+    { id: 'now', label: 'Play now', sub: 'Replaces the queue', primary: true },
+    { id: 'next', label: 'Play next' },
+    { id: 'queue', label: 'Add to queue' },
+    { id: 'playlist', label: 'Add to playlist' },
+  ];
+}
+/* LINK-COLLECTION:END */
+
+// Every song of a saved collection that matched a playable version, as the
+// plain rows a playlist holds.
+function collectionPlayableTracks(pl){ return (pl.tracks || []).filter(t => t && t.videoId); }
+
+// "Add to playlist" for a whole collection: one tap on a playlist adds every
+// matched song (skipping ones it already holds), or start a new playlist named
+// after the collection.
+function openAddCollectionToPlaylistPicker(pl){
+  const songs = collectionPlayableTracks(pl);
+  openImportOverlay();
+  const customs = addablePlaylists().filter(p => p.id !== pl.id);
+  const rowsHtml = customs.map(p =>
+    '<button class="btn-ghost pl-pick" data-id="' + escapeHtml(p.id) + '" style="width:100%;text-align:left;margin-bottom:8px;display:block">' +
+      escapeHtml(p.name) + ' <span style="color:var(--faint-2)">(' + p.tracks.length + (p.tracks.length === 1 ? ' song' : ' songs') + ')</span>' +
+    '</button>'
+  ).join('');
+  importStage.innerHTML =
+    '<div class="step">Add ' + songs.length + (songs.length === 1 ? ' song' : ' songs') + ' to&hellip;</div>' +
+    '<div style="width:100%;max-height:50vh;overflow-y:auto;overscroll-behavior:contain;margin-bottom:16px">' +
+      (rowsHtml || '<div style="color:var(--faint-2);font-size:13px;margin-bottom:12px">No playlists yet.</div>') +
+    '</div>' +
+    '<button class="btn-ghost" id="plNewFromCollectionBtn" style="width:100%">+ New playlist</button>';
+  importStage.querySelectorAll('.pl-pick').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const target = getCachedPlaylist(btn.dataset.id);
+      closeImportOverlay();
+      if (!target) return;
+      const n = addTracksToPlaylist(target.id, songs);
+      showToast(n ? 'Added ' + n + (n === 1 ? ' song' : ' songs') + ' to ' + target.name : 'Already in ' + target.name);
+    });
+  });
+  $('plNewFromCollectionBtn').addEventListener('click', () => openCreatePlaylistFlow(null, { prefill: pl.name, onCreate: (name) => {
+    const np = createCustomPlaylist(name);
+    const n = addTracksToPlaylist(np.id, songs);
+    showToast('Created ' + np.name + ' with ' + n + (n === 1 ? ' song' : ' songs'));
+  } }));
+}
+
+// The collection actions sheet: the single-song sheet's tiles for a whole
+// album/playlist/artist, with the match result and where it was filed.
+function showCollectionLanding(pl){
+  const counts = linkMatchCounts(pl.tracks);
+  const acts = linkCollectionActions(counts.matched);
+  const miss = linkMissingLine(counts);
+  openImportOverlay();
+  const tile = (a) => '<button type="button" class="ss-tile' + (a.primary ? ' is-primary' : '') + '" data-coll-act="' + a.id + '"><span class="ss-ic">' +
+    ({ now: CTX_ICON_PLAY, next: CTX_ICON_PLAY_NEXT, queue: CTX_ICON_ADD_QUEUE, playlist: CTX_ICON_ADD_PLAYLIST }[a.id]) + '</span>' +
+    '<span class="ss-lbl">' + a.label + (a.sub ? '<span class="ss-sub">' + a.sub + '</span>' : '') + '</span></button>';
+  importStage.innerHTML =
+    '<div class="ss-head"><div class="ss-art">' + CTX_ICON_ALBUM + '</div><div class="ss-meta"><div class="ss-title"></div><div class="ss-artist"></div></div></div>' +
+    '<div class="step" id="collResult" style="margin:0 0 ' + (acts.length ? '16' : '0') + 'px;font-size:13px;text-align:left;width:100%"></div>' +
+    (acts.length ? '<div class="ss-acts">' + acts.map(tile).join('') + '</div>' : '');
+  importStage.querySelector('.ss-title').textContent = pl.name;
+  importStage.querySelector('.ss-artist').textContent = isAlbumEntry(pl) && !isArtistEntry(pl) ? albumArtistName(pl) : '';
+  $('collResult').textContent = linkResultLine(counts) + '. ' + linkSavedLine(libSectionOf(pl)) + '.' + (miss ? ' ' + miss + '.' : '');
+  const artTrack = pl.image ? { art: pl.image } : (pl.tracks || []).find(t => t && (t.art || t.videoId));
+  if (artTrack){ const img = document.createElement('img'); img.alt = ''; attachArtworkFallback(img, artTrack, true); importStage.querySelector('.ss-art').appendChild(img); }
+  const on = (id, fn) => { const b = importStage.querySelector('[data-coll-act="' + id + '"]'); if (b) b.addEventListener('click', fn); };
+  on('now', () => { closeImportOverlay(); playPlaylistNow(pl.id); });
+  on('next', () => { closeImportOverlay(); const n = queuePlayNextCollection(pl.id); showToast(n ? 'Playing ' + n + (n === 1 ? ' song' : ' songs') + ' next' : 'Nothing to add'); });
+  on('queue', () => { closeImportOverlay(); const n = queueAddCollection(pl.id); showToast(n ? 'Added ' + n + (n === 1 ? ' song' : ' songs') + ' to queue' : 'Nothing to add'); });
+  on('playlist', () => openAddCollectionToPlaylistPicker(pl));
+}
+
+// A collection that started playing on its own: a toast says what matched and
+// where it was filed, with Add to playlist one tap away.
+function toastCollectionPlaying(pl){
+  const counts = linkMatchCounts(pl.tracks);
+  showToast(linkResultLine(counts) + '. ' + linkSavedLine(libSectionOf(pl)) + '.', counts.matched ? { label: 'Add to playlist', run: () => openAddCollectionToPlaylistPicker(pl) } : undefined);
+}
+// The one place a finished collection import lands. Falls back to a toast while
+// another import waits its turn, so the sheet never covers the next one.
+function collectionImportDone(pl, mode){
+  if (isPodcastEntry(pl)) { if (mode === 'sheet') showToast('Added ' + pl.name + ' to your library', { label: 'Play now', run: () => playPlaylistNow(pl.id) }); return; }
+  if (mode === 'sheet' && importsPending <= 1) showCollectionLanding(pl);
+  else if (mode === 'sheet') showToast(linkResultLine(linkMatchCounts(pl.tracks)) + '. ' + linkSavedLine(libSectionOf(pl)) + '.', { label: 'Play now', run: () => playPlaylistNow(pl.id) });
+  else toastCollectionPlaying(pl);
+}
+
 // Loads run one at a time (Geethub #465): anything started while another
 // import is still matching waits its turn instead of fighting it for the
 // screen. The footer bar shows how many are waiting.
@@ -18287,7 +18414,7 @@ async function beginImportNow(id, force, type, targetIndex, waited){
     if (cached){
       if (keepQueue && !isSingleTrackType(cached.type)){
         if (!wasSaved){ statsImport(id); saveToLibrary(id); renderLibrary(); }
-        showToast('Added ' + cached.name + ' to your library', { label: 'Play now', run: () => playPlaylistNow(id) }); showLoadSuccess();
+        showLoadSuccess(); collectionImportDone(cached, 'sheet');
         if (isResolveStale(cached)) reResolveStaleInBackground(id, cached.type);
         return;
       }
@@ -18310,6 +18437,7 @@ async function beginImportNow(id, force, type, targetIndex, waited){
       loadIndex(state.queuePos, true);
       setView('player');
       showLoadSuccess();
+      if (!isSingleTrackType(cached.type)) collectionImportDone(cached, 'play');
       // Cached before the resolution logic last changed - the tracks that
       // are showing now may point at outdated links. Don't make the visitor
       // wait on a full re-resolve to see their playlist; refresh it behind
@@ -18381,7 +18509,7 @@ async function beginImportNow(id, force, type, targetIndex, waited){
     if (!startedEarly) statsImport(id);
     saveToLibrary(id);
     renderLibrary();
-    if (keepQueue){ showToast('Added ' + pl.name + ' to your library', { label: 'Play now', run: () => playPlaylistNow(id) }); showLoadSuccess(); }
+    if (keepQueue){ showLoadSuccess(); collectionImportDone(pl, 'sheet'); }
     if (!wasSaved && isArtistEntry(pl)){
       addArtistAlbumsToLibrary(pl, undefined, true);
       // warm the artist-info cache now so the bio is ready when the panel opens
@@ -18399,6 +18527,7 @@ async function beginImportNow(id, force, type, targetIndex, waited){
         loadPlaylistIntoPlayer(pl);
         buildQueueFrom(anchor);
       }
+      if (!keepQueue) collectionImportDone(pl, 'play');
     } else if (keepQueue){
       closeFindingOverlay();
     } else {
@@ -18408,6 +18537,7 @@ async function beginImportNow(id, force, type, targetIndex, waited){
       loadIndex(state.queuePos, true);
       setView('player');
       showLoadSuccess();
+      collectionImportDone(pl, 'play');
     }
   } catch(e){
     if (startedEarly) bgResolveProgress.delete(id);
@@ -24136,6 +24266,27 @@ function queueAddToEnd(trackIndex, plId){
   state.queue.push({ plId, idx: trackIndex });
   renderQueuePanel();
   schedulePreload(state.queuePos);
+}
+// Whole playlist/album onto the queue right after the playing song, in order
+// (or shuffled when shuffle is on). Songs already further down the queue move
+// up instead of doubling, like a single Play next. Returns the number added.
+function queuePlayNextCollection(plId){
+  const pl = playlistById(plId);
+  if (!pl) return 0;
+  if (state.queuePos < 0) return queueAddCollection(plId);
+  awardMilestone('qadd');
+  let order = validIndices(pl);
+  if (!order.length) return 0;
+  if (state.shuffle) order = shuffleTail(order, 0);
+  const want = new Set(order);
+  for (let i = state.queue.length - 1; i > state.queuePos; i--){
+    const e = state.queue[i];
+    if (e.plId === plId && want.has(e.idx)) state.queue.splice(i, 1);
+  }
+  state.queue.splice(state.queuePos + 1, 0, ...order.map(idx => ({ plId, idx })));
+  renderQueuePanel();
+  schedulePreload(state.queuePos);
+  return order.length;
 }
 // Whole playlist/album/podcast onto the end of the queue, in order (or
 // shuffled when shuffle is on). Returns the number of tracks added.
