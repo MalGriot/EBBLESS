@@ -12476,20 +12476,20 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #760. Issue has no further detail. Top nav buttons use --text (white) instead of grey; verified in browser. v507.
 
 ### library-queue-edge-peek-759: Edge of another window peeks out and can't be reached, left of Library and right of Queue (Geethub #759)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Bug, Geethub #759. On desktop, the edge of another window shows on the left of the library window and on the right of the queue window, and it can't be clicked.
 - **Touches:** index.html (library and queue panel layout), sw.js cache bump
 - **Branch:**
-- **Notes:** Synced from Geethub #759. Possibly related to home-edge-breathing-room-583f and hover-boxes-full-width (both in review).
+- **Notes:** Merged v509. Closed Playlist and History side panels were parked 8px inside the pane gap and kept their shadow; they now park a full gap out with no shadow until open. Measured: libpl-panel right edge 0, hist-panel left edge 1440 at 1440px.
 
 ### library-queue-align-758: Desktop: Library heading and filters line up with Queue heading and Discover buttons (Geethub #758)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub #758. Library h1 moves up to line up exactly with the Queue h1; the library filter buttons line up with the Discover buttons in the queue window.
 - **Touches:** index.html (desktop library and queue headers), sw.js cache bump
 - **Branch:**
-- **Notes:** Synced from Geethub #758. Same area as library-queue-edge-peek-759; consider one lane.
+- **Notes:** Merged v509. Library title row now centers on the 26px action row: library h2 top 74.2 = queue h2 top 74.2; filter pills 26px tall like Discover and the queue icon buttons.
 
 ### play-button-white-icons-757: When the play button is white, the other player icons match instead of clashing (Geethub #757)
 - **Status:** merged
