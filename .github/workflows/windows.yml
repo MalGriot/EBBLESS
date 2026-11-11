@@ -41,6 +41,8 @@ jobs:
           if [ "v$VERSION" != "$TAG" ]; then
             echo "::error::desktop/package.json is $VERSION but the release tag is $TAG"; exit 1
           fi
+          # Git Bash's GNU tar can't read zips; the Windows bsdtar can (fetch-ytdlp.js shells out to tar)
+          export PATH="/c/Windows/System32:$PATH"
           npm run dist:win
           ls dist/EBBLESS-Setup-*.exe
 
