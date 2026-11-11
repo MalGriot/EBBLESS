@@ -111,3 +111,11 @@ automates the greppable parts.
   folder, yt-dlp runs with `--ignore-config --no-plugin-dirs`, no system copy in the
   packaged app. App self-update path unchanged. Left: yt-dlp's key is pinned, so a key
   rotation by yt-dlp stops updates until an app release.
+- 2026-11-11: `POST /owner/tier` (owner plan tester) and the `owner`/`testing` fields on
+  `POST /entitlement` reviewed. Owner = verified token whose verified email equals the
+  `OWNER_EMAIL` secret (unset = nobody); identity and `sub` come from the token, never
+  the body; tier is an allowlist; writes only the caller's own `ent:<sub>` with
+  `src: 'owner'`, which a Patreon sync never overwrites; anyone else gets a generic 403
+  and nothing is written; existing per-IP throttle on these routes. Cost: one KV write per
+  switch. The Settings panel is hidden for everyone else; hiding it is UX only, the worker
+  is the gate.

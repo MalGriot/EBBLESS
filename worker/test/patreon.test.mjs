@@ -284,3 +284,42 @@ test('a failed send answers 500 so Patreon retries, and the retry sends', async 
   assert.equal((await call(env, '/patreon/webhook', { body: raw, headers: signed(raw), sendMail })).status, 200);
   assert.equal(n, 1);
 });
+
+// ---- owner plan tester (/owner/tier, owner flag on /entitlement) ----
+const ownerIds = { owner: { sub: 'own', email: 'Me@X.test', email_verified: true }, spoof: { sub: 'u9', email: 'me@x.test', email_verified: false }, other: { sub: 'u1', email: 'u1@x.test', email_verified: true } };
+const ownerCall = (env, path, body) => handlePatreon(new Request('https://w.test' + path, { method: 'POST', body: JSON.stringify(body) }), new URL('https://w.test' + path), env, ctx,
+  { json, verifyIdentity: async (t) => { if (!ownerIds[t]) throw new Error('bad'); return ownerIds[t]; }, overIpLimit: noLimit, fetchFn: mkFetch(identityOf(member(1500))) });
+test('owner flag: only the verified OWNER_EMAIL account sees owner: true', async () => {
+  const env = mkEnv({ OWNER_EMAIL: ' me@x.test ' });
+  assert.deepEqual(await (await ownerCall(env, '/entitlement', { idToken: 'owner' })).json(), { tier: 'discovery', owner: true, testing: false });
+  assert.deepEqual(await (await ownerCall(env, '/entitlement', { idToken: 'spoof' })).json(), { tier: 'discovery' }, 'unverified email is not the owner');
+  assert.deepEqual(await (await ownerCall(env, '/entitlement', { idToken: 'other' })).json(), { tier: 'discovery' });
+  const noOwner = mkEnv();
+  assert.deepEqual(await (await ownerCall(noOwner, '/entitlement', { idToken: 'owner' })).json(), { tier: 'discovery' }, 'unset OWNER_EMAIL = nobody');
+});
+test('/owner/tier: owner switches own plan, nobody else can', async () => {
+  const env = mkEnv({ OWNER_EMAIL: 'me@x.test' });
+  for (const t of ['horizon', 'deep', 'flow', 'discovery', 'deep']){
+    assert.deepEqual(await (await ownerCall(env, '/owner/tier', { idToken: 'owner', tier: t })).json(), { tier: t, testing: true });
+    assert.deepEqual(await (await ownerCall(env, '/entitlement', { idToken: 'owner' })).json(), { tier: t, owner: true, testing: true });
+  }
+  assert.equal(JSON.parse(env.PROFILES.m.get('ent:own')).src, 'owner');
+  assert.equal((await ownerCall(env, '/owner/tier', { idToken: 'other', tier: 'horizon' })).status, 403);
+  assert.equal((await ownerCall(env, '/owner/tier', { idToken: 'spoof', tier: 'horizon' })).status, 403);
+  assert.equal(env.PROFILES.m.get('ent:u1'), undefined, 'a refused call writes nothing');
+  assert.equal((await ownerCall(env, '/owner/tier', { idToken: 'owner', tier: 'paid' })).status, 400);
+  assert.equal((await ownerCall(env, '/owner/tier', { idToken: 'nope', tier: 'flow' })).status, 401);
+  assert.equal((await ownerCall(mkEnv(), '/owner/tier', { idToken: 'owner', tier: 'flow' })).status, 403, 'unset OWNER_EMAIL = nobody');
+});
+test('/owner/tier: a Patreon sync never changes the test plan; real drops it', async () => {
+  const env = mkEnv({ OWNER_EMAIL: 'me@x.test' });
+  await ownerCall(env, '/owner/tier', { idToken: 'owner', tier: 'discovery' });
+  assert.equal(await writeTier(env, 'own', 'horizon'), 'free', 'sync keeps the test plan');
+  assert.equal(JSON.parse(env.PROFILES.m.get('ent:own')).src, 'owner');
+  const r = await (await ownerCall(env, '/owner/tier', { idToken: 'owner', tier: 'real' })).json();
+  assert.equal(r.testing, false);
+  assert.notEqual(JSON.parse(env.PROFILES.m.get('ent:own') || '{"src":"none"}').src, 'owner', 'test record gone');
+  const env2 = mkEnv({ OWNER_EMAIL: 'me@x.test' });
+  env2.PROFILES.m.set('ent:own', JSON.stringify({ tier: 'horizon', src: 'code', at: 1 }));
+  assert.deepEqual(await (await ownerCall(env2, '/owner/tier', { idToken: 'owner', tier: 'real' })).json(), { tier: 'horizon', testing: false }, 'real leaves a non-test grant alone');
+});

@@ -2,7 +2,7 @@
 //
 // Plans: discovery (basic, free) < flow < deep < horizon.
 // The entitlement record the rest of the worker reads is `ent:<sub>` in PROFILES:
-//   { tier: 'free'|'flow'|'deep'|'horizon'|'paid', src?: 'patreon'|'code'|'revoked', at?: ms, until?: ms }
+//   { tier: 'free'|'flow'|'deep'|'horizon'|'paid', src?: 'patreon'|'code'|'revoked'|'owner', at?: ms, until?: ms }
 // `free` is what the client calls "discovery". Hand-written records (no `src`) keep
 // working: a Patreon sync never downgrades a hand-written record that is higher
 // than the pledge (owner grants win).
@@ -13,7 +13,11 @@
 //   POST /patreon/disconnect  { idToken }  -> { ok }   forgets the link, drops back to discovery
 //   POST /patreon/webhook     (Patreon)    -> { ok }   signed with HMAC-MD5; re-verifies that patron
 //   POST /entitlement         { idToken }  -> { tier } from the verified token; also the check-in
-//                                              (re-verifies a connected patron at most once a day)
+//                                              (re-verifies a connected patron at most once a day).
+//                                              Adds owner: true for the OWNER_EMAIL account only.
+//   POST /owner/tier          { idToken, tier } -> { tier }  owner only: sets the owner's own plan
+//                                              for testing (discovery|flow|deep|horizon), or
+//                                              tier 'real' to drop the test plan. 403 for anyone else.
 //
 // KV cost (free tier: 100k reads, 1k writes per day): /entitlement is 1 read
 // (2 when the record is older than a day or absent), plus at most 1 write per
@@ -122,6 +126,7 @@ export async function readEnt(env, sub) {
 export async function writeTier(env, sub, tier, now = Date.now()) {
   const cur = await readEnt(env, sub);
   if (cur && cur.src === 'revoked') return 'free';   // switched off by the owner: no sync or code brings it back
+  if (cur && cur.src === 'owner') return entTier(cur, now);   // the owner's test plan: a sync never changes it
   if (cur && cur.src !== 'patreon' && (TIER_RANK[entTier(cur, now)] || 0) > TIER_RANK[tier]) return entTier(cur, now);
   await env.PROFILES.put('ent:' + sub, JSON.stringify({ tier, src: 'patreon', at: now }));
   return tier;
@@ -186,6 +191,13 @@ async function sendThanks(env, to, tier, code, cfg) {
   await sheetCall(env, 'patron_thanks', { to, tier, code, app: cfg.returnUrl });
 }
 
+// The OWNER_EMAIL account, from a verified token with a verified email. Unset OWNER_EMAIL = nobody.
+function isOwner(id, env) {
+  const want = String(env.OWNER_EMAIL || '').trim().toLowerCase();
+  const verified = id && (id.email_verified === true || id.email_verified === 'true');
+  return !!(want && verified && String(id.email || '').toLowerCase() === want);
+}
+
 // ---- routes ---------------------------------------------------------------------
 // deps: { json, verifyIdentity(token, env, ctx), overIpLimit(request, ctx, name, limit, windowS), fetchFn? }
 export async function handlePatreon(request, url, env, ctx, deps) {
@@ -194,7 +206,7 @@ export async function handlePatreon(request, url, env, ctx, deps) {
   const path = url.pathname;
   const cfg = configOf(env);
   // /entitlement also serves hand-written records, so it works with Patreon unconfigured.
-  if (!cfg && path !== '/entitlement') return json({ error: 'not configured' }, 503);
+  if (!cfg && path !== '/entitlement' && path !== '/owner/tier') return json({ error: 'not configured' }, 503);
 
   if (path === '/patreon/callback') {
     if (request.method !== 'GET') return json({ error: 'GET only' }, 405);
@@ -269,12 +281,30 @@ export async function handlePatreon(request, url, env, ctx, deps) {
   }
   if (path === '/entitlement') {
     let ent = await readEnt(env, sub);
-    const hand = ent && ent.src === 'revoked' || ent && ent.src !== 'patreon' && publicTier(entTier(ent)) !== 'discovery';
+    const hand = ent && (ent.src === 'revoked' || ent.src === 'owner') || ent && ent.src !== 'patreon' && publicTier(entTier(ent)) !== 'discovery';
     if (cfg && !hand && (!ent || !ent.at || Date.now() - ent.at > RECHECK_MS)) {
       const t = await syncTier(env, cfg, sub, fetchFn);
       if (t) ent = { tier: t };
     }
-    return json({ tier: publicTier(entTier(ent)) });
+    const out = { tier: publicTier(entTier(ent)) };
+    if (isOwner(id, env)){ out.owner = true; out.testing = !!(ent && ent.src === 'owner'); }
+    return json(out);
+  }
+  // The owner's plan tester (Settings > Plan tester): writes only the owner's own record, from the verified token.
+  if (path === '/owner/tier') {
+    if (!isOwner(id, env)) return json({ error: 'not allowed' }, 403);
+    const want = String((body && body.tier) || '');
+    if (want === 'real') {
+      const cur = await readEnt(env, sub);
+      if (cur && cur.src === 'owner') await env.PROFILES.delete('ent:' + sub);
+      let ent = await readEnt(env, sub);
+      if (cfg && !ent) { const t = await syncTier(env, cfg, sub, fetchFn); if (t) ent = { tier: t }; }
+      return json({ tier: publicTier(entTier(ent)), testing: false });
+    }
+    const TEST = { discovery: 'free', flow: 'flow', deep: 'deep', horizon: 'horizon' };
+    if (!TEST[want]) return json({ error: 'bad tier' }, 400);
+    await env.PROFILES.put('ent:' + sub, JSON.stringify({ tier: TEST[want], src: 'owner', at: Date.now() }));
+    return json({ tier: want, testing: true });
   }
   return json({ error: 'not found' }, 404);
 }

@@ -2973,6 +2973,7 @@ body.split-desktop.desktop-fs:not(.view-settings-active) .fs-timeline{display:fl
 .set-title{font-size:26px;font-weight:700;letter-spacing:-.3px;margin:14px 0 4px}
 .set-hub{display:flex;flex-direction:column;margin:12px 0 28px;border:1px solid var(--border);border-radius:var(--r-lg,16px);overflow:hidden;background:var(--panel)}
 .set-hub-row{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;min-height:64px;padding:12px 16px;background:none;border:0;border-top:1px solid var(--border);color:inherit;font:inherit;text-align:left;cursor:pointer}
+.set-hub-row[hidden]{display:none}
 .set-hub-row:first-child{border-top:0}
 .set-hub-row:hover,.set-hub-row:active{background:var(--panel-2,var(--panel-3))}
 .set-hub-row svg{flex:none;color:var(--faint)}
@@ -2982,7 +2983,25 @@ body.split-desktop.desktop-fs:not(.view-settings-active) .fs-timeline{display:fl
 .hub-t{font-size:16px;font-weight:600}
 .hub-s{font-size:13px;color:var(--faint);line-height:1.35}
 #view-settings [data-spage]{display:none}
-#view-settings[data-page="playback"] [data-spage="playback"],#view-settings[data-page="privacy"] [data-spage="privacy"],#view-settings[data-page="app"] [data-spage="app"],#view-settings[data-page="help"] [data-spage="help"],#view-settings[data-page="about"] [data-spage="about"],#view-settings[data-page="customize"] [data-spage="customize"]{display:block}
+#view-settings[data-page="playback"] [data-spage="playback"],#view-settings[data-page="privacy"] [data-spage="privacy"],#view-settings[data-page="app"] [data-spage="app"],#view-settings[data-page="help"] [data-spage="help"],#view-settings[data-page="about"] [data-spage="about"],#view-settings[data-page="customize"] [data-spage="customize"],#view-settings[data-page="plans"] [data-spage="plans"]:not([hidden]){display:block}
+/* plan tester (owner only): static, no animation */
+.pt-seg{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:4px;border:1px solid var(--border-2);border-radius:14px}
+.pt-seg button{padding:10px 4px;border-radius:10px;font-size:14px;font-weight:600;color:var(--faint);min-width:0;overflow:hidden;text-overflow:ellipsis}
+.pt-seg button[aria-pressed="true"]{background:var(--accent);color:#121212}
+.pt-seg button:disabled{opacity:.5}
+.pt-status{margin:12px 2px;font-size:13px;color:var(--faint);min-height:18px}
+.pt-list{list-style:none;margin:0;padding:0}
+.pt-list li{display:flex;gap:12px;align-items:flex-start;padding:11px 0;border-top:1px solid var(--border)}
+.pt-mark{flex:none;width:20px;text-align:center;font-weight:700}
+.pt-list li.on .pt-mark{color:var(--accent)}
+.pt-list li.off{color:var(--faint-2)}
+.pt-list li.off .pt-mark{color:var(--faint-2)}
+.pt-txt{flex:1;min-width:0;font-size:14px;line-height:1.4}
+.pt-txt small{display:block;color:var(--faint);font-size:12px;margin-top:2px}
+.pt-tag{flex:none;font-size:11px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;padding:2px 7px;border-radius:8px;border:1px solid var(--border-2)}
+.pt-live{color:var(--accent)}
+.pt-soon{color:var(--faint)}
+.pt-foot{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;padding-top:12px;border-top:1px solid var(--border);font-size:12px;color:var(--faint)}
 #view-settings:not([data-page=""]) :is(#settingsHub,#accountBlock,#updateCtaBlock){display:none}
 #view-settings:not([data-page=""]) .set-title{margin-bottom:0}
 #settingsPlaybackBlock>h2,#settingsSupportBlock>h2,#settingsAppBlock>h2,#settingsAboutBlock>h2,#settingsPrivacyBlock>h2{display:none}
@@ -5377,6 +5396,7 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
         <button type="button" class="set-hub-row" data-spage-go="privacy"><span class="hub-text"><span class="hub-t">Privacy &amp; data</span><span class="hub-s">Listening profile, terms, clear playlists</span></span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
         <label class="set-hub-row ui-lang-row" id="uiLangRow"><span class="hub-text"><span class="hub-t">Language</span><span class="hub-s">English</span></span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 3.8 5.7 3.8 9s-1.3 6.3-3.8 9c-2.5-2.7-3.8-5.7-3.8-9S9.5 5.7 12 3z"/></svg><select id="uiLangSelect" aria-label="Language"></select></label>
         <button type="button" class="set-hub-row" data-spage-go="app"><span class="hub-text"><span class="hub-t">App</span><span class="hub-s">Install, sounds, voice, shortcuts</span></span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+        <button type="button" class="set-hub-row" data-spage-go="plans" id="hubPlanTester" hidden><span class="hub-text"><span class="hub-t">Plan tester</span><span class="hub-s" id="hubPlanTesterSub">Owner only: switch plans and see what changes</span></span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
         <button type="button" class="set-hub-row" data-spage-go="help"><span class="hub-text"><span class="hub-t">Help &amp; feedback</span><span class="hub-s">Tell us about a bug or an idea</span></span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
         <button type="button" class="set-hub-row" data-spage-go="about"><span class="hub-text"><span class="hub-t">About</span><span class="hub-s">What's new, what EBBLESS is, credits</span></span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
       </nav>
@@ -5400,6 +5420,17 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
             <button class="btn-ghost" id="updateCtaBtn" type="button">Update</button>
           </div>
         </div>
+      </div>
+      <!-- Owner-only plan tester: switches the owner's own plan on the worker (POST /owner/tier), so app and
+           worker limits both shift. Hidden for everyone else; the worker refuses anyone but OWNER_EMAIL. -->
+      <div class="settings-block" id="settingsPlansBlock" data-spage="plans" hidden>
+        <div class="pt-seg" id="ptSeg" role="group" aria-label="Test plan">
+          <button type="button" data-pt="discovery">discover</button><button type="button" data-pt="flow">flowwww</button><button type="button" data-pt="deep">deeeep</button><button type="button" data-pt="horizon">horizonnn</button>
+        </div>
+        <div class="pt-status" id="ptStatus" role="status" aria-live="polite"></div>
+        <ul class="pt-list" id="ptList"></ul>
+        <div class="pt-foot"><span class="pt-key"><b class="pt-live">Live</b> changes the moment you switch. <b class="pt-soon">Coming</b> is not built yet.</span>
+          <button type="button" class="btn-ghost" id="ptReal" hidden>Back to my real plan</button></div>
       </div>
       <div class="settings-block" id="settingsSupportBlock" data-spage="help">
         <h2>Feedback &amp; support</h2>
@@ -8146,11 +8177,79 @@ function renderPlanBadge(){
   if (b){ b.textContent = name || ''; b.hidden = !name; b.title = name ? 'Your plan: ' + name : ''; }
   const sp = document.getElementById('splashPlan');   // the same name on the splash, under the wordmark
   if (sp){ sp.textContent = name || ''; sp.hidden = !name; }
+  if (!profileIdToken) tierOwner = tierTesting = false;
+  renderPlanTester();
 }
 function hasTier(min){
   const need = TIER_RANK[min];
   return need !== undefined && (TIER_RANK[state.tier] || 0) >= need;
 }
+/* ---------- PLAN TESTER (owner only, Settings > Plan tester) ----------
+   One list of what each plan gets. `min` is the lowest plan that has it; `live` means the app or worker
+   already gates it, so switching changes it at once. Keep this list in step with hasTier() calls and the
+   worker's tier checks (voice.js VOICE_CAPS). Owner flags come from POST /entitlement. */
+let tierOwner = false, tierTesting = false, ptBusy = false;
+const PLAN_FEATURES = [
+  { min: 'discovery', live: true, t: 'Every playlist, import, Discover, lyrics and the light show', s: 'The whole player, free' },
+  { min: 'discovery', live: true, t: 'Voice: 7 smart requests a day', s: 'Simple commands are always unlimited', only: 'discovery' },
+  { min: 'flow', live: true, t: 'Voice: 100 smart requests a day', s: 'Checked by the server on every request' },
+  { min: 'flow', live: false, t: 'fLUX without the daily limit', s: 'discover gets a 7-minute taste a day' },
+  { min: 'flow', live: false, t: 'fLUX Flow look: cover-color tint, title cards, curated moods', s: 'In progress (fLUX lane)' },
+  { min: 'deep', live: false, t: 'Offline queue: your next 10 songs held close', s: 'Keeps playing when the signal drops (docs/DOWNLOADS-PLAN.md)' },
+  { min: 'horizon', live: false, t: 'Keep any song on this device, with a storage slider', s: 'Default 2 GB' },
+  { min: 'horizon', live: false, t: 'Video layer and song info kept with each song', s: 'Picture, artist, album, credits' },
+  { min: 'horizon', live: false, t: 'fLUX interactive: ripples, ghost artwork, poster capture, film pass', s: 'Planned' },
+];
+function renderPlanTester(){
+  const hub = document.getElementById('hubPlanTester'), block = document.getElementById('settingsPlansBlock');
+  if (!hub || !block) return;
+  const on = !!(tierOwner && profileIdToken);
+  hub.hidden = !on; block.hidden = !on;
+  if (!on){ const v = document.getElementById('view-settings'); if (v && v.dataset.page === 'plans') settingsShowPage(''); return; }
+  const cur = TIER_RANK[state.tier] !== undefined ? state.tier : 'discovery';
+  const sub = document.getElementById('hubPlanTesterSub');
+  if (sub) sub.textContent = 'Now on ' + PLAN_NAMES[cur] + (tierTesting ? ' (test)' : '') + '. Switch plans and see what changes.';
+  block.querySelectorAll('[data-pt]').forEach(b => { b.setAttribute('aria-pressed', String(b.dataset.pt === cur)); b.disabled = ptBusy; });
+  const list = document.getElementById('ptList');
+  list.textContent = '';
+  PLAN_FEATURES.forEach(f => {
+    const has = f.only ? cur === f.only : (TIER_RANK[cur] || 0) >= TIER_RANK[f.min];
+    if (f.only && !has) return;   // a limit that only applies to one plan
+    const li = document.createElement('li');
+    li.className = has ? 'on' : 'off';
+    const mark = document.createElement('span'); mark.className = 'pt-mark'; mark.textContent = has ? '\u2713' : '\u2715'; mark.setAttribute('aria-label', has ? 'included' : 'not included');
+    const txt = document.createElement('span'); txt.className = 'pt-txt'; txt.textContent = f.t;
+    const sm = document.createElement('small'); sm.textContent = has ? f.s : 'Needs ' + PLAN_NAMES[f.min]; txt.appendChild(sm);
+    const tag = document.createElement('span'); tag.className = 'pt-tag ' + (f.live ? 'pt-live' : 'pt-soon'); tag.textContent = f.live ? 'Live' : 'Coming';
+    li.append(mark, txt, tag); list.appendChild(li);
+  });
+  const st = document.getElementById('ptStatus');
+  if (st && !ptBusy) st.textContent = tierTesting ? 'Testing ' + PLAN_NAMES[cur] + '. Your real plan comes back with the button below.' : 'This is your real plan. Pick another to try it.';
+  document.getElementById('ptReal').hidden = !tierTesting;
+}
+async function ptSwitch(tier){
+  if (ptBusy || !profileIdToken || !tierOwner) return;
+  ptBusy = true;
+  const st = document.getElementById('ptStatus');
+  if (st) st.textContent = 'Switching...';
+  renderPlanTester();
+  try {
+    const res = await fetch(BACKEND + '/owner/tier', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idToken: profileIdToken, tier }) });
+    const d = res.ok ? await res.json() : null;
+    if (!d || TIER_RANK[d.tier] === undefined) throw new Error('refused');
+    state.tier = d.tier; tierTesting = d.testing === true;
+    const s = sessionLoad();
+    if (s && s.sub) try { localStorage.setItem(LS_TIER, JSON.stringify({ t: d.tier, sub: s.sub })); } catch(e){}
+    ptBusy = false;
+    renderPlanBadge();
+    showToast((tierTesting ? 'Now testing ' : 'Back on your real plan: ') + PLAN_NAMES[d.tier] + '.');
+  } catch(e){
+    ptBusy = false; renderPlanTester();
+    if (st) st.textContent = "Couldn't switch. Check you're signed in, then try again.";
+  }
+}
+document.getElementById('ptSeg')?.addEventListener('click', (e) => { const b = e.target.closest('[data-pt]'); if (b && b.getAttribute('aria-pressed') !== 'true') ptSwitch(b.dataset.pt); });
+document.getElementById('ptReal')?.addEventListener('click', () => ptSwitch('real'));
 /* Links from the Patreon thank-you note and the thank-you emails:
    ?activate=patreon connects the pledge, ?redeem=CODE redeems a code, and
    ?patreon=ok|taken|error is Patreon sending the person back. Read once on
@@ -8209,6 +8308,7 @@ async function refreshTier(){
     if (!res.ok) return;
     const d = await res.json();
     if (!d || TIER_RANK[d.tier] === undefined) return;
+    tierOwner = d.owner === true; tierTesting = d.testing === true;
     state.tier = d.tier; renderPlanBadge();
     const s = sessionLoad();
     if (s && s.sub) try { localStorage.setItem(LS_TIER, JSON.stringify({ t: d.tier, sub: s.sub })); } catch(e){}
@@ -11069,7 +11169,7 @@ function showLoadSuccess(){
    ========================================================================= */
 document.getElementById('settingsBackBtn')?.addEventListener('click', () => { const v = document.getElementById('view-settings'); if (v && v.dataset.page) settingsShowPage(''); else setView(state.preSettingsView || 'library'); });
 /* Settings v2 hub: which page of #view-settings shows ('' = the hub). Blocks keep their ids; data-spage on each block names its page. */
-const SET_PAGE_TITLES = { playback: 'Playback', customize: 'Customize', privacy: 'Privacy & data', app: 'App', help: 'Help & feedback', about: 'About' };
+const SET_PAGE_TITLES = { playback: 'Playback', customize: 'Customize', privacy: 'Privacy & data', app: 'App', help: 'Help & feedback', about: 'About', plans: 'Plan tester' };
 function settingsShowPage(p){
   const v = document.getElementById('view-settings');
   if (!v) return;
