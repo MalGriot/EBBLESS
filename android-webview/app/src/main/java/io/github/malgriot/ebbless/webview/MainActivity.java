@@ -238,7 +238,10 @@ public class MainActivity extends Activity {
                 return true;
             }
         }
-        return super.dispatchKeyEvent(e);
+        boolean r = super.dispatchKeyEvent(e);
+        if ((k == android.view.KeyEvent.KEYCODE_VOLUME_UP || k == android.view.KeyEvent.KEYCODE_VOLUME_DOWN) && e.getAction() == android.view.KeyEvent.ACTION_UP && web != null)
+            web.postDelayed(() -> web.evaluateJavascript("window.__ebbVolChanged&&__ebbVolChanged()", null), 200);   // #787: page re-checks for volume 0 after the system applies the key
+        return r;
     }
 
     @Override protected void onStop() {
