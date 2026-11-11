@@ -1365,7 +1365,7 @@ html.reduce-motion .lib-grid:not(.is-list) .lib-card .info .name{display:block;w
 .mm-node:hover .mm-play,.mm-play:focus-visible{opacity:1}
 .mm-name:hover,.mm-name:focus-visible{color:var(--accent)}
 .mm-center{flex-direction:column;gap:10px;text-align:center;max-width:min(300px,80vw)}
-.mm-center-name{font-size:26px;font-weight:800;line-height:1.1;color:var(--text);overflow-wrap:anywhere}
+.mm-center-name{font-size:26px;font-weight:800;line-height:1.1;color:var(--text);overflow-wrap:anywhere;cursor:pointer}
 .mm-center-row{display:flex;gap:8px;justify-content:center}
 .mm-center-row .btn-ghost{padding:9px 16px;font-size:14px}
 .mm-note{color:var(--faint);font-size:13.5px;line-height:1.4}
@@ -14881,6 +14881,7 @@ function mmBuild(){
     if (!t) return;
     const k = t.dataset.mm, v = t.dataset.v;
     if (k === 'go') mmGo(v, t.closest('.mm-node'));
+    else if (k === 'artist'){ if (Date.now() < mmTapGuard) return; closeMusicMap(); openArtistPage(v); }   // the center artist opens their page (not on the 2nd tap of a double-tap)
     else if ((k === 'play' || k === 'radio') && Date.now() < mmTapGuard) return;   // the 2nd tap of a double-tap lands on the new center's buttons: explore only, never play
     else if (k === 'play') mmPlay(v, t);
     else if (k === 'radio') mmRadio(v);
@@ -15151,7 +15152,7 @@ function mmRenderTrail(){
 }
 
 function mmCenterHtml(name, note, retry){
-  return '<div class="mm-center-name">' + escapeHtml(name) + '</div>' +
+  return '<div class="mm-center-name" data-mm="artist" data-v="' + escapeHtml(name) + '">' + escapeHtml(name) + '</div>' +
     (note ? '<div class="mm-note">' + note + '</div>' : '') +
     '<div class="mm-center-row">' +
       (retry ? '<button type="button" class="btn-ghost" data-mm="retry" data-v="' + escapeHtml(name) + '">Try again</button>' : '') +
@@ -23343,6 +23344,9 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
+  { version: 537, date: '2026-11-12', items: [
+    'On the music map, tapping the big artist name in the middle opens that artist\'s page.'
+  ]},
   { version: 536, date: '2026-11-12', items: [
     'The music map never runs out: tap an artist and the map grows around them, and zoom out or drag toward empty space and it keeps finding more artists to explore. Everything you already found stays put.'
   ]},
