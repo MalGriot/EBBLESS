@@ -296,7 +296,12 @@ html{-webkit-tap-highlight-color:transparent}
    into the new album-art color instead of snapping. */
 @property --clock-accent{syntax:'<color>';inherits:true;initial-value:#e0b26a}
 @property --player-accent{syntax:'<color>';inherits:true;initial-value:#e0b26a}
-html{transition:--clock-accent var(--dur-surface) var(--ease-in-out),--player-accent var(--dur-surface) var(--ease-in-out)}
+/* #803: the text/knob color on accent fills and the tints must fade with the accent, or they snap while the accent fades */
+@property --on-accent{syntax:'<color>';inherits:true;initial-value:#151107}
+@property --on-player-accent{syntax:'<color>';inherits:true;initial-value:#151107}
+@property --clock-tint{syntax:'<color>';inherits:true;initial-value:transparent}
+@property --clock-tint-splash{syntax:'<color>';inherits:true;initial-value:transparent}
+html{transition:--clock-accent var(--dur-surface) var(--ease-in-out),--player-accent var(--dur-surface) var(--ease-in-out),--on-accent var(--dur-surface) var(--ease-in-out),--on-player-accent var(--dur-surface) var(--ease-in-out),--clock-tint var(--dur-surface) var(--ease-in-out),--clock-tint-splash var(--dur-surface) var(--ease-in-out)}
 html.clock-color-init,
 html.reduce-motion{transition:none}
 @media (prefers-reduced-motion:reduce){html{transition:none}}
@@ -22943,7 +22948,9 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 const WHATS_NEW = [
   { version: 530, date: '2026-11-12', items: [
     'The desktop mini player no longer has the shape button next to the album color button.',
-    'The "Matching" bar at the bottom now shows the song being matched right now and goes away when matching is over.'
+    'The "Matching" bar at the bottom now shows the song being matched right now and goes away when matching is over.',
+    'The waveform on the progress bar now shows in fullscreen too.',
+    'The accent color now fades fully to the next song\'s color, including the text on colored buttons, instead of part of it switching harshly.'
   ]},
   { version: 529, date: '2026-11-12', items: [
     'The song title on the player is now centered.',
@@ -39394,7 +39401,8 @@ function waveDraw(){
   if (key === waveDrawKey) return;
   waveDrawKey = key;
   const k = Math.floor(r), f = r - k;
-  seekTrack.style.setProperty('--wave', waveSvg(waveShape.map((v, i) => i < k ? v : i === k ? .31 + (v - .31) * f : .31)));
+  const waveCss = waveSvg(waveShape.map((v, i) => i < k ? v : i === k ? .31 + (v - .31) * f : .31));
+  seekTrack.style.setProperty('--wave', waveCss); flowSeekTrack.style.setProperty('--wave', waveCss);
 }
 function waveShow(shape, full){ waveShape = shape; waveFullShape = !!full; waveDrawKey = -1; waveDraw(); }
 function waveSvg(peaks){
@@ -39626,7 +39634,7 @@ function waveSync(){
   waveSave();
   waveId = id; waveLastCur = -1; waveShape = null; waveFullShape = false; waveReach = 0; waveDrawKey = -1; wavePaintK = -1;
   recRingSync();
-  seekTrack.style.removeProperty('--wave');
+  seekTrack.style.removeProperty('--wave'); flowSeekTrack.style.removeProperty('--wave');
   waveLoading(false);
   if (!id) return;
   if (!(isLocalVideoId(id) || isAudioVideoId(id))){
