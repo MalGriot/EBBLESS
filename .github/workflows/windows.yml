@@ -33,25 +33,17 @@ jobs:
         working-directory: desktop
         run: npm ci
 
-      - name: Debug tar
-        shell: bash
-        run: |
-          export PATH="/c/Windows/System32:$PATH"
-          which -a tar; tar --version | head -1
-          cd "$RUNNER_TEMP" && echo hi > a.txt && powershell -c "Compress-Archive a.txt a.zip" && mkdir -p out && tar -xf a.zip -C out; echo "tar exit $?"; ls out
-
+      # pwsh, not Git Bash: bash puts GNU tar first, which can't read the yt-dlp zip
+      # (fetch-ytdlp.js shells out to tar); in pwsh `tar` is the Windows bsdtar.
       - name: Build installer
         working-directory: desktop
-        shell: bash
+        shell: pwsh
         run: |
-          VERSION=$(node -p "require('./package.json').version")
-          if [ "v$VERSION" != "$TAG" ]; then
-            echo "::error::desktop/package.json is $VERSION but the release tag is $TAG"; exit 1
-          fi
-          # Git Bash's GNU tar can't read zips; the Windows bsdtar can (fetch-ytdlp.js shells out to tar)
-          export PATH="/c/Windows/System32:$PATH"
+          $version = node -p "require('./package.json').version"
+          if ("v$version" -ne $env:TAG) { Write-Error "desktop/package.json is $version but the release tag is $env:TAG"; exit 1 }
           npm run dist:win
-          ls dist/EBBLESS-Setup-*.exe
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Get-ChildItem dist/EBBLESS-Setup-*.exe
 
       - name: Attach to release
         working-directory: desktop
