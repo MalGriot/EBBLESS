@@ -1419,6 +1419,10 @@ html.reduce-motion .lib-grid:not(.is-list) .lib-card .info .name{display:block;w
 .rm-wrap .maplibregl-ctrl-attrib *{color:#c9c9c9!important}
 .rm-wrap .maplibregl-ctrl-attrib-button{filter:invert(1)}
 .rm-wrap .maplibregl-canvas{outline:none}
+.live-tag{display:none}
+body.is-live-radio .seek-row>.t,body.is-live-radio .seek-row>.seek-track{display:none}
+body.is-live-radio .seek-row>.live-tag{display:block;flex:1;text-align:center;font-size:13px;font-weight:700;letter-spacing:.4px;color:var(--accent)}
+.rm-act .rm-live{background:transparent}
 /* Music map (Geethub #597): same layer as Find music. Static by default; a recenter is one
    finite transform/opacity glide, nothing runs while it sits still or is hidden (#487). */
 #musicMap{position:fixed;inset:0;z-index:55;background:radial-gradient(circle at 50% 50%,var(--panel-2) 0,transparent 62%),var(--bg);display:flex;flex-direction:column}
@@ -5463,6 +5467,7 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
         <div class="transport-full">
           <div class="seek-row">
             <span class="t tnum" id="timeCur">0:00</span>
+            <span class="live-tag" aria-hidden="true">Live radio</span>
             <div class="seek-track" id="seekTrack"><div class="rail"><div class="fill" id="seekFill"></div></div><div class="knob" id="seekKnob"></div></div>
             <span class="t tnum" id="timeDur">0:00</span>
           </div>
@@ -6316,6 +6321,7 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
         <div class="flow-seek">
           <div class="seek-row">
             <span class="t tnum" id="flowTimeCur">0:00</span>
+            <span class="live-tag" aria-hidden="true">Live radio</span>
             <div class="seek-track" id="flowSeekTrack"><div class="rail"><div class="fill" id="flowSeekFill"></div></div><div class="knob" id="flowSeekKnob"></div></div>
             <span class="t tnum" id="flowTimeDur">0:00</span>
           </div>
@@ -10610,13 +10616,29 @@ function rmSelect(st, from){
   const go = bpMk('button', 'rm-go', 'Play songs from here'); go.type = 'button';
   go.addEventListener('click', () => { bpLastEl = go; fmOpenResults(rmSongsTerm(st), st.state || st.country || st.name); });
   act.appendChild(go);
+  const lv = bpMk('button', 'rm-live', 'Listen live'); lv.type = 'button';
+  lv.addEventListener('click', () => { if (liveSt && liveSt.id === st.id && liveIsPlaying()) liveStop(); else liveStart(st); });
+  act.appendChild(lv);
   if (st.home){ const a = bpMk('a', '', 'Station website'); a.href = st.home; a.target = '_blank'; a.rel = 'noopener noreferrer'; act.appendChild(a); }
   sh.appendChild(act);
   sh.appendChild(bpMk('p', 'rm-note', 'Songs from this place, picked by EBBLESS. No ads.'));
+  const ln = bpMk('p', 'rm-note rm-livenote'); ln.setAttribute('role', 'status'); sh.appendChild(ln);
   sh.hidden = false;
+  rmSheetSync();
   statsFeature('region_map_station');
   if (rmMap){ try { rmMap.easeTo({ center: [st.lng, st.lat], zoom: Math.max(rmMap.getZoom(), 9), padding: { bottom: 200 }, duration: 400 }); } catch(e){} }
   h.focus({ preventScroll: true });
+}
+// the Listen live button and its note follow the live player's state
+function rmSheetSync(){
+  const sh = rmWrap && rmWrap.querySelector('.rm-sheet');
+  if (!sh || sh.hidden || !rmSel) return;
+  const b = sh.querySelector('.rm-live'), n = sh.querySelector('.rm-livenote');
+  if (!b || !n) return;
+  const mine = !!liveSt && liveSt.id === rmSel.id, mode = mine ? liveMode : 'idle';
+  b.textContent = mode === 'playing' || mode === 'loading' ? 'Stop live radio' : 'Listen live';
+  n.textContent = mode === 'loading' ? 'Connecting to the station\u2026' : mode === 'playing' ? 'Live now. Live radio can include ads and talk.'
+    : mode === 'error' ? 'Could not reach this station. Try again, or play songs from here.' : 'Live radio is the station as it broadcasts. It can include ads and talk.';
 }
 function rmTeardownMap(){
   clearTimeout(rmMoveT); clearTimeout(rmPushT);
@@ -10707,6 +10729,94 @@ function rmInit(gen){
       rmMoveT = setTimeout(() => { rmFetchView(); rmListRender(); }, 450);
     });
   }).catch(() => { if (gen === rmGen) rmOff('The map could not load. Check your connection, or pick a region below.'); });
+}
+
+/* ---------- LIVE RADIO (Listen live on a station) ----------
+   A minimal live-stream source beside the YouTube/SoundCloud decks: one
+   HTMLAudioElement (never in the DOM), https URLs only (rmHttps), no queue.
+   It reuses the player's own chrome: the title/artist lines, the play button,
+   the media-session lock-screen controls, and "Live radio" replaces the seek
+   bar. Starting it pauses the deck player; the deck player starting (any
+   setPlayingUI(true)) stops it. var, not let: setPlayingUI can run before
+   this section is reached on a cold start. */
+var liveAudio = null, liveSt = null, liveMode = 'idle', liveTry = 0, liveUiSync = false, liveRetryT = 0;   // liveMode: idle | loading | playing | paused | error
+function liveActive(){ return !!liveSt; }
+function liveIsPlaying(){ return !!liveSt && (liveMode === 'playing' || liveMode === 'loading'); }
+function liveMeta(){
+  const st = liveSt; if (!st) return;
+  const place = [st.state, st.country].filter(Boolean).join(', ');
+  const artist = 'Live radio' + (place ? ' · ' + place : '');
+  $('trackMeta').classList.remove('is-empty');
+  setMarqueeText(trackTitle, st.name); setMarqueeText(trackArtist, artist);
+  setMarqueeText(flowTitle, st.name); setMarqueeText(flowArtist, artist);
+  setMarqueeText(miniTitle, st.name); setMarqueeText(miniArtist, artist);
+  if ('mediaSession' in navigator){
+    try { navigator.mediaSession.metadata = new MediaMetadata({ title: st.name, artist: 'Live radio', album: place || 'EBBLESS' }); } catch(e){}
+    try { if (navigator.mediaSession.setPositionState) navigator.mediaSession.setPositionState(); } catch(e){}
+  }
+}
+function liveSync(){
+  document.body.classList.toggle('is-live-radio', !!liveSt);
+  if (liveSt){ liveMeta(); liveUiSync = true; try { setPlayingUI(liveIsPlaying()); } finally { liveUiSync = false; } }
+  if ('mediaSession' in navigator){ try { navigator.mediaSession.playbackState = liveSt ? (liveIsPlaying() ? 'playing' : 'paused') : 'none'; } catch(e){} }
+  try { rmSheetSync(); } catch(e){}
+}
+function liveRelease(){
+  clearTimeout(liveRetryT);
+  const a = liveAudio; if (!a) return;
+  a.onplaying = a.onwaiting = a.onstalled = a.onerror = a.onpause = null;
+  try { a.pause(); a.removeAttribute('src'); a.load(); } catch(e){}
+}
+function liveLoad(){
+  const st = liveSt, url = st && rmHttps(st.url);
+  if (!url){ liveFail(); return; }
+  if (!liveAudio){ liveAudio = new Audio(); liveAudio.preload = 'none'; }
+  const a = liveAudio;
+  liveRelease();
+  liveMode = 'loading'; liveSync();
+  a.onplaying = () => { if (liveSt !== st) return; liveTry = 0; liveMode = 'playing'; liveSync(); };
+  a.onwaiting = a.onstalled = () => { if (liveSt === st && liveMode === 'playing'){ liveMode = 'loading'; liveSync(); } };
+  a.onpause = () => { if (liveSt === st && (liveMode === 'playing' || liveMode === 'loading')){ liveMode = 'paused'; liveSync(); } };   // the OS or a headset paused it
+  a.onerror = () => { if (liveSt === st && (liveMode === 'loading' || liveMode === 'playing')) liveFail(); };
+  a.src = url;
+  const p = a.play();
+  if (p && p.catch) p.catch((e) => { if (liveSt === st && e && e.name !== 'AbortError' && liveMode === 'loading') liveFail(); });
+}
+function liveFail(){
+  const st = liveSt; if (!st) return;
+  if (liveTry < 1){ liveTry++; clearTimeout(liveRetryT); liveRetryT = setTimeout(() => { if (liveSt === st) liveLoad(); }, 1200); return; }
+  liveRelease(); liveMode = 'error'; liveSync();
+  showToast('Could not play ' + st.name + '. Check your connection, or try again.', { label: 'Try again', run: () => { if (liveSt === st){ liveTry = 0; liveLoad(); } } }, 'live-err');
+}
+function liveStart(st){
+  if (!st || !rmHttps(st.url)){ showToast('This station has no safe stream to play.'); return; }
+  if (liveSt && liveSt.id === st.id && liveMode === 'paused'){ liveToggle(); return; }
+  try { pausePlayback(); } catch(e){}
+  liveSt = st; liveTry = 0;
+  rmGet('/json/url/' + encodeURIComponent(st.id)).catch(() => {});   // the directory asks apps to count a listen
+  showToast('Live radio can include ads and talk.', null, 'live-note');
+  liveLoad();
+}
+function liveToggle(){
+  if (!liveSt) return;
+  if (liveMode === 'paused' || liveMode === 'error'){ liveTry = 0; liveLoad(); return; }
+  liveRelease(); liveMode = 'paused'; liveSync();   // a live stream resumes at the live edge, so the connection is dropped
+}
+function liveStop(quiet){
+  if (!liveSt) return;
+  liveRelease();
+  liveSt = null; liveMode = 'idle'; liveTry = 0;
+  document.body.classList.remove('is-live-radio');
+  const t = currentTrack();
+  if (t) updateTrackMetaUI(t);
+  else {
+    $('trackMeta').classList.add('is-empty');
+    setMarqueeText(trackTitle, uiT('Nothing playing yet')); setMarqueeText(trackArtist, '');
+    setMarqueeText(flowTitle, ''); setMarqueeText(flowArtist, ''); setMarqueeText(miniTitle, ''); setMarqueeText(miniArtist, '');
+  }
+  if ('mediaSession' in navigator){ try { navigator.mediaSession.playbackState = 'none'; } catch(e){} }
+  if (!quiet) setPlayingUI(false);
+  try { rmSheetSync(); } catch(e){}
 }
 
 /* =========================================================================
@@ -23976,6 +24086,9 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
+  { version: 541, date: '2026-11-12', items: [
+    'On the region map, a station now has a Listen live button that plays its real radio stream. Live radio can include ads and talk, so songs from that place stay the default.',
+  ]},
   { version: 540, date: '2026-11-12', items: [
     'Browse by region now has a world map. Zoom from the whole world down to your street, and tap a radio station to hear songs from that place, picked by EBBLESS with no ads.',
   ]},
@@ -31498,7 +31611,9 @@ function volZeroCheck(){
 window.__ebbVolChanged = volZeroCheck;
 function setPlayingUI(isPlaying){
   volZeroCheck();
+  if (isPlaying && liveSt && !liveUiSync) liveStop(true);   // a song started: live radio gives way
   if (resumeBootDone) lsSet(LS_RESUME_PLAY, !!isPlaying);
+  if (!isPlaying && liveIsPlaying()) isPlaying = true;   // live radio is what is playing
   ytPanelBtnSync();
   if (isPlaying && activeLoadProgress() !== null) startLoadIconTicker();
   else { stopLoadIconTicker(); [seekTrack, flowSeekTrack].forEach(el => el.classList.remove('is-loading', 'ad-fill')); setPlayIcons(isPlaying ? ICO_PAUSE : ICO_PLAY); }
@@ -35852,7 +35967,7 @@ function updatePlayerLikeBtn(t){
 }
 
 function updateMediaSessionMeta(t){
-  if (!('mediaSession' in navigator)) return;
+  if (!('mediaSession' in navigator) || liveSt) return;
   // Same art-resolution chain the in-app player reads (artworkUrls(), fed by
   // resolveTrackArt()'s Spotify-cover-with-SoundCloud-exception result via
   // track.art) - not a separate lookup, so the lock screen never drifts out
@@ -35943,6 +36058,7 @@ function mediaSessionArtwork(t){
 const MS_POS_DRIFT_S = 1.5;
 let msPos = { dur: -1, pos: 0, at: 0, rate: 1, playing: false };
 function syncMediaPositionState(force, posOverride){
+  if (liveSt) return;
   if (!('mediaSession' in navigator) || !navigator.mediaSession.setPositionState) return;
   const ad = activeDeck();
   if (!ad || !ad.player || !ad.confirmed || !ad.player.getDuration || !ad.player.getCurrentTime || ad.adMutedAt > 0) return;
@@ -36688,6 +36804,7 @@ function clearSleepTimer(){
 function fireSleepTimer(){
   clearSleepTimer();
   pausePlayback();
+  liveStop();
   showToast('Sleep timer: paused. Good night.');
 }
 function sleepTimerTick(){
@@ -36893,6 +37010,7 @@ function lpSfxUnlock(){
 // tap, PiP mini player): playIndex(state.queuePos) plus the needle sfx.
 let msPausedOnce = false;
 function userTogglePlayback(){
+  if (liveActive()){ liveToggle(); return; }
   const ad = activeDeck();
   const s = ad.player && ad.player.getPlayerState ? ad.player.getPlayerState() : -1;
   if (s === 1) msPausedOnce = true; else if (msPausedOnce) awardMilestone('pause');
@@ -37008,17 +37126,18 @@ function playRickrollFallback(){
   loadIndex(0, true);
 }
 playBtn.addEventListener('click', () => {
+  if (liveActive()){ liveToggle(); return; }
   if (state.queuePos >= 0){ userTogglePlayback(); return; }
   // first run (#264): the glowing play button starts the glowing starter
   const nudgeId = playNudgeActive() ? playNudgeTargetId() : null;
   if (nudgeId) playLibraryTrackInline(nudgeId, 0); else playRickrollFallback();
 });
-nextBtn.addEventListener('click', () => { msPart('skip', 'next', ['next', 'prev']); playNext(false); });
-prevBtn.addEventListener('click', () => { msPart('skip', 'prev', ['next', 'prev']); playPrev(); });
-flowPlayBtn.addEventListener('click', () => { if (state.queuePos >= 0) userTogglePlayback(); });
-flowNextBtn.addEventListener('click', () => playNext(false));
-flowPrevBtn.addEventListener('click', playPrev);
-miniPlayBtn.addEventListener('click', (e) => { e.stopPropagation(); if (state.queuePos >= 0) userTogglePlayback(); });
+nextBtn.addEventListener('click', () => { liveStop(); msPart('skip', 'next', ['next', 'prev']); playNext(false); });
+prevBtn.addEventListener('click', () => { liveStop(); msPart('skip', 'prev', ['next', 'prev']); playPrev(); });
+flowPlayBtn.addEventListener('click', () => { if (state.queuePos >= 0 || liveActive()) userTogglePlayback(); });
+flowNextBtn.addEventListener('click', () => { liveStop(); playNext(false); });
+flowPrevBtn.addEventListener('click', () => { liveStop(); playPrev(); });
+miniPlayBtn.addEventListener('click', (e) => { e.stopPropagation(); if (state.queuePos >= 0 || liveActive()) userTogglePlayback(); });
 
 /* ---------- desktop keyboard shortcuts ---------- */
 // Library/Queue/Settings shortcuts click the nav buttons themselves, so they
@@ -37122,7 +37241,7 @@ document.addEventListener('keydown', (e) => {
       e.preventDefault();
       // LP game (#652): from the first tap of a run until its score leaves the screen, Space is a tap on the record, not pause
       if (recordGameInFlow() && (recGame.on || recGameHud.dataset.phase === 'over')){ if (!e.repeat) recordGameTap(); break; }
-      if (state.queuePos >= 0) userTogglePlayback();
+      if (state.queuePos >= 0 || liveActive()) userTogglePlayback();
       break;
     // Podcasts swap the two (Geethub #234): plain arrows skip -/+15s,
     // shift+arrows go to the previous/next episode. Music is unchanged.
@@ -37289,23 +37408,25 @@ repeatBtn.addEventListener('click', cycleRepeat);
 
 if ('mediaSession' in navigator){
   navigator.mediaSession.setActionHandler('play', () => {
+    if (liveSt){ if (liveMode === 'paused' || liveMode === 'error') liveToggle(); return; }
     noteHiddenPlayIntent(true);
     const ad = activeDeck();
     if (state.queuePos >= 0 && (!ad.player || !ad.player.getPlayerState || ad.player.getPlayerState() !== 1 || isFadingOut(ad))) playLpNeedle('drop');
     resumePlayback();
   });
   navigator.mediaSession.setActionHandler('pause', () => {
+    if (liveSt){ if (liveIsPlaying()) liveToggle(); return; }
     noteHiddenPlayIntent(false);
     const ad = activeDeck();
     if (ad.player && ad.player.pauseVideo && !isFadingOut(ad)) playLpNeedle('lift');
     pausePlayback();
   });
-  navigator.mediaSession.setActionHandler('previoustrack', playPrev);
-  navigator.mediaSession.setActionHandler('nexttrack', () => playNext(false));
+  navigator.mediaSession.setActionHandler('previoustrack', () => { liveStop(); playPrev(); });
+  navigator.mediaSession.setActionHandler('nexttrack', () => { liveStop(); playNext(false); });
   // Each of these may be unsupported (setActionHandler throws on an unknown
   // action in some browsers), so they're registered one by one.
   const msSet = (action, fn) => { try { navigator.mediaSession.setActionHandler(action, fn); } catch(e){} };
-  msSet('stop', () => { noteHiddenPlayIntent(false); pausePlayback(); });
+  msSet('stop', () => { if (liveSt){ liveStop(); return; } noteHiddenPlayIntent(false); pausePlayback(); });
   // Scrubbing from the lock screen / notification / car display. Same
   // clamping as the in-app seek bar; the explicit position goes straight to
   // setPositionState since getCurrentTime() lags a fresh seekTo().
