@@ -3725,15 +3725,38 @@ body.split-desktop .install-banner{padding-left:24px;padding-right:12px}
   body.split-desktop.desktop-fs:not(.view-settings-active) :is(#fsBtn,#desktopFsExitBtn,#castBtn){top:calc(var(--topbar-h) + 10px)}
   /* idle auto-hide (issue #147): same 600ms fade and hidden cursor as
      #flow-layer.chrome-hidden, toggled by the shared armFsIdleTimer() */
-  body.split-desktop.desktop-fs:not(.view-settings-active) :is(#topbar,.visual-tabs,.track-meta,.transport-full,#fsTimeline,#fsBtn,#desktopFsExitBtn,#castBtn,#playerLikeBtn){
+  body.split-desktop.desktop-fs:not(.view-settings-active) :is(#topbar,.visual-tabs,.track-meta,.transport-full,#fsTimeline,#fsBtn,#desktopFsExitBtn,#castBtn,#playerLikeBtn,#playerMoreBtn,#playerDeclineBtn){
     /* background/color kept for #fsBtn's own .art-fs-btn hover transition */
     transition:opacity 600ms var(--ease-in-out),background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out);
   }
-  body.split-desktop.desktop-fs.fs-chrome-hidden:not(.view-settings-active) :is(#topbar,.visual-tabs,.track-meta,.transport-full,#fsTimeline,#fsBtn,#desktopFsExitBtn,#castBtn,#playerLikeBtn){
+  body.split-desktop.desktop-fs.fs-chrome-hidden:not(.view-settings-active) :is(#topbar,.visual-tabs,.track-meta,.transport-full,#fsTimeline,#fsBtn,#desktopFsExitBtn,#castBtn,#playerLikeBtn,#playerMoreBtn,#playerDeclineBtn){
     opacity:0;pointer-events:none;
   }
   body.split-desktop.desktop-fs.fs-chrome-hidden:not(.view-settings-active),
   body.split-desktop.desktop-fs.fs-chrome-hidden:not(.view-settings-active) *{cursor:none}
+  /* #804: the art's corner buttons (X, 3 dots, heart, thumbs-down, fullscreen) flank the
+     player controls instead of sitting on the art's corners: X and 3 dots on the left,
+     heart, thumbs-down and fullscreen on the right, all 32px and vertically centered on
+     the controls row. They are always shown here and fade out with the rest of the UI
+     (the hover-only rule above never fires over the controls, which are not inside the art). */
+  body.split-desktop.desktop-fs:not(.view-settings-active) .artwork-wrap > :is(#desktopFsExitBtn,#playerMoreBtn,#playerLikeBtn,#playerDeclineBtn,#fsBtn){
+    top:auto;bottom:50px;width:32px;height:32px;opacity:1;
+  }
+  body.split-desktop.desktop-fs:not(.view-settings-active) .artwork-wrap > #desktopFsExitBtn{left:auto;right:calc(50% + 208px)}
+  body.split-desktop.desktop-fs:not(.view-settings-active) .artwork-wrap > #playerMoreBtn{left:auto;right:calc(50% + 168px)}
+  body.split-desktop.desktop-fs:not(.view-settings-active) .artwork-wrap > #playerLikeBtn{right:auto;left:calc(50% + 168px)}
+  body.split-desktop.desktop-fs:not(.view-settings-active) .artwork-wrap > #playerDeclineBtn{right:auto;left:calc(50% + 208px)}
+  body.split-desktop.desktop-fs:not(.view-settings-active) .artwork-wrap > #fsBtn{right:auto;left:calc(50% + 208px)}
+  body.split-desktop.desktop-fs:not(.view-settings-active) .artwork-wrap:has(#playerDeclineBtn:not([hidden])) > #fsBtn{left:calc(50% + 248px)}
+  body.split-desktop.desktop-fs.fs-chrome-hidden:not(.view-settings-active) .artwork-wrap > :is(#desktopFsExitBtn,#playerMoreBtn,#playerLikeBtn,#playerDeclineBtn,#fsBtn){
+    opacity:0;pointer-events:none;
+  }
+  /* #804: hover turns the UI color (progress bar, player buttons, top nav) */
+  body.split-desktop.desktop-fs:not(.view-settings-active) :is(.art-fs-btn,.viz-ctl-btn,.ctl-btn,.nav-btn):hover,
+  body.split-desktop.desktop-fs:not(.view-settings-active) :is(.art-fs-btn,.viz-ctl-btn,.ctl-btn,.nav-btn).is-liked:hover{
+    background:var(--accent);color:var(--on-accent,#151107);
+  }
+  body.split-desktop.desktop-fs:not(.view-settings-active) .seek-track:hover :is(.fill,.knob){background:var(--accent)}
   /* drawer overlays: only reachable while deskFsOpen, so it's fine for
      these to reuse the library/queue panes' own fixed positioning rather
      than the grid - they sit above the fixed fullscreen player (z-index 44)
@@ -22938,6 +22961,10 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
+  { version: 530, date: '2026-11-12', items: [
+    'In fullscreen, the close, 3 dots, heart, thumbs-down and fullscreen buttons now sit on either side of the player controls, and they fade out with the rest of the screen.',
+    'In fullscreen, the progress bar, the player buttons and the top menu buttons now turn the app color when you point at them.'
+  ]},
   { version: 529, date: '2026-11-12', items: [
     'The song title on the player is now centered.',
     'The music map now starts from the artist that is playing. If nothing is playing, it opens with a box where you type an artist.',
