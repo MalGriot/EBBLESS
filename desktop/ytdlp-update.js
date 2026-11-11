@@ -62,7 +62,8 @@ function ensure(dir, platform, opts){
       if (size > MAX_BYTES) throw new Error('Download too large');
       if (sha256File(zip) !== want) throw new Error('Checksum did not match');
       fs.rmSync(next, { recursive: true, force: true }); fs.mkdirSync(next);
-      execFileSync('tar', ['-xf', zip, '-C', next], { stdio: 'ignore', timeout: 120000 });   // bsdtar reads zip on macOS and Windows 10+
+      try { execFileSync('tar', ['-xf', zip, '-C', next], { stdio: 'pipe', timeout: 120000 }); }
+      catch(e){ throw new Error('Could not unpack: ' + String((e.stderr || e.message || '')).trim().slice(0, 300)); }   // bsdtar reads zip on macOS and Windows 10+
       const newExe = path.join(next, binName(platform));
       if (!fs.existsSync(newExe)) throw new Error('Unexpected archive contents');
       if (platform !== 'win32') fs.chmodSync(newExe, 0o755);
