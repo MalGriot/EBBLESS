@@ -22786,6 +22786,11 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
+  { version: 526, date: '2026-11-11', items: [
+    'Switching the chips above the queue (Discover, Popular, Deep cuts, Chill, Energy, Focus, decades) no longer changes the song that is playing, even if it is already fading into the next one. Only the upcoming songs change.',
+    'New songs show up in the queue within seconds, one by one, instead of all at once after a long wait. This happens after you clear the queue, switch a chip, or the queue runs out at the end of a song, so playback keeps going.',
+    'Switching back to a chip you already used brings its songs back instantly.'
+  ]},
   { version: 525, date: '2026-11-11', items: [
     'Press H to switch between Home and the player.',
     'The Video button turns into the Cinema button while video is on.',
