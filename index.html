@@ -4465,6 +4465,9 @@ body.week-up-on{overflow:hidden}
 #milkLayer.milk-inline .milk-btn svg{width:15px;height:15px}
 /* #788: in desktop fullscreen the art box is the whole screen and the title/seek/transport float over its bottom, so the fLUX buttons sit above them (same 236px as the lyrics) */
 body.desktop-fs #milkLayer.milk-inline .milk-bar{bottom:calc(236px + var(--safe-b,0px))}
+/* #792: with the record or cassette picked, fLUX is the backdrop: the disc/tape draws over it (clicks fall through to fLUX's buttons) */
+.artwork-wrap[data-mode="art"]:is([data-art-style="record"],[data-art-style="cassette"]) > #milkLayer.milk-inline{z-index:0}
+.artwork-wrap[data-mode="art"]:is([data-art-style="record"],[data-art-style="cassette"]):has(> #milkLayer.milk-inline) :is(.art-record,.art-cassette){z-index:1;pointer-events:none}
 #milkCanvas{position:absolute;inset:0;width:100%;height:100%;display:block}
 .milk-ui{position:absolute;inset:0;pointer-events:none;opacity:1;visibility:visible;transition:opacity var(--dur-surface,.25s) var(--ease-in-out,ease-in-out),visibility 0s}
 #milkLayer.milk-idle .milk-ui{opacity:0;visibility:hidden;transition:opacity .4s var(--ease-in-out,ease-in-out),visibility 0s .4s}
@@ -22990,6 +22993,9 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
+  { version: 533, date: '2026-11-12', items: [
+    'fLUX behind the record or cassette: pick either style while fLUX is on and the disc or tape plays over the moving color instead of fLUX covering it.'
+  ]},
   { version: 532, date: '2026-11-12', items: [
     'fLUX in fullscreen: its buttons now sit above the player controls instead of behind them.'
   ]},
