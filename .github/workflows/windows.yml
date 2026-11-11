@@ -33,6 +33,13 @@ jobs:
         working-directory: desktop
         run: npm ci
 
+      - name: Debug tar
+        shell: bash
+        run: |
+          export PATH="/c/Windows/System32:$PATH"
+          which -a tar; tar --version | head -1
+          cd "$RUNNER_TEMP" && echo hi > a.txt && powershell -c "Compress-Archive a.txt a.zip" && mkdir -p out && tar -xf a.zip -C out; echo "tar exit $?"; ls out
+
       - name: Build installer
         working-directory: desktop
         shell: bash
