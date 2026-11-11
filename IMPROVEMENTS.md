@@ -12533,7 +12533,7 @@ Add entries in this shape:
 - **Notes:** **Blocked on the owner buying and choosing the domain**; a domain is a recurring cost and a commitment, so the owner decides. Today the site is `malgriot.github.io/EBBLESS` (no custom domain, no CNAME), and the verification file must sit at a domain root, which a GitHub project page cannot provide. Moving the site's address has knock-on effects (service worker scope, existing installs, Google sign-in redirect origins, worker CORS allowlist): list and check each when activating. Activate together with `branded-share-links` when the owner has the domain.
 
 ### link-album-actions-746: Album and playlist links opened in the app get the same actions as a single song (follow-up to #746)
-- **Status:** review
+- **Status:** merged
 - **Priority:** high
 - **Description:** An Apple Music (or any) album or playlist link that opens in EBBLESS is matched, but with a queue already going it only filed the songs in the Library and showed a short "Added X to your library" toast, so the owner did not know where the album went and got none of the single-song actions. A collection link now ends on the same four-tile sheet a single song gets (Play now, Play next, Add to queue, Add to playlist), with a result line ("Matched 11 of 12 songs. Saved in your Library under Albums. Not found: ...").
 - **Touches:** index.html only (`beginImportNow`, new LINK-COLLECTION block with `showCollectionLanding`, `openAddCollectionToPlaylistPicker`, `queuePlayNextCollection`), `tools/link-collection.test.js`. No worker change.
@@ -12589,7 +12589,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #766.
 
 ### even-if-a-playlist-is-updated-via-sp-767: Even if a playlist is updated via spotify, songs added on ebbless shouldn't be affected (Geethub #767)
-- **Status:** review
+- **Status:** merged
 - **Priority:** high
 - **Description:** Bug, Geethub issue #767. See the issue for references.
 - **Touches:** index.html (UI)
@@ -12605,7 +12605,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #768.
 
 ### switching-discovery-mode-shouldn-t-s-769: Switching discovery mode shouldn't switch the current song, just the upcoming queue (Geethub #769)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #769. See the issue for references.
 - **Touches:** index.html (UI)
@@ -12613,7 +12613,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #769. Steer chip, Discover off and leaving shuffle+Discover keep a song already crossfading in (soundingQueuePos); before, it was cut and queuePos landed on another song. Verified in preview mid-crossfade.
 
 ### if-the-queue-has-been-cleared-it-sho-770: If the queue has been cleared, it should immediately refresh with new music by the time the current song is ov (Geethub #770)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #770. See the issue for references.
 - **Touches:** index.html (UI)
