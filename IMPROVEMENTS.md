@@ -12557,11 +12557,11 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #762.
 
 ### music-map-should-start-from-current-763: Music map should start from current artist or have an artist input box - not just starting from meltt automati (Geethub #763)
-- **Status:** ready
+- **Status:** review
 - **Priority:** high
 - **Description:** Bug, Geethub issue #763. See the issue for references.
 - **Touches:** index.html (UI)
-- **Branch:**
+- **Branch:** agent/music-map-763
 - **Notes:** Synced from Geethub #763.
 
 ### lp-should-spin-slower-than-cd-764: Lp should spin slower than cd (Geethub #764)
