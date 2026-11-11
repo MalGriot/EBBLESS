@@ -12933,3 +12933,11 @@ Add entries in this shape:
 - **Touches:** index.html (Home, Find music, Browse pages), sw.js
 - **Branch:** agent/browse-pages
 - **Notes:** Test: node --test tools/browse-pages.test.js. Back button, Escape and browser back close the topmost layer. Not a deep link (the app has no view deep links). Region cards have no sub line: the data has only search terms, no artists or languages. No worker change. Cache v539.
+
+### vibe-chart: Browse by vibe: flow chart of feelings, pick up to 7
+- **Status:** review
+- **Priority:** medium
+- **Description:** Owner: "browse by vibe should have a flow chart of emotions and states and you should be able to highlight multiple (listed as you gather them, up to 7; on desktop visibly listed, on mobile they fill a heart cart)". The Vibe page now has a map of 25 feelings joined by arrows (left to right low to high energy, top to bottom heavy to light). Tap to pick (numbered badge and ring, tap again to remove), the 8th shows a "Max 7" hint. Desktop: side panel with the picks in order, remove buttons and n / 7. Phone: a heart that fills by n / 7 and opens a bottom sheet. Play this mix turns the picks, in order, into one sentence and hands it to bpStartVibe (the same function as the What's the vibe? box). The old Right now / Tempo / Moods cards stay below as the list view.
+- **Touches:** index.html (Browse pages, Vibe), sw.js
+- **Branch:** agent/vibe-chart
+- **Notes:** Test: node --test tools/vibe-chart.test.js. No worker change; the order is expressed in the sentence (the vibe feature's energy arc is chosen from words in the text, so a blend). The chart scrolls inside its own box when it does not fit (the music map's zoom code is tied to its own state, so not reused). Picks are kept for the session (sessionStorage). Cache v540 (on top of agent/browse-pages v539, which must merge first).

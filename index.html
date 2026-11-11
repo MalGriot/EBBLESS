@@ -1384,6 +1384,76 @@ html.reduce-motion .lib-grid:not(.is-list) .lib-card .info .name{display:block;w
 .bp-vibe button{flex:none;font:inherit;font-size:15px;font-weight:700;padding:0 22px;border-radius:999px;background:var(--accent);color:var(--on-accent,#151107);cursor:pointer}
 .bp-empty{padding:36px 10px;text-align:center;color:var(--faint)}
 .bp-empty button{display:block;margin:12px auto 0;padding:10px 22px;border-radius:999px;border:1px solid var(--border-2);background:var(--panel-2);color:var(--text);font:inherit;font-weight:600}
+/* VIBE CHART (Browse by vibe): flow chart of feelings, side panel (desktop), heart cart + sheet (phone) */
+#browsePage.bp-wide .bp-inner{max-width:1240px}
+.vc-lead,.vc-cap{margin:0 2px 12px;font-size:13.5px;line-height:1.45;color:var(--faint)}
+.vc-cap{margin:10px 2px 0;font-size:12.5px}
+.vc-layout{display:block}
+.vc-col{min-width:0}
+.vc-chart{position:relative;overflow:auto;max-height:min(70vh,560px);overscroll-behavior:contain;border-radius:20px;background:linear-gradient(135deg,rgba(190,70,120,.12),rgba(60,90,170,.12)),var(--panel);border:1px solid rgba(255,255,255,.08)}
+.vc-chart:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.vc-canvas{position:relative;margin:0 auto}
+.vc-canvas svg{position:absolute;left:0;top:0;pointer-events:none}
+.vc-edge{fill:none;stroke:var(--faint-2);stroke-width:1.6;opacity:.75}
+.vc-edge.is-on{stroke:var(--accent);stroke-width:3;opacity:1}
+.vc-ah{fill:var(--faint-2)}
+.vc-ah.is-on{fill:var(--accent)}
+.vc-node{--c1:#7b4fd1;--c2:#2a1d5c;position:absolute;transform:translate(-50%,-50%);display:flex;align-items:center;justify-content:center;gap:6px;min-width:44px;min-height:44px;padding:0 15px;border-radius:999px;border:2px solid transparent;background:linear-gradient(120deg,var(--c1),var(--c2));color:#fff;font:inherit;font-size:14px;font-weight:800;letter-spacing:-.1px;white-space:nowrap;cursor:pointer}
+.vc-node.g-gloom{--c1:#7b4fd1;--c2:#2a1d5c}
+.vc-node.g-edge{--c1:#d9622b;--c2:#7a1f3d}
+.vc-node.g-still{--c1:#2e8f8a;--c2:#12365a}
+.vc-node.g-bright{--c1:#c9a227;--c2:#7a4a12}
+.vc-node.g-love{--c1:#c2417a;--c2:#4e1536}
+.vc-node.g-drive{--c1:#3a8f4f;--c2:#15432c}
+.vc-node:focus-visible{outline:3px solid #fff;outline-offset:2px}
+.vc-node[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent),0 4px 14px rgba(0,0,0,.5);z-index:2}
+.vc-nn{display:none;min-width:20px;height:20px;padding:0 4px;border-radius:999px;background:var(--accent);color:var(--on-accent,#151107);font-size:12px;font-weight:800;line-height:20px;text-align:center}
+.vc-node[aria-pressed="true"] .vc-nn{display:inline-block}
+.vc-max{display:none;position:absolute;left:50%;top:100%;transform:translateX(-50%);margin-top:2px;padding:1px 8px;border-radius:999px;background:var(--panel-3);color:var(--faint);font-size:11px;font-weight:700;line-height:16px;pointer-events:none;white-space:nowrap}
+.vc-node.is-max[aria-pressed="false"]{opacity:.55}
+.vc-node.is-max[aria-pressed="false"] .vc-max{display:block}
+.vc-panel{display:none}
+.vc-ph{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 10px}
+.vc-ph h3,.vc-sh h2{margin:0;font-size:17px;font-weight:800;color:var(--text)}
+.vc-count{font-size:13px;font-weight:800;color:var(--accent);white-space:nowrap}
+.vc-list{list-style:none;margin:0 0 12px;padding:0;display:flex;flex-direction:column;gap:6px}
+.vc-empty{padding:10px 2px;font-size:13.5px;line-height:1.4;color:var(--faint)}
+.vc-pick{display:flex;align-items:center;gap:10px;min-height:44px;padding:4px 6px 4px 10px;border-radius:14px;background:var(--panel-2);border:1px solid var(--border)}
+.vc-pn{flex:none;width:22px;height:22px;border-radius:50%;background:var(--accent);color:var(--on-accent,#151107);font-size:12px;font-weight:800;line-height:22px;text-align:center}
+.vc-pl{flex:1;min-width:0;font-size:15px;font-weight:700;color:var(--text);overflow-wrap:anywhere}
+.vc-rm,.vc-close{flex:none;min-width:44px;min-height:44px;border-radius:50%;background:transparent;border:0;color:var(--faint);font:inherit;font-size:22px;line-height:1;cursor:pointer}
+.vc-close{font-size:14px;font-weight:700;border-radius:999px;padding:0 12px;color:var(--text)}
+.vc-rm:focus-visible,.vc-close:focus-visible,.vc-play:focus-visible,.vc-clear:focus-visible,.vc-heart:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.vc-actions{display:flex;gap:8px}
+.vc-play,.vc-clear{min-height:46px;border-radius:999px;font:inherit;font-size:15px;font-weight:700;cursor:pointer}
+.vc-play{flex:1;padding:0 18px;background:var(--accent);border:0;color:var(--on-accent,#151107)}
+.vc-clear{padding:0 18px;background:var(--panel-2);border:1px solid var(--border-2);color:var(--text)}
+.vc-play:disabled,.vc-clear:disabled{opacity:.45;cursor:default}
+.vc-heart{position:fixed;right:16px;bottom:calc(18px + var(--safe-b));z-index:3;width:60px;height:60px;border-radius:50%;background:var(--panel-3);border:1px solid var(--border-2);box-shadow:0 6px 18px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:0;cursor:pointer}
+.vc-heart[hidden]{display:none}
+.vc-hwrap{display:block;width:30px;height:30px}
+.vc-hwrap svg{display:block;width:100%;height:100%}
+.vc-hwrap.is-pop{animation:vcPop .32s ease-out}
+.vc-hcount{position:absolute;top:-4px;right:-4px;min-width:22px;height:22px;padding:0 5px;border-radius:999px;background:var(--text);color:var(--bg);font-size:12px;font-weight:800;line-height:22px;text-align:center;box-sizing:border-box}
+@keyframes vcPop{0%{transform:scale(1)}40%{transform:scale(1.25)}100%{transform:scale(1)}}
+.vc-back{position:fixed;inset:0;z-index:4;background:rgba(0,0,0,.55);opacity:0;visibility:hidden;transition:opacity .2s,visibility 0s .2s}
+.vc-back.is-open{opacity:1;visibility:visible;transition:opacity .2s}
+.vc-sheet{position:fixed;left:0;right:0;bottom:0;z-index:5;max-height:80vh;display:flex;flex-direction:column;box-sizing:border-box;padding:14px 16px calc(16px + var(--safe-b));border-radius:20px 20px 0 0;background:var(--panel);border-top:1px solid var(--border-2);transform:translateY(100%);visibility:hidden;transition:transform .24s var(--ease-out,ease-out),visibility 0s .24s}
+.vc-sheet.is-open{transform:none;visibility:visible;transition:transform .24s var(--ease-out,ease-out)}
+.vc-sheet:focus{outline:none}
+.vc-sheet .vc-list{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain}
+.vc-sheet .vc-sh,.vc-sheet .vc-actions{flex:none}
+.vc-sh{display:flex;align-items:center;gap:10px;margin:0 0 10px}
+.vc-sh h2{flex:1}
+@media (min-width:860px){
+  .vc-layout{display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:16px;align-items:start}
+  .vc-panel{display:block;position:sticky;top:0;padding:16px;border-radius:20px;background:var(--panel);border:1px solid rgba(255,255,255,.08)}
+  .vc-heart,.vc-back,.vc-sheet{display:none!important}
+}
+@media (prefers-reduced-motion:reduce){
+  .vc-hwrap.is-pop{animation:none}
+  .vc-back,.vc-sheet,.vc-sheet.is-open,.vc-back.is-open{transition:none}
+}
 @media (min-width:860px){.bp-grid{grid-template-columns:repeat(auto-fill,minmax(180px,1fr))}.bp-card{min-height:112px}}
 /* Music map (Geethub #597): same layer as Find music. Static by default; a recenter is one
    finite transform/opacity glide, nothing runs while it sits still or is hidden (#487). */
@@ -10252,6 +10322,9 @@ function bpRenderTop(){
 function bpRender(){
   const list = $('bpList');
   list.textContent = '';
+  bpEl.classList.toggle('bp-wide', bpKind === 'vibe');
+  if (vcHeart) vcHeart.hidden = bpKind !== 'vibe';
+  if (bpKind !== 'vibe') vcCloseSheet(true);
   if (bpKind === 'genre'){
     const hits = bpFilterGenres(FM_GENRES, bpFilter);
     if (!hits.length){ bpEmpty(list, 'genres or styles'); return; }
@@ -10283,7 +10356,8 @@ function bpRender(){
     list.appendChild(grid);
     return;
   }
-  // vibe: what fits right now (same picks as Home), tempo, then the moods
+  vcMount(list);
+  // vibe list view (also the fallback): what fits right now (same picks as Home), tempo, then the moods
   let picks = [];
   try { const seen = new Set(); picks = homeVibePicks().filter(p => { const k = p.q.toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; }); } catch(e){}
   if (picks.length){
@@ -10327,10 +10401,251 @@ function openBrowsePage(kind, genre){
 function closeBrowsePage(keepFocus){
   if (!bpEl || bpEl.hidden) return;
   bpScroll[bpKind] = $('bpScroll').scrollTop;
+  vcCloseSheet(true);
   bpEl.hidden = true;
   if (fmEl && !fmEl.hidden && bpKind) closeFindMusic();
   if (keepFocus !== true && bpOpener && bpOpener.isConnected) try { bpOpener.focus({ preventScroll: true }); } catch(e){}
   bpOpener = null;
+}
+
+/* =========================================================================
+   VIBE CHART: Browse by vibe, a flow chart of feelings. Tap up to 7 in the
+   order you want the mix to move; Play this mix hands them to the same
+   function the "What's the vibe?" box uses (bpStartVibe), as one sentence.
+   Desktop: a side panel lists the picks. Phone: a heart that fills as you
+   pick, and a bottom sheet. Static layers: only transform/opacity change,
+   and everything sits inside #browsePage, which is display:none when closed.
+   ========================================================================= */
+/* VIBE-CHART:BEGIN (pure helpers, tested by tools/vibe-chart.test.js) */
+const VC_MAX = 7, VC_W = 910, VC_H = 510;
+// [label, column (low to high energy), row (heavy to light), colour group]
+const VC_NODES = [
+  ['numb',0,0,'gloom'], ['sad',1,0,'gloom'], ['anxious',3,0,'edge'], ['angry',5,0,'edge'],
+  ['lonely',0,1,'gloom'], ['wistful',1,1,'gloom'], ['tense',3,1,'edge'], ['restless',4,1,'edge'],
+  ['tired',0,2,'gloom'], ['nostalgic',1,2,'gloom'], ['reflective',2,2,'still'], ['focused',3,2,'drive'], ['determined',4,2,'drive'], ['euphoric',5,2,'drive'],
+  ['healing',1,3,'still'], ['hopeful',2,3,'bright'], ['romantic',3,3,'love'], ['playful',4,3,'bright'], ['energized',5,3,'drive'],
+  ['peaceful',0,4,'still'], ['calm',1,4,'still'], ['content',2,4,'still'], ['grateful',3,4,'still'], ['confident',4,4,'drive'], ['joyful',5,4,'bright'],
+].map(([label, c, r, g]) => ({ id: label, label, c, r, g }));
+const VC_BY_ID = {}; VC_NODES.forEach(n => { VC_BY_ID[n.id] = n; });
+// natural ways one feeling turns into another (from, to)
+const VC_EDGES = [
+  ['numb','sad'], ['lonely','wistful'], ['wistful','nostalgic'], ['nostalgic','reflective'], ['sad','healing'],
+  ['healing','hopeful'], ['healing','content'], ['hopeful','playful'], ['playful','joyful'], ['tired','calm'],
+  ['peaceful','calm'], ['calm','content'], ['content','grateful'], ['grateful','romantic'], ['reflective','hopeful'],
+  ['reflective','focused'], ['calm','focused'], ['focused','determined'], ['determined','confident'], ['confident','joyful'],
+  ['anxious','tense'], ['tense','restless'], ['tense','calm'], ['restless','energized'], ['energized','euphoric'],
+  ['energized','joyful'], ['angry','determined'],
+];
+function vcPos(n){ return { x: 80 + n.c * 150, y: 60 + n.r * 96 }; }
+// only known feelings, no repeats, at most 7: whatever came from storage is cleaned here
+function vcClean(list){
+  const out = [];
+  (Array.isArray(list) ? list : []).forEach(id => { if (typeof id === 'string' && VC_BY_ID[id] && !out.includes(id) && out.length < VC_MAX) out.push(id); });
+  return out;
+}
+// tap: adds, removes, or says it is full ('full' leaves the list as it was)
+function vcToggle(sel, id){
+  const cur = vcClean(sel);
+  if (!VC_BY_ID[id]) return { sel: cur, change: 'none' };
+  if (cur.includes(id)) return { sel: cur.filter(x => x !== id), change: 'removed' };
+  if (cur.length >= VC_MAX) return { sel: cur, change: 'full' };
+  return { sel: cur.concat(id), change: 'added' };
+}
+function vcFill(n){ return Math.max(0, Math.min(1, n / VC_MAX)); }
+function vcJoin(a){ return a.length < 2 ? a.join('') : a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1]; }
+// the picks, in order, as one sentence for the vibe feature (labels come from the fixed list, never typed text)
+function vcCompose(sel){
+  const w = vcClean(sel).map(id => VC_BY_ID[id].label);
+  if (!w.length) return '';
+  let t;
+  if (w.length === 1) t = 'feeling ' + w[0];
+  else if (w.length === 2) t = 'starting out ' + w[0] + ', ending up ' + w[1];
+  else t = 'starting out ' + w[0] + ', moving through ' + vcJoin(w.slice(1, -1)) + ', ending up ' + w[w.length - 1];
+  return t.slice(0, 300);
+}
+// arrow between two nodes: a gentle curve that starts and ends at the pill edges ('' when they touch)
+function vcEdgePath(a, b){
+  const pa = vcPos(a), pb = vcPos(b), dx = pb.x - pa.x, dy = pb.y - pa.y, len = Math.hypot(dx, dy) || 1;
+  const clip = (n) => Math.min(((n.label.length * 8.5 + 34) / 2) / (Math.abs(dx) || 1e-9), 22 / (Math.abs(dy) || 1e-9)) + 7 / len;
+  const ta = clip(a), tb = clip(b);
+  if (ta + tb >= 0.96) return '';
+  const sx = pa.x + dx * ta, sy = pa.y + dy * ta, ex = pb.x - dx * tb, ey = pb.y - dy * tb;
+  const q = (v) => Math.round(v * 10) / 10;
+  return 'M' + q(sx) + ' ' + q(sy) + ' Q' + q((sx + ex) / 2 - dy * 0.1) + ' ' + q((sy + ey) / 2 + dx * 0.1) + ' ' + q(ex) + ' ' + q(ey);
+}
+// arrow keys: the nearest feeling in that direction, or null
+function vcNeighbor(id, dir){
+  const a = VC_BY_ID[id]; if (!a) return null;
+  let best = null, bs = Infinity;
+  VC_NODES.forEach(n => {
+    if (n === a) return;
+    const dc = n.c - a.c, dr = n.r - a.r;
+    const along = dir === 'right' ? dc : dir === 'left' ? -dc : dir === 'down' ? dr : -dr;
+    if (along <= 0) return;
+    const across = (dir === 'left' || dir === 'right') ? Math.abs(dr) : Math.abs(dc);
+    const s = along + 1.6 * across;
+    if (s < bs){ bs = s; best = n.id; }
+  });
+  return best;
+}
+/* VIBE-CHART:END */
+const VC_KEY = 'ebbless_vibe_chart_v1';
+let vcSel = [];
+try { vcSel = vcClean(JSON.parse(sessionStorage.getItem(VC_KEY) || '[]')); } catch(e){}
+let vcNodeEls = {}, vcEdgeEls = [], vcPanel = null, vcHeart = null, vcSheet = null, vcSheetOpen = false, vcLive = null;
+function vcSave(){ try { sessionStorage.setItem(VC_KEY, JSON.stringify(vcSel)); } catch(e){} }
+function vcSay(msg){ if (vcLive){ vcLive.textContent = ''; setTimeout(() => { if (vcLive) vcLive.textContent = msg; }, 30); } }
+function vcSvg(tag, attrs){ const e = document.createElementNS('http://www.w3.org/2000/svg', tag); Object.keys(attrs || {}).forEach(k => e.setAttribute(k, attrs[k])); return e; }
+function vcPickList(ol){
+  ol.textContent = '';
+  if (!vcSel.length){
+    const li = bpMk('li', 'vc-empty', 'Tap feelings on the map. Up to 7, in the order you want the mix to move.');
+    ol.appendChild(li); return;
+  }
+  vcSel.forEach((id, i) => {
+    const li = bpMk('li', 'vc-pick');
+    li.appendChild(bpMk('span', 'vc-pn', String(i + 1)));
+    li.appendChild(bpMk('span', 'vc-pl', VC_BY_ID[id].label));
+    const x = bpMk('button', 'vc-rm', '×'); x.type = 'button'; x.setAttribute('aria-label', 'Remove ' + VC_BY_ID[id].label);
+    x.addEventListener('click', () => vcSet(id));
+    li.appendChild(x); ol.appendChild(li);
+  });
+}
+// the heart fills from the bottom by n / 7 (a hard-edged gradient, no animation needed)
+function vcSyncHeart(pop){
+  if (!vcHeart) return;
+  const n = vcSel.length, f = vcFill(n), off = String(Math.round((1 - f) * 100)) + '%';
+  vcHeart.querySelectorAll('stop').forEach(s => s.setAttribute('offset', off));
+  vcHeart.querySelector('.vc-hcount').textContent = String(n);
+  vcHeart.setAttribute('aria-label', n ? 'Your picks: ' + n + ' of ' + VC_MAX + '. Open the list' : 'Your picks: none yet');
+  if (pop){ const w = vcHeart.querySelector('.vc-hwrap'); w.classList.remove('is-pop'); void w.offsetWidth; w.classList.add('is-pop'); }
+}
+function vcSync(pop){
+  const n = vcSel.length, full = n >= VC_MAX;
+  Object.keys(vcNodeEls).forEach(id => {
+    const b = vcNodeEls[id], i = vcSel.indexOf(id), on = i >= 0;
+    b.setAttribute('aria-pressed', String(on));
+    b.classList.toggle('is-max', full && !on);
+    b.querySelector('.vc-nn').textContent = on ? String(i + 1) : '';
+  });
+  vcEdgeEls.forEach(([p, a, b]) => {
+    const on = vcSel.includes(a) && vcSel.includes(b);
+    p.classList.toggle('is-on', on); p.setAttribute('marker-end', on ? 'url(#vcArrOn)' : 'url(#vcArr)');
+  });
+  document.querySelectorAll('.vc-count').forEach(e => { e.textContent = n + ' / ' + VC_MAX; });
+  document.querySelectorAll('.vc-list').forEach(vcPickList);
+  document.querySelectorAll('.vc-play').forEach(b => { b.disabled = !n; });
+  document.querySelectorAll('.vc-clear').forEach(b => { b.disabled = !n; });
+  vcSyncHeart(pop);
+  vcSave();
+}
+function vcSet(id){
+  const r = vcToggle(vcSel, id), label = VC_BY_ID[id] ? VC_BY_ID[id].label : '';
+  if (r.change === 'full'){
+    vcSay('That is ' + VC_MAX + ' of ' + VC_MAX + '. Remove one to add ' + label + '.');
+    showToast('Max ' + VC_MAX + ': remove one to add another');
+    return;
+  }
+  if (r.change === 'none') return;
+  vcSel = r.sel; vcSync(r.change === 'added');
+  vcSay((r.change === 'added' ? 'Added ' : 'Removed ') + label + '. ' + vcSel.length + ' of ' + VC_MAX + '.' + (vcSel.length >= VC_MAX ? ' Max reached.' : ''));
+  if (vcSheetOpen && !vcSel.length) vcCloseSheet();
+}
+function vcClear(){ if (!vcSel.length) return; vcSel = []; vcSync(false); vcSay('Cleared. 0 of ' + VC_MAX + '.'); if (vcSheetOpen) vcCloseSheet(); }
+function vcPlay(){
+  const text = vcCompose(vcSel);
+  if (!text){ showToast('Pick a feeling first'); return; }
+  vcCloseSheet(true);
+  statsFeature('browse_vibe_chart');
+  bpStartVibe(text);
+}
+function vcActions(){
+  const row = bpMk('div', 'vc-actions');
+  const p = bpMk('button', 'vc-play', 'Play this mix'); p.type = 'button'; p.addEventListener('click', vcPlay);
+  const c = bpMk('button', 'vc-clear', 'Clear'); c.type = 'button'; c.addEventListener('click', vcClear);
+  row.appendChild(p); row.appendChild(c); return row;
+}
+function vcCartBuild(){
+  vcLive = bpMk('div', 'sr-only'); vcLive.setAttribute('role', 'status'); vcLive.setAttribute('aria-live', 'polite');
+  bpEl.appendChild(vcLive);
+  const h = bpMk('button', 'vc-heart'); h.type = 'button'; h.hidden = true;
+  h.innerHTML = '<span class="vc-hwrap"><svg viewBox="0 0 24 24" aria-hidden="true"><defs><linearGradient id="vcHg" x1="0" y1="1" x2="0" y2="0"><stop offset="100%" stop-color="var(--accent)"/><stop offset="100%" stop-color="var(--accent)" stop-opacity="0"/></linearGradient></defs><path d="M12 21s-7.5-4.6-9.6-9.2C.9 8.3 2.8 4.5 6.4 4.5c2.2 0 3.9 1.2 5.6 3.3 1.7-2.1 3.4-3.3 5.6-3.3 3.6 0 5.5 3.8 4 7.3C19.5 16.4 12 21 12 21z" fill="url(#vcHg)" stroke="var(--accent)" stroke-width="1.8" stroke-linejoin="round"/></svg></span><span class="vc-hcount" aria-hidden="true">0</span>';
+  h.addEventListener('click', vcOpenSheet);
+  bpEl.appendChild(h); vcHeart = h;
+  const back = bpMk('div', 'vc-back'); back.addEventListener('click', () => vcCloseSheet());
+  const s = bpMk('div', 'vc-sheet'); s.setAttribute('role', 'dialog'); s.setAttribute('aria-modal', 'true'); s.setAttribute('aria-labelledby', 'vcSheetT'); s.tabIndex = -1;
+  const head = bpMk('div', 'vc-sh');
+  const t = bpMk('h2', '', 'Your picks'); t.id = 'vcSheetT';
+  head.appendChild(t); head.appendChild(bpMk('span', 'vc-count', '0 / ' + VC_MAX));
+  const x = bpMk('button', 'vc-close', 'Close'); x.type = 'button'; x.addEventListener('click', () => vcCloseSheet());
+  head.appendChild(x);
+  const ol = bpMk('ol', 'vc-list');
+  s.appendChild(head); s.appendChild(ol); s.appendChild(vcActions());
+  bpEl.appendChild(back); bpEl.appendChild(s); vcSheet = s;
+  vcSheet._back = back;
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && vcSheetOpen){ e.preventDefault(); e.stopImmediatePropagation(); vcCloseSheet(); }
+  }, true);
+}
+function vcOpenSheet(){
+  if (!vcSheet) return;
+  vcSheetOpen = true; vcSheet.classList.add('is-open'); vcSheet._back.classList.add('is-open');
+  vcSheet.querySelector('.vc-close').focus({ preventScroll: true });
+}
+function vcCloseSheet(noFocus){
+  if (!vcSheet || !vcSheetOpen) return;
+  vcSheetOpen = false; vcSheet.classList.remove('is-open'); vcSheet._back.classList.remove('is-open');
+  if (noFocus !== true && vcHeart && !vcHeart.hidden) try { vcHeart.focus({ preventScroll: true }); } catch(e){}
+}
+function vcMount(list){
+  if (!vcSheet) vcCartBuild();
+  vcHeart.hidden = false;
+  vcNodeEls = {}; vcEdgeEls = [];
+  const sec = bpMk('section', 'bp-sec vc-sec');
+  sec.appendChild(bpMk('h2', '', 'How do you want to feel?'));
+  sec.appendChild(bpMk('p', 'vc-lead', 'Tap feelings in the order you want the mix to move, up to ' + VC_MAX + '. Arrows show how one feeling can turn into another.'));
+  const lay = bpMk('div', 'vc-layout');
+  const col = bpMk('div', 'vc-col');
+  const box = bpMk('div', 'vc-chart'); box.tabIndex = 0; box.setAttribute('role', 'group'); box.setAttribute('aria-label', 'Chart of feelings. Scroll to explore.');
+  const cv = bpMk('div', 'vc-canvas'); cv.style.width = VC_W + 'px'; cv.style.height = VC_H + 'px';
+  const svg = vcSvg('svg', { viewBox: '0 0 ' + VC_W + ' ' + VC_H, width: VC_W, height: VC_H, 'aria-hidden': 'true', focusable: 'false' });
+  const defs = vcSvg('defs');
+  [['vcArr', 'vc-ah'], ['vcArrOn', 'vc-ah is-on']].forEach(([id, cls]) => {
+    const m = vcSvg('marker', { id, viewBox: '0 0 10 10', refX: '8', refY: '5', markerWidth: '7', markerHeight: '7', orient: 'auto' });
+    m.appendChild(vcSvg('path', { d: 'M1 1L9 5L1 9z', class: cls })); defs.appendChild(m);
+  });
+  svg.appendChild(defs);
+  VC_EDGES.forEach(([a, b]) => {
+    const d = vcEdgePath(VC_BY_ID[a], VC_BY_ID[b]); if (!d) return;
+    const p = vcSvg('path', { d, class: 'vc-edge', 'marker-end': 'url(#vcArr)' });
+    svg.appendChild(p); vcEdgeEls.push([p, a, b]);
+  });
+  cv.appendChild(svg);
+  VC_NODES.forEach(n => {
+    const pos = vcPos(n);
+    const b = bpMk('button', 'vc-node g-' + n.g); b.type = 'button'; b.dataset.id = n.id;
+    b.style.left = pos.x + 'px'; b.style.top = pos.y + 'px';
+    b.setAttribute('aria-pressed', 'false');
+    b.appendChild(bpMk('span', 'vc-nn')); b.lastChild.setAttribute('aria-hidden', 'true');
+    b.appendChild(bpMk('span', 'vc-nl', n.label));
+    const mx = bpMk('span', 'vc-max', 'Max ' + VC_MAX); mx.setAttribute('aria-hidden', 'true'); b.appendChild(mx);
+    b.addEventListener('click', () => vcSet(n.id));
+    b.addEventListener('keydown', (e) => {
+      const dir = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down' }[e.key];
+      if (!dir) return;
+      const to = vcNeighbor(n.id, dir);
+      if (to && vcNodeEls[to]){ e.preventDefault(); vcNodeEls[to].focus(); }
+    });
+    cv.appendChild(b); vcNodeEls[n.id] = b;
+  });
+  box.appendChild(cv); col.appendChild(box);
+  col.appendChild(bpMk('p', 'vc-cap', 'Left to right: calmer to more energy. Top to bottom: heavier to lighter. Drag the chart to see all of it.'));
+  const panel = bpMk('aside', 'vc-panel'); panel.setAttribute('aria-label', 'Your picks');
+  const ph = bpMk('div', 'vc-ph'); ph.appendChild(bpMk('h3', '', 'Your picks')); ph.appendChild(bpMk('span', 'vc-count', '0 / ' + VC_MAX));
+  panel.appendChild(ph); panel.appendChild(bpMk('ol', 'vc-list')); panel.appendChild(vcActions());
+  vcPanel = panel;
+  lay.appendChild(col); lay.appendChild(panel); sec.appendChild(lay); list.appendChild(sec);
+  vcSync(false);
 }
 
 
@@ -23600,6 +23915,9 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
+  { version: 540, date: '2026-11-12', items: [
+    'Browse by vibe now has a map of feelings. Tap up to 7, in the order you want the mix to move, then Play this mix. On a computer your picks are listed beside the map; on a phone they fill a heart you can open.',
+  ]},
   { version: 539, date: '2026-11-12', items: [
     'Browse by genre, region and vibe on Home each open their own page now, with a filter for genres and regions, and the same colorful cards as Search.',
     'If artists fail to load, you now see a Try again button instead of an empty screen.',
