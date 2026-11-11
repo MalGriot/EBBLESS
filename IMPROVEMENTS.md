@@ -12933,3 +12933,11 @@ Add entries in this shape:
 - **Touches:** index.html (Home, Find music, Browse pages), sw.js
 - **Branch:** agent/browse-pages
 - **Notes:** Test: node --test tools/browse-pages.test.js. Back button, Escape and browser back close the topmost layer. Not a deep link (the app has no view deep links). Region cards have no sub line: the data has only search terms, no artists or languages. No worker change. Cache v539.
+
+### region-map: Browse by region world map that zooms to local radio stations
+- **Status:** review
+- **Priority:** medium
+- **Description:** Owner: "browse by region should have a world map (that zooms in to the granularity of the local radio stations)". The Region page now opens with a dark world map (zoom and pan to street level, +/- and reset, tap to zoom, keyboard). Stations from the open Radio Browser directory are pins that cluster when zoomed out. Tapping one opens a sheet with the station's place, genres and bitrate, and Play songs from here (the same ad-free songs search the region cards use). The region cards stay below the map as the list and as the fallback when there is no WebGL or no network.
+- **Touches:** index.html (Browse pages, Credits), sw.js
+- **Branch:** agent/region-map
+- **Notes:** Test: node --test tools/region-map.test.js. MapLibre GL JS 5.17.0 loads from cdnjs (with SRI) only when the Region page opens and is not precached; the map is destroyed on leaving the page and when the tab is hidden. Tiles and style from OpenFreeMap (dark), no keys. Cost: no worker route; stations fetched per tile of the visible area (120 max each, 2 at a time, debounced 450 ms, cached in memory); no billing impact. Credits list has Radio Browser, OpenFreeMap and MapLibre.
