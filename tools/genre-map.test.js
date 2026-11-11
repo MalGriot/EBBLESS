@@ -96,7 +96,7 @@ test('layout: label boxes never overlap at zoom 1 or closer, and the declutter h
 });
 
 test('declutter: zoomed out shows the biggest genres, zoomed in reveals sub-styles', () => {
-  const W = 898, H = 498, f = A.gmFit(D.w, D.h, W, H - 26, 8);
+  const W = 898, H = 498, f = A.gmFit(D.w, D.h, W, H - 26, 48);
   const out = A.gmDeclutter(nodes, order, { s: f.s, tx: f.tx, ty: f.ty + 26 }, W, H, { top: 26 }).map(k => nodes[k.i]);
   assert.ok(out.length >= 8 && out.every(n => n.prom >= A.gmMinProm(f.s)), 'only prominent genres at fit');
   const n = idx('Trip hop'), v = { s: 1.6, tx: W / 2 - nodes[n].x * 1.6, ty: H / 2 - nodes[n].y * 1.6 };
@@ -105,7 +105,7 @@ test('declutter: zoomed out shows the biggest genres, zoomed in reveals sub-styl
 });
 
 test('declutter: forced labels (the selected genre) always show, even below the zoom floor', () => {
-  const W = 898, H = 498, f = A.gmFit(D.w, D.h, W, H - 26, 8), v = { s: f.s, tx: f.tx, ty: f.ty + 26 }, i = idx('Post-bop');
+  const W = 898, H = 498, f = A.gmFit(D.w, D.h, W, H - 26, 48), v = { s: f.s, tx: f.tx, ty: f.ty + 26 }, i = idx('Post-bop');
   assert.ok(!A.gmDeclutter(nodes, order, v, W, H, { top: 26 }).map(k => k.i).includes(i));
   assert.ok(A.gmDeclutter(nodes, [i].concat(order.filter(x => x !== i)), v, W, H, { forced: 1, top: 26 }).map(k => k.i).includes(i));
 });

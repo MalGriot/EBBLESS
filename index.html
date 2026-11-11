@@ -1436,23 +1436,31 @@ html.reduce-motion .lib-grid:not(.is-list) .lib-card .info .name{display:block;w
 .gm-sg:hover{background:color-mix(in srgb,var(--text) 8%,transparent)}
 .gm-sg small{margin-left:auto;padding-left:8px;color:var(--faint);font-size:12px;font-weight:500}
 .gm-none{padding:12px;color:var(--faint);font-size:13.5px}
-.gm-panel{position:absolute;z-index:3;left:8px;right:8px;bottom:8px;max-height:48%;overflow-y:auto;overscroll-behavior:contain;padding:14px 16px 16px;border-radius:18px;background:var(--panel-2);border:1px solid var(--border-2);opacity:0;transform:translateY(24px);transition:transform .3s var(--ease-out),opacity .25s var(--ease-out)}
+.gm-panel{position:absolute;z-index:3;left:8px;right:8px;bottom:8px;max-height:58%;display:flex;flex-direction:column;padding:10px 12px 12px;border-radius:18px;background:var(--panel-2);border:1px solid var(--border-2);opacity:0;transform:translateY(24px);transition:transform .3s var(--ease-out),opacity .25s var(--ease-out)}
 .gm-panel.is-open{opacity:1;transform:none}
-.gm-phead{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
-.gm-ptitle{margin:0;font-size:20px;font-weight:800;letter-spacing:-.2px;color:var(--text);overflow-wrap:anywhere}
+.gm-phead{flex:none;display:flex;align-items:center;gap:6px}
+.gm-pt{flex:1;min-width:0}
+.gm-ptitle{margin:0;font-size:18px;font-weight:800;letter-spacing:-.2px;color:var(--text);overflow-wrap:anywhere;line-height:1.2}
 .gm-ptitle:focus{outline:none}
-.gm-pfam{display:flex;align-items:center;gap:6px;margin-top:3px;font-size:12.5px;font-weight:700;color:hsl(var(--gm-h) var(--gm-s) 74%)}
-.gm-pclose{flex:none;width:40px;height:40px;margin:-6px -8px 0 0;border:0;border-radius:50%;background:none;color:var(--faint);font-size:26px;line-height:1;cursor:pointer}
-.gm-play{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:46px;margin:12px 0 2px;border:0;border-radius:999px;background:var(--accent);color:var(--on-accent,#151107);font:inherit;font-size:15px;font-weight:800;cursor:pointer}
-.gm-play svg{width:18px;height:18px}
-.gm-plab{margin:14px 0 8px;font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--faint)}
+.gm-pfam{display:flex;align-items:center;gap:6px;margin-top:2px;font-size:12px;font-weight:700;color:hsl(var(--gm-h) var(--gm-s) 74%);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gm-pclose,.gm-ptog{flex:none;width:36px;height:36px;border:0;border-radius:50%;background:none;color:var(--faint);font-size:24px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.gm-ptog svg{width:24px;height:24px}
+.gm-ptog[aria-expanded="true"] svg{transform:rotate(180deg)}
+.gm-ptog:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.gm-play{flex:none;display:flex;align-items:center;justify-content:center;gap:6px;min-height:38px;padding:0 15px;border:0;border-radius:999px;background:var(--accent);color:var(--on-accent,#151107);font:inherit;font-size:14px;font-weight:800;cursor:pointer}
+.gm-play svg{width:16px;height:16px}
+.gm-pbody{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;margin-top:6px;max-height:min(30vh,200px)}
+.gm-plab{margin:10px 0 6px;font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--faint)}
 .gm-chips{display:flex;flex-wrap:wrap;gap:8px}
-.gm-chip{display:inline-flex;align-items:center;gap:7px;min-height:40px;padding:0 13px;border-radius:999px;background:color-mix(in srgb,var(--text) 5%,transparent);border:1px solid hsl(var(--gm-h) var(--gm-s) 60% / .4);color:var(--text);font:inherit;font-size:13px;font-weight:600;cursor:pointer}
+.gm-chip{display:inline-flex;align-items:center;gap:7px;min-height:38px;padding:0 12px;border-radius:999px;background:color-mix(in srgb,var(--text) 5%,transparent);border:1px solid hsl(var(--gm-h) var(--gm-s) 60% / .4);color:var(--text);font:inherit;font-size:13px;font-weight:600;cursor:pointer}
 .gm-foot{margin:14px 2px 0;font-size:13px}
 .gm-foot a{color:var(--faint);text-decoration:underline;text-underline-offset:3px}
 .gm-foot a:hover{color:var(--accent)}
+@media (max-width:639px){.gm-panel.is-min .gm-pbody{display:none}}
 @media (min-width:640px){
   .gm-panel{left:auto;top:10px;right:10px;bottom:10px;width:300px;max-height:none;transform:translateX(24px)}
+  .gm-pbody{max-height:none}
+  .gm-ptog{display:none}
   .gm-zoomctl{right:auto;top:auto;left:10px;bottom:10px}
 }
 @media (prefers-reduced-motion:reduce){.gm-lab,.gm-panel,.gm-hint{transition:none}}
@@ -10601,6 +10609,7 @@ function gmInit(){
   g.panel.addEventListener('click', (e) => {
     const b = e.target.closest('[data-gp]'); if (!b) return;
     if (b.dataset.gp === 'close'){ gmDeselect(); return; }
+    if (b.dataset.gp === 'tog'){ g.min = !g.min; gmPanel(); gmFlyTo(g.sel); const t = g.panel.querySelector('.gm-ptog'); if (t && e.detail === 0) t.focus({ preventScroll: true }); return; }
     if (b.dataset.gp === 'play') gmPlay(g.sel, b);
     else if (b.dataset.gp === 'go') gmSelect(+b.dataset.i, { kbd: e.detail === 0, fromPanel: true });
   });
@@ -10710,8 +10719,12 @@ function gmApply(){
     if (e.classList.contains('is-nb') !== rel) e.classList.toggle('is-nb', rel);
   });
   g.lanes.forEach((l) => {
-    const t = Math.max(l.y0 * v.s + v.ty, GM_HEADER), b = Math.min(l.y1 * v.s + v.ty, H), show = b - t >= 22 && !want.has(l.root);
-    if (show){ l.s.style.transform = 'translateY(' + Math.round((t + b) / 2 - 9) + 'px)'; if (l.hid){ l.hid = false; l.s.style.visibility = ''; } }
+    const t = Math.max(l.y0 * v.s + v.ty, GM_HEADER), b = Math.min(l.y1 * v.s + v.ty, H), ty = Math.round((t + b) / 2 - 9);
+    if (!l.w) l.w = l.s.offsetWidth || 70;
+    // the pinned family name steps aside rather than sit on top of a genre label
+    const hit = keep.some(k => { const n = g.nodes[k.i]; return k.sx - n.w / 2 < 8 + l.w + 4 && k.sx + n.w / 2 > 4 && k.sy - n.h / 2 < ty + 22 && k.sy + n.h / 2 > ty - 4; });
+    const show = b - t >= 22 && !want.has(l.root) && !hit;
+    if (show){ l.s.style.transform = 'translateY(' + ty + 'px)'; if (l.hid){ l.hid = false; l.s.style.visibility = ''; } }
     else if (!l.hid){ l.hid = true; l.s.style.visibility = 'hidden'; }
   });
   const note = st.querySelector('.gm-note');
@@ -10756,7 +10769,7 @@ function gmGlideTo(s1, tx1, ty1){
 }
 function gmFitTarget(){
   const g = gm, W = g.stage.clientWidth, H = g.stage.clientHeight;
-  const f = gmFit(g.D.w, g.D.h, W, H - GM_HEADER, 8);
+  const f = gmFit(g.D.w, g.D.h, W, H - GM_HEADER, 48);   // room for the half label that hangs over each edge
   f.ty += GM_HEADER;
   return f;
 }
@@ -10781,7 +10794,7 @@ function gmFitView(animate){
 // where on the stage a selected genre should sit: left of the side panel on desktop, above the sheet on phones
 function gmFocusPoint(){
   const g = gm, W = g.stage.clientWidth, H = g.stage.clientHeight;
-  return W >= 640 ? { x: (W - 330) / 2, y: (H + GM_HEADER) / 2 } : { x: W / 2, y: GM_HEADER + (H - GM_HEADER) * 0.28 };
+  return W >= 640 ? { x: (W - 330) / 2, y: (H + GM_HEADER) / 2 } : { x: W / 2, y: GM_HEADER + (H - GM_HEADER) * (g.min === false ? 0.2 : 0.4) };
 }
 function gmFlyTo(i){
   const g = gm, n = g.nodes[i], p = gmFocusPoint();
@@ -10816,19 +10829,24 @@ function gmDeselect(){
 }
 function gmPanel(){
   const g = gm, n = g.nodes[g.sel], f = g.D.fam[n.fam], p = g.panel;
+  if (g.min === undefined) g.min = g.stage.clientWidth < 640;   // phones start with the one-line strip; the choice then sticks
   const chip = (i) => '<button type="button" class="gm-chip" style="--gm-h:' + g.D.fam[g.nodes[i].fam][2] + ';--gm-s:' + g.D.fam[g.nodes[i].fam][3] + '%" data-gp="go" data-i="' + i + '"><i aria-hidden="true"></i>' + escapeHtml(g.nodes[i].name) + '</button>';
   const byProm = (a, b) => g.nodes[b].prom - g.nodes[a].prom || a - b;
   const from = n.from.slice().sort(byProm), to = n.to.slice().sort(byProm);
   let styles = [];
   if (n.root) styles = g.nodes.map((m, i) => i).filter(i => g.nodes[i].fam === n.fam && !g.nodes[i].root).sort(byProm).slice(0, 14);
+  p.classList.toggle('is-min', g.min);
   p.innerHTML =
-    '<div class="gm-phead"><div><h2 class="gm-ptitle" tabindex="-1">' + escapeHtml(n.name) + '</h2>' +
+    '<div class="gm-phead"><div class="gm-pt"><h2 class="gm-ptitle" tabindex="-1">' + escapeHtml(n.name) + '</h2>' +
     '<div class="gm-pfam" style="--gm-h:' + f[2] + ';--gm-s:' + f[3] + '%"><i aria-hidden="true"></i>' + (n.root ? 'Genre family' : escapeHtml(f[1]) + ' &middot; ' + escapeHtml(gmDecade(n))) + '</div></div>' +
-    '<button type="button" class="gm-pclose" data-gp="close" aria-label="Close">&times;</button></div>' +
     '<button type="button" class="gm-play" data-gp="play"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>Play</button>' +
+    '<button type="button" class="gm-ptog" data-gp="tog" aria-expanded="' + !g.min + '" aria-controls="gmPBody" aria-label="' + (g.min ? 'Show' : 'Hide') + ' what it came from and led to"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg></button>' +
+    '<button type="button" class="gm-pclose" data-gp="close" aria-label="Close">&times;</button></div>' +
+    '<div class="gm-pbody" id="gmPBody">' +
     (from.length ? '<div class="gm-plab">Came from</div><div class="gm-chips">' + from.map(chip).join('') + '</div>' : '') +
     (to.length ? '<div class="gm-plab">Led to</div><div class="gm-chips">' + to.map(chip).join('') + '</div>' : '') +
-    (styles.length ? '<div class="gm-plab">Styles</div><div class="gm-chips">' + styles.map(chip).join('') + '</div>' : '');
+    (styles.length ? '<div class="gm-plab">Styles</div><div class="gm-chips">' + styles.map(chip).join('') + '</div>' : '') +
+    (!from.length && !to.length && !styles.length ? '<div class="gm-plab">No arrows on the chart for this one yet.</div>' : '') + '</div>';
   p.hidden = false; p.offsetWidth; p.classList.add('is-open');
 }
 // the same call a style button on the list view makes (see bpRender); styles the list does not have get a plain search
@@ -24101,8 +24119,9 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
-  { version: 541, date: '2026-11-12', items: [
+  { version: 542, date: '2026-11-12', items: [
     'Browse by genre now opens a genre flow chart: time runs left to right, each family has its own row, and arrows show which genres led to which. Zoom in to find smaller styles, tap one to hear it, or jump to what it came from and led to.',
+    'On a phone the chart opens in the middle of the story with a hint to swipe through time, the zoomed-out view is much cleaner, and a tapped genre shows a slim strip you can open for the full lists.',
     'The old genre cards are still there under List, and there is a link to more genres on EveryNoise.',
   ]},
   { version: 539, date: '2026-11-12', items: [
