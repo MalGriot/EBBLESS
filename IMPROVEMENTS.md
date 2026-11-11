@@ -12933,3 +12933,12 @@ Add entries in this shape:
 - **Touches:** index.html (Home, Find music, Browse pages), sw.js
 - **Branch:** agent/browse-pages
 - **Notes:** Test: node --test tools/browse-pages.test.js. Back button, Escape and browser back close the topmost layer. Not a deep link (the app has no view deep links). Region cards have no sub line: the data has only search terms, no artists or languages. No worker change. Cache v539.
+
+
+### genre-map: Browse by genre is an interactive genre map
+- **Status:** review
+- **Priority:** medium
+- **Description:** Owner: "browse by genre should have a genre map". The Genre page opens on a map of 209 genres and styles: related genres sit close, each of 15 families has one hue, zoom (wheel, pinch, double tap, +/-/Fit, keyboard) reveals sub-styles, labels never overlap and only visible ones exist in the DOM. Tap a genre for a side panel (desktop) or bottom sheet (phones) with Play (same call the list view makes), "Sounds close to" chips that fly the map there, and a search box on the page that flies to a genre. The gradient cards remain as the List toggle and as the fallback if the map cannot build. Small "More genres on EveryNoise" link below. Our own data and layout; nothing taken from EveryNoise.
+- **Touches:** index.html (Browse pages, music map gesture code now shared via zmGestures), sw.js, tools/genre-map-*.js, scripts/check.sh
+- **Branch:** agent/genre-map
+- **Notes:** Data in tools/genre-map-data.js; `node tools/genre-map-layout.js` regenerates tools/genre-map.json and the GENRE-MAP-DATA block in index.html (scripts/check.sh fails if stale). Test: node --test tools/genre-map.test.js. No worker route added. Not run on a real phone; verified in the preview at 320/360/768/1280 px with zero label overlaps at every zoom. Phones start at a closer zoom than "Fit" so names stay readable. Merge note: built on agent/browse-pages (v539); sw.js is v540 here, bump again if another lane lands first.
