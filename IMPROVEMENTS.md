@@ -12758,11 +12758,11 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #787.
 
 ### flux-player-controls-are-underneath-and-788: FLUX player controls are underneath and blocked by the player controls (Geethub #788)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Geethub issue #788. See the issue for the full text.
 - **Touches:** index.html (UI)
-- **Branch:**
+- **Branch:** agent/flux-flow
 - **Notes:** Synced from Geethub #788.
 
 ### cinema-mode-the-video-button-disappears-789: Cinema mode, the video button disappears (Geethub #789)
@@ -12782,19 +12782,19 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #790.
 
 ### flux-mode-there-should-be-more-keyboard-791: Flux mode: there should be more keyboard shortcuts to affect the visualizer (Geethub #791)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Geethub issue #791. See the issue for the full text.
 - **Touches:** index.html (UI)
-- **Branch:**
+- **Branch:** agent/flux-flow
 - **Notes:** Synced from Geethub #791.
 
 ### when-flux-is-fullscreen-and-another-albu-792: When flux is fullscreen and another album art style is selected, flux should be behind whatever is showing cur (Geethub #792)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Geethub issue #792. See the issue for the full text.
 - **Touches:** index.html (UI)
-- **Branch:**
+- **Branch:** agent/flux-flow
 - **Notes:** Synced from Geethub #792.
 
 ### title-on-desktop-is-not-centered-with-th-793: Title on desktop is not centered with the album art (Geethub #793)
@@ -12814,11 +12814,11 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #794.
 
 ### flux-should-use-the-colors-of-the-now-pl-795: Flux should use the colors of the now playing art (Geethub #795)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Geethub issue #795. See the issue for the full text.
 - **Touches:** index.html (UI)
-- **Branch:**
+- **Branch:** agent/flux-flow
 - **Notes:** Synced from Geethub #795.
 
 ### remove-the-shape-chooser-button-from-def-796: Remove the shape chooser button from default miniplayer - the one next to the paint tablet button above the ti (Geethub #796)
@@ -12902,9 +12902,9 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #805.
 
 ### flux-left-and-right-change-the-song-good-806: FLux: left and right change the song (good) but up and down should change the pattern (Geethub #806)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Geethub issue #806. See the issue for the full text.
 - **Touches:** index.html (UI)
-- **Branch:**
+- **Branch:** agent/flux-flow
 - **Notes:** Synced from Geethub #806.
