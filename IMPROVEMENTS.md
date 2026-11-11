@@ -12862,11 +12862,11 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #800.
 
 ### progress-bar-wav-form-doesn-t-appear-on-801: Progress bar wav form doesn't appear on fullscreen mode (Geethub #801)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Geethub issue #801. See the issue for the full text.
 - **Touches:** index.html (UI)
-- **Branch:**
+- **Branch:** agent/bugs-b
 - **Notes:** Synced from Geethub #801.
 
 ### the-for-square-button-that-opens-the-fin-802: The for square button that opens the find music window should be removed and integrated into the home page (Geethub #802)
@@ -12878,11 +12878,11 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #802.
 
 ### ui-color-should-fade-to-the-next-color-n-803: Ui color should fade to the next color - now it just switches harshly. it should fade along with the art and c (Geethub #803)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Geethub issue #803. See the issue for the full text.
 - **Touches:** index.html (UI)
-- **Branch:**
+- **Branch:** agent/bugs-b
 - **Notes:** Synced from Geethub #803.
 
 ### mid-fullscreen-mode-804: Mid-fullscreen mode (Geethub #804)
