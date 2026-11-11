@@ -43,11 +43,11 @@ jobs:
           if ("v$version" -ne $env:TAG) { Write-Error "desktop/package.json is $version but the release tag is $env:TAG"; exit 1 }
           npm run dist:win
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          Get-ChildItem dist/EBBLESS-Setup-*.exe
+          Get-ChildItem dist.noindex/EBBLESS-Setup-*.exe
 
       - name: Attach to release
         working-directory: desktop
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload "$TAG" dist/EBBLESS-Setup-*.exe --clobber
+        run: gh release upload "$TAG" dist.noindex/EBBLESS-Setup-*.exe --clobber
