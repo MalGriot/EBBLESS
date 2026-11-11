@@ -1,128 +1,121 @@
-// Builds the genre map: fixed, repeatable positions for every genre in
-// tools/genre-map-data.js using a small force layout (no randomness: the seed
-// is a hash of each genre's name, so the output is identical on every run).
+// Builds the genre flow chart: a fixed, repeatable layout for every genre in
+// tools/genre-map-data.js. Columns are decades (left to right), each family is a
+// horizontal lane, arrows run from the genre(s) a style grew out of to the style.
+// No randomness: the same data always gives the same output.
 //
 //   node tools/genre-map-layout.js          rewrite tools/genre-map.json and the
 //                                           GENRE-MAP-DATA block in index.html
 //   node tools/genre-map-layout.js --check  fail if either is out of date
 //
-// Output format (kept small, it ships inside index.html):
-//   { v:1, w, h, fam:[[id,label,hue,sat,fmKey|null],...],
-//     n:[[name,famIndex,x,y,prominence,isRoot],...], e:[[i,j],...] }
+// Output (kept small, it ships inside index.html):
+//   { v:2, w, h, fam:[[id,label,hue,sat,fmKey|null],...],
+//     cols:[[label,xCenter],...], lanes:[[famIndex,y0,y1],...],
+//     n:[[name,famIndex,x,y,prominence,isRoot,decade],...], e:[[fromIndex,toIndex],...] }
 'use strict';
 const fs = require('node:fs');
 const path = require('node:path');
-const { FAMILIES, FAMILY_LINKS, SRC } = require('./genre-map-data.js');
+const { FAMILIES, LANES, SRC } = require('./genre-map-data.js');
 
-// the label box the browser uses (index.html gmLabelW / GM_LABEL_H), at screen px
+// the label box the browser uses (index.html gmLabelW / GM_LABEL_H), in screen px
 const LABEL_H = 30;
-const labelW = (name) => Math.round(String(name).length * 7.4 + 34);
-// layout keeps every label box apart at this zoom and closer in; the browser
-// thins labels at lower zooms, so no two labels ever overlap at any zoom
-const Z_REF = 1.6;
-const GAP = 6;
-// the zoom at which a genre of this prominence appears (gmMinProm in index.html is the same table);
-// two genres are kept apart at the zoom where the less prominent one shows up
-const Z_FIT = +(process.env.GM_ZFIT || 0.48);
-function tz(p){ return p >= 10 ? 0.32 : p >= 8 ? Z_FIT : p === 7 ? 0.7 : p === 6 ? 0.9 : p === 5 ? 1.2 : Z_REF; }
+const labelW = (name) => Math.round(String(name).length * 7.8 + 42);
+// world units are px at zoom 1: boxes built from these never overlap at zoom >= 1,
+// and the browser thins labels below that, so no two labels ever overlap at any zoom
+const Z_REF = 1;
+const GAP_X = 44, ROW = 36, SUB_ROWS = 5, LANE_PAD = 14, LANE_GAP = 10, MARGIN = 24;
 
-function hash(s){ let h = 2166136261; for (let i = 0; i < s.length; i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
-function rnd(seed){ let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+// decade -> column. 0 is the family column; then Before 1900, 1900s, 1910s ... 2010s
+function colOf(dec){ return dec < 1900 ? 1 : 2 + (Math.min(dec, 2010) - 1900) / 10; }
+function colLabel(c){ return c === 0 ? '' : c === 1 ? '<1900' : (1900 + (c - 2) * 10) + 's'; }
 
 function parse(){
-  const nodes = [], byName = new Map(), links = [];
+  const nodes = [], byName = new Map();
   FAMILIES.forEach((f, fi) => {
     const lines = (SRC[f.id] || '').split('\n').map(s => s.trim()).filter(Boolean);
     lines.forEach((ln, li) => {
-      const [name, p, nb] = ln.split('|').map(s => s.trim());
+      const [name, p, dec, from] = ln.split('|').map(s => s.trim());
       if (byName.has(name)) throw new Error('duplicate genre: ' + name);
-      const n = { name, fam: fi, prom: +p, root: li === 0, nb: nb ? nb.split(',').map(s => s.trim()) : [] };
+      const root = li === 0;
+      if (!root && !/^\d{4}$/.test(dec || '')) throw new Error('bad decade for ' + name);
+      const n = { name, fam: fi, prom: +p, root, dec: root ? 0 : +dec, from: from ? from.split(',').map(s => s.trim()) : [] };
+      if (n.prom < 1 || n.prom > 10 || !isFinite(n.prom)) throw new Error('bad prominence: ' + name);
+      if (!root && n.dec >= 1900 && n.dec % 10 !== 0) throw new Error('decade must be a multiple of 10: ' + name);
+      n.col = root ? 0 : colOf(n.dec);
       byName.set(name, nodes.length); nodes.push(n);
     });
   });
-  const seen = new Set();
-  const add = (a, b, kind) => { const k = a < b ? a + ',' + b : b + ',' + a; if (a === b || seen.has(k)) return; seen.add(k); links.push({ a, b, kind }); };
-  nodes.forEach((n, i) => {
-    if (n.prom < 1 || n.prom > 10 || !isFinite(n.prom)) throw new Error('bad prominence: ' + n.name);
-    n.nb.forEach(x => { if (!byName.has(x)) throw new Error('unknown neighbor "' + x + '" of ' + n.name); add(i, byName.get(x), 'nb'); });
-  });
-  const roots = FAMILIES.map((f, fi) => nodes.findIndex(n => n.fam === fi && n.root));
-  nodes.forEach((n, i) => { if (!n.root) add(i, roots[n.fam], 'parent'); });
-  FAMILY_LINKS.forEach(([a, b]) => {
-    const ia = FAMILIES.findIndex(f => f.id === a), ib = FAMILIES.findIndex(f => f.id === b);
-    if (ia < 0 || ib < 0) throw new Error('bad family link ' + a + ' ' + b);
-    add(roots[ia], roots[ib], 'fam');
-  });
-  return { nodes, links };
+  const edges = [], seen = new Set();
+  nodes.forEach((n, i) => n.from.forEach(x => {
+    if (!byName.has(x)) throw new Error('unknown parent "' + x + '" of ' + n.name);
+    const j = byName.get(x), k = j + ',' + i;
+    if (j === i || seen.has(k)) throw new Error('bad or repeated lineage ' + x + ' -> ' + n.name);
+    // a style cannot come before what it grew out of (the root of a family counts as the start)
+    if (!nodes[j].root && nodes[j].col > n.col) throw new Error(x + ' emerged after ' + n.name);
+    seen.add(k); edges.push([j, i]);
+  }));
+  return { nodes, edges, byName };
 }
 
 function layout(){
-  const { nodes, links } = parse();
-  const N = nodes.length;
-  const KX = +(process.env.GM_KX || 0.06);
-  const KY = +(process.env.GM_KY || 0.06);
-  const SX = +(process.env.GM_SX || 1), SY = +(process.env.GM_SY || 0.9);   // spread the anchors a little: label boxes need room
-  nodes.forEach((n) => {
-    const r = rnd(hash(n.name)), f = FAMILIES[n.fam];
-    const a = r() * Math.PI * 2, d = n.root ? 0 : 40 + r() * 110;
-    n.x = f.at[0] * SX + Math.cos(a) * d * 1.6; n.y = f.at[1] * SY + Math.sin(a) * d;
-    n.vx = 0; n.vy = 0;
-    n.pw = labelW(n.name) + GAP; n.ph = LABEL_H + GAP; n.w = n.pw / Z_REF; n.h = n.ph / Z_REF;
-  });
-  const ITER = 700;
-  for (let it = 0; it < ITER; it++){
-    const alpha = 1 - it / ITER, cool = 0.04 + alpha * 0.96;
-    for (const l of links){
-      const A = nodes[l.a], B = nodes[l.b];
-      let dx = B.x - A.x, dy = B.y - A.y, d = Math.hypot(dx, dy) || 0.01;
-      const rest = l.kind === 'nb' ? 52 : l.kind === 'parent' ? 105 : 230;
-      const k = l.kind === 'nb' ? 0.06 : l.kind === 'parent' ? 0.012 : 0.01;
-      const f = (d - rest) * k * cool, fx = dx / d * f, fy = dy / d * f;
-      A.vx += fx; A.vy += fy; B.vx -= fx; B.vy -= fy;
-    }
-    for (let i = 0; i < N; i++){
-      const A = nodes[i], F = FAMILIES[A.fam];
-      A.vx += (F.at[0] * SX - A.x) * KX * cool; A.vy += (F.at[1] * SY - A.y) * KY * cool;
-      for (let j = i + 1; j < N; j++){
-        const B = nodes[j];
-        let dx = B.x - A.x, dy = B.y - A.y;
-        const d2 = dx * dx + dy * dy;
-        if (d2 > 160 * 160) continue;
-        const d = Math.sqrt(d2) || 0.01;
-        const f = 520 / (d2 + 60) * cool;
-        const fx = dx / d * f, fy = dy / d * f;
-        A.vx -= fx; A.vy -= fy; B.vx += fx; B.vy += fy;
+  const { nodes, edges } = parse();
+  const laneOrder = LANES.map(id => FAMILIES.findIndex(f => f.id === id));
+  if (laneOrder.some(i => i < 0) || laneOrder.length !== FAMILIES.length) throw new Error('LANES must list every family once');
+  const parents = nodes.map(() => []);
+  edges.forEach(([a, b]) => parents[b].push(a));
+  const NC = 2 + (2010 - 1900) / 10 + 1;   // family, <1900, 1900s ... 2010s
+  // slots: for each lane, each column's nodes stack in rows; a node sits at the row of its parents in the same lane when it can
+  nodes.forEach(n => { n.slot = 0; n.sub = 0; n.nsub = 1; });
+  const slotsUsed = new Map();
+  laneOrder.forEach(fi => {
+    const inLane = nodes.map((n, i) => i).filter(i => nodes[i].fam === fi && !nodes[i].root);
+    for (let c = 1; c < NC; c++){
+      const members = inLane.filter(i => nodes[i].col === c), inCol = new Set(members), depth = new Map();
+      // a style that grew out of another in the same decade sits to its right, so arrows still run left to right
+      const dep = (i) => { if (!depth.has(i)) depth.set(i, 0), depth.set(i, 1 + Math.max(-1, ...parents[i].filter(p => inCol.has(p)).map(dep))); return depth.get(i); };
+      members.forEach(dep);
+      const slotOf = (i) => { const ps = parents[i].filter(p => nodes[p].fam === fi && !nodes[p].root); return ps.length ? ps.reduce((t, p) => t + nodes[p].slot, 0) / ps.length : 0; };
+      // parents first (by depth), then fill sub-columns left to right: a style never lands left of what it grew out of
+      const ord = members.slice().sort((x, y) => depth.get(x) - depth.get(y) || nodes[y].prom - nodes[x].prom || x - y);
+      const nchunk = Math.ceil(ord.length / SUB_ROWS) || 0, per = Math.ceil(ord.length / (nchunk || 1)), chunks = [];
+      for (let k = 0; k < nchunk; k++){
+        const part = ord.slice(k * per, (k + 1) * per).map(i => ({ i, want: slotOf(i) })).sort((x, y) => x.want - y.want || x.i - y.i);
+        let last = -1;
+        part.forEach(o => { const sl = Math.max(Math.round(slotOf(o.i)), last + 1); nodes[o.i].slot = sl; last = sl; });
+        chunks.push(part.map(o => o.i));
       }
+      chunks.forEach((ch, k) => ch.forEach(i => { nodes[i].sub = k; nodes[i].nsub = chunks.length; }));
     }
-    for (const n of nodes){ n.x += Math.max(-9, Math.min(9, n.vx)); n.y += Math.max(-9, Math.min(9, n.vy)); n.vx *= 0.55; n.vy *= 0.55; }
+    slotsUsed.set(fi, Math.max(1, 1 + Math.max(0, ...inLane.map(i => nodes[i].slot))));
+  });
+  // lanes top to bottom
+  const lanes = [];
+  let y = MARGIN;
+  laneOrder.forEach(fi => {
+    const h = slotsUsed.get(fi) * ROW + LANE_PAD * 2;
+    lanes.push([fi, y, y + h]);
+    nodes.forEach(n => { if (n.fam === fi) n.y = n.root ? y + h / 2 : y + LANE_PAD + n.slot * ROW + ROW / 2; });
+    y += h + LANE_GAP;
+  });
+  // columns: wide enough for the widest label in them (times its sub-columns) plus room for the arrows between
+  const cw = new Array(NC).fill(0), cs = new Array(NC).fill(1);
+  nodes.forEach(n => { cw[n.col] = Math.max(cw[n.col], labelW(n.name)); cs[n.col] = Math.max(cs[n.col], n.nsub); });
+  const cols = [], subW = []; let x = MARGIN;
+  for (let c = 0; c < NC; c++){
+    subW[c] = (cw[c] || 40) + GAP_X;
+    const w = subW[c] * cs[c];
+    cols.push([colLabel(c), Math.round((x + w / 2) * 10) / 10]);
+    x += w;
   }
-  const HB = +(process.env.GM_HB || 0.4);
-  // collision pass: slide boxes apart along the shallower axis until none overlap
-  for (let it = 0; it < 4000; it++){
-    let moved = 0;
-    for (let i = 0; i < N; i++) for (let j = i + 1; j < N; j++){
-      const A = nodes[i], B = nodes[j];
-      const z = tz(Math.min(A.prom, B.prom));
-      const ox = (A.pw + B.pw) / 2 / z - Math.abs(B.x - A.x), oy = (A.ph + B.ph) / 2 / z - Math.abs(B.y - A.y);
-      if (ox <= 0 || oy <= 0) continue;
-      moved++;
-      if (oy * HB < ox){ const s = (B.y >= A.y ? 1 : -1) * (oy / 2 + 0.05); A.y -= s; B.y += s; }
-      else { const s = (B.x >= A.x ? 1 : -1) * (ox / 2 + 0.05); A.x -= s; B.x += s; }
-    }
-    if (!moved) break;
-  }
-  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
-  nodes.forEach(n => { x0 = Math.min(x0, n.x - n.w / 2); y0 = Math.min(y0, n.y - n.h / 2); x1 = Math.max(x1, n.x + n.w / 2); y1 = Math.max(y1, n.y + n.h / 2); });
-  const px = 30 - x0, py = 30 - y0;
-  nodes.forEach(n => { n.x = Math.round((n.x + px) * 10) / 10; n.y = Math.round((n.y + py) * 10) / 10; });
+  nodes.forEach(n => { n.x = Math.round((cols[n.col][1] + (n.sub - (n.nsub - 1) / 2) * subW[n.col]) * 10) / 10; });
   return {
-    v: 1, w: Math.ceil(x1 - x0 + 60), h: Math.ceil(y1 - y0 + 60),
-    fam: FAMILIES.map(f => [f.id, f.fm || labelOf(f.id), f.hue, f.sat, f.fm]),
-    n: nodes.map(n => [n.name, n.fam, n.x, n.y, n.prom, n.root ? 1 : 0]),
-    e: links.filter(l => l.kind !== 'parent').map(l => [l.a, l.b])
+    v: 2, w: Math.ceil(x + MARGIN), h: Math.ceil(y - LANE_GAP + MARGIN),
+    fam: FAMILIES.map(f => [f.id, f.fm || ({ blues: 'Blues', metal: 'Metal', world: 'World' })[f.id] || f.id, f.hue, f.sat, f.fm]),
+    cols,
+    lanes: lanes.map(l => [l[0], Math.round(l[1]), Math.round(l[2])]),
+    n: nodes.map(n => [n.name, n.fam, n.x, Math.round(n.y * 10) / 10, n.prom, n.root ? 1 : 0, n.dec]),
+    e: edges
   };
 }
-function labelOf(id){ return ({ blues: 'Blues', metal: 'Metal', world: 'World' })[id] || id; }
 
 const ROOT = path.join(__dirname, '..');
 const JSON_PATH = path.join(__dirname, 'genre-map.json');
@@ -136,7 +129,7 @@ function injected(html, d){
   return html.slice(0, a) + blockFor(d) + html.slice(b + END.length);
 }
 
-module.exports = { layout, parse, labelW, tz, LABEL_H, Z_REF, GAP, hash, rnd, toJson, BEGIN, END };
+module.exports = { layout, parse, labelW, LABEL_H, Z_REF, ROW, toJson, BEGIN, END };
 
 if (require.main === module){
   const d = layout();
@@ -150,6 +143,6 @@ if (require.main === module){
   } else {
     fs.writeFileSync(JSON_PATH, toJson(d) + '\n');
     if (next === null) console.log('no GENRE-MAP-DATA block in index.html yet; wrote ' + JSON_PATH + ' only');
-    else { fs.writeFileSync(idx, next); console.log('wrote tools/genre-map.json and index.html block (' + d.n.length + ' genres, ' + d.w + 'x' + d.h + ')'); }
+    else { fs.writeFileSync(idx, next); console.log('wrote tools/genre-map.json and index.html block (' + d.n.length + ' genres, ' + d.e.length + ' arrows, ' + d.w + 'x' + d.h + ')'); }
   }
 }

@@ -1394,16 +1394,33 @@ html.reduce-motion .lib-grid:not(.is-list) .lib-card .info .name{display:block;w
 .gm-stage{position:absolute;inset:0;touch-action:none;user-select:none;-webkit-user-select:none;outline:none;cursor:grab}
 .gm-stage:focus-visible{box-shadow:inset 0 0 0 2px var(--accent)}
 .gm-note{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--faint);font-size:14px;pointer-events:none}
-.gm-lab{position:absolute;left:0;top:0;height:30px;box-sizing:border-box;display:flex;align-items:center;gap:6px;padding:0 8px;border-radius:999px;font:inherit;font-size:12.5px;font-weight:600;white-space:nowrap;cursor:pointer;touch-action:none;color:hsl(var(--gm-h) var(--gm-s) 76%);background:hsl(var(--gm-h) var(--gm-s) 50% / .16);border:1px solid hsl(var(--gm-h) var(--gm-s) 60% / .38);transition:opacity .25s var(--ease-out)}
+.gm-lab{position:absolute;left:0;top:0;height:30px;box-sizing:border-box;display:flex;align-items:center;gap:6px;padding:0 8px;border-radius:999px;font:inherit;font-size:12.5px;font-weight:600;white-space:nowrap;cursor:pointer;touch-action:none;color:hsl(var(--gm-h) var(--gm-s) 76%);background:color-mix(in srgb,hsl(var(--gm-h) var(--gm-s) 50%) 20%,var(--bg));border:1px solid hsl(var(--gm-h) var(--gm-s) 60% / .45);transition:opacity .25s var(--ease-out)}
 .gm-lab i,.gm-chip i,.gm-pfam i,.gm-sg i{flex:none;width:8px;height:8px;border-radius:50%;background:hsl(var(--gm-h) var(--gm-s) 62%)}
 .gm-lab span{min-width:0;overflow:hidden}
-.gm-lab.is-root{font-weight:700;background:hsl(var(--gm-h) var(--gm-s) 50% / .3);border-color:hsl(var(--gm-h) var(--gm-s) 62% / .6)}
-.gm-lab.is-nb{border-color:hsl(var(--gm-h) var(--gm-s) 70% / .95);background:hsl(var(--gm-h) var(--gm-s) 50% / .3)}
+.gm-lab.is-root{font-weight:700;background:color-mix(in srgb,hsl(var(--gm-h) var(--gm-s) 50%) 34%,var(--bg));border-color:hsl(var(--gm-h) var(--gm-s) 62% / .6)}
+.gm-lab.is-nb{border-color:hsl(var(--gm-h) var(--gm-s) 70% / .95);background:color-mix(in srgb,hsl(var(--gm-h) var(--gm-s) 50%) 34%,var(--bg))}
 .gm-lab.is-sel{background:hsl(var(--gm-h) var(--gm-s) 64%);border-color:transparent;color:#151107}
 .gm-lab.is-sel i{background:#151107}
 .gm-lab.is-out{opacity:0;pointer-events:none}
 .gm-lab:focus-visible,.gm-chip:focus-visible,.gm-sg:focus-visible,.gm-play:focus-visible,.gm-pclose:focus-visible,.gm-zoomctl button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.gm-zoomctl{position:absolute;right:10px;top:10px;display:flex;gap:4px;z-index:2}
+.gm-svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.gm-band{fill:hsl(var(--gm-h) var(--gm-s) 50% / .07)}
+.gm-col{stroke:rgba(255,255,255,.06);stroke-width:1;vector-effect:non-scaling-stroke}
+.gm-e{fill:none;stroke:rgba(255,255,255,.3);stroke-width:1.2;vector-effect:non-scaling-stroke;marker-mid:url(#gmA0)}
+.gm-e.is-x{stroke:rgba(255,255,255,.16);stroke-dasharray:5 4}
+.gm-e.is-off{display:none}
+.gm-svg.has-sel .gm-e{opacity:.3}
+.gm-svg .gm-e.is-in,.gm-svg .gm-e.is-out{opacity:1;stroke-width:2.2;stroke-dasharray:none}
+.gm-e.is-in{stroke:#7cc6ff;marker-mid:url(#gmA1)}
+.gm-e.is-out{stroke:var(--accent);marker-mid:url(#gmA2)}
+.gm-dot{fill:none;stroke:hsl(var(--gm-h) var(--gm-s) 62%);stroke-width:5;stroke-linecap:round;vector-effect:non-scaling-stroke}
+.gm-ah{fill:rgba(255,255,255,.5)}
+.gm-ah1{fill:#7cc6ff}
+.gm-ah2{fill:var(--accent)}
+.gm-axis{position:absolute;left:0;right:0;top:0;height:26px;z-index:1;overflow:hidden;pointer-events:none;background:color-mix(in srgb,var(--panel-2) 92%,transparent);border-bottom:1px solid var(--border)}
+.gm-lane{position:absolute;left:8px;top:0;z-index:1;height:18px;padding:0 9px;display:flex;align-items:center;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap;pointer-events:none;color:hsl(var(--gm-h) var(--gm-s) 78%);background:hsl(var(--gm-h) var(--gm-s) 40% / .55)}
+.gm-dec{position:absolute;left:0;top:0;width:44px;height:26px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;letter-spacing:.02em;color:var(--faint)}
+.gm-zoomctl{position:absolute;right:10px;top:34px;display:flex;gap:4px;z-index:2}
 .gm-zoomctl button{min-width:36px;height:36px;padding:0 6px;border-radius:999px;background:var(--panel-2);border:1px solid var(--border);color:var(--text);font:inherit;font-size:18px;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer}
 .gm-zoomctl button:hover{color:var(--accent)}
 .gm-zoomctl .gm-zreset{font-size:12px;font-weight:700;padding:0 12px}
@@ -10396,10 +10413,10 @@ function closeBrowsePage(keepFocus){
    Animates transform/opacity only; no filters or blur.
    ========================================================================= */
 /* GENRE-MAP:BEGIN (pure helpers, tested by tools/genre-map.test.js) */
-const GM_LABEL_H = 30, GM_SMAX = 6, GM_CAP = 140;
-function gmLabelW(name){ return Math.round(String(name).length * 7.4 + 34); }
-// only the biggest genres show when zoomed out; every style by about 2x
-function gmMinProm(s){ return s < 0.7 ? 8 : s < 0.9 ? 7 : s < 1.2 ? 6 : s < 1.6 ? 5 : 4; }
+const GM_LABEL_H = 30, GM_SMAX = 2.5, GM_CAP = 140;
+function gmLabelW(name){ return Math.round(String(name).length * 7.8 + 42); }
+// only the biggest genres show when zoomed out; every style by about 1.2x
+function gmMinProm(s){ return s < 0.3 ? 9 : s < 0.45 ? 8 : s < 0.65 ? 7 : s < 0.9 ? 6 : s < 1.2 ? 5 : 4; }
 function gmFit(w, h, W, H, pad){
   pad = pad == null ? 16 : pad;
   const s = Math.max(0.05, Math.min((W - pad * 2) / w, (H - pad * 2) / h));
@@ -10409,13 +10426,13 @@ function gmFit(w, h, W, H, pad){
 // Returns the labels to draw, each with its screen position; no two label boxes overlap.
 function gmDeclutter(nodes, order, v, W, H, o){
   o = o || {};
-  const M = 40, floor = gmMinProm(v.s), cap = o.cap || GM_CAP, forced = o.forced || 0;
+  const M = 40, floor = gmMinProm(v.s), cap = o.cap || GM_CAP, forced = o.forced || 0, top = o.top || 0;
   const grid = new Map(), keep = [];
   for (let k = 0; k < order.length && keep.length < cap; k++){
     const i = order[k], p = nodes[i];
     if (k >= forced && p.prom < floor) continue;
     const sx = p.x * v.s + v.tx, sy = p.y * v.s + v.ty;
-    if (sx < -M - p.w / 2 || sx > W + M + p.w / 2 || sy < -M - p.h / 2 || sy > H + M + p.h / 2) continue;
+    if (sx < -M - p.w / 2 || sx > W + M + p.w / 2 || sy < top + p.h / 2 || sy > H + M + p.h / 2) continue;   // labels never sit under the decade axis
     const l = sx - p.w / 2 - 3, r = sx + p.w / 2 + 3, t = sy - p.h / 2 - 2, b = sy + p.h / 2 + 2;
     const x0 = Math.floor(l / 120), x1 = Math.floor(r / 120), y0 = Math.floor(t / 60), y1 = Math.floor(b / 60);
     let hit = false;
@@ -10447,7 +10464,7 @@ function gmSearch(nodes, q, limit){
 }
 /* GENRE-MAP:END */
 /* GENRE-MAP-DATA:BEGIN (generated by tools/genre-map-layout.js, do not edit by hand) */
-const GM_DATA = {"v":1,"w":1634,"h":1186,"fam":[["hiphop","Hip-Hop",27,88,"Hip-Hop"],["rnb","R&B / Soul",326,78,"R&B / Soul"],["funk","Funk",47,92,"Funk"],["jazz","Jazz",242,82,"Jazz"],["blues","Blues",272,62,null],["rock","Rock",356,80,"Rock"],["metal","Metal",222,14,null],["country","Country & Folk",74,62,"Country & Folk"],["classical","Classical",210,70,"Classical"],["world","World",30,22,null],["latin","Latin",164,72,"Latin"],["afro","Afro",96,70,"Afro"],["reggae","Reggae",136,66,"Reggae"],["electronic","Electronic",188,82,"Electronic"],["pop","Pop",292,70,"Pop"]],"n":[["Hip-Hop",0,568.3,466.6,10,1],["Boom bap",0,531.9,191.3,8,0],["Trap",0,399.5,386.5,9,0],["Conscious rap",0,540.5,41.3,7,0],["Drill",0,406,186.3,7,0],["Underground rap",0,474.2,311.4,6,0],["Southern rap",0,429.1,101.3,7,0],["Old school hip-hop",0,605.3,101.3,6,0],["Gangsta rap",0,521.9,271.4,6,0],["G-funk",0,636.2,231.2,5,0],["East Coast rap",0,498.2,131.3,5,0],["West Coast rap",0,523.8,161.3,5,0],["Jazz rap",0,661.1,261.2,5,0],["Cloud rap",0,445.2,208.8,4,0],["Melodic rap",0,513.7,396.6,5,0],["Grime",0,345.4,346.5,6,0],["UK rap",0,421.1,356.5,5,0],["Crunk",0,441.1,333.9,4,0],["Alternative hip-hop",0,492,71.3,5,0],["R&B / Soul",1,823.8,161.2,10,1],["Neo-soul",1,785.7,251.3,8,0],["Classic soul",1,910.3,81.1,8,0],["Contemporary R&B",1,667.9,391.4,9,0],["Quiet storm",1,892.6,396.7,6,0],["Gospel soul",1,877.5,317.6,5,0],["Motown",1,860.2,356.7,6,0],["Southern soul",1,984,363.1,5,0],["Philly soul",1,820.5,206.2,5,0],["Northern soul",1,845.5,183.7,4,0],["New jack swing",1,744,361.4,5,0],["Alternative R&B",1,673.1,291.3,6,0],["Disco",1,744.7,331.3,7,0],["Doo-wop",1,935.6,419.3,4,0],["Rhythm and blues",1,1022.2,408.2,4,0],["Slow jams",1,793.3,308.8,4,0],["Gospel",1,813.6,121.1,6,0],["Contemporary gospel",1,764.6,228.7,4,0],["Funk",2,905.5,441.9,10,1],["Classic funk",2,1046.1,280.6,8,0],["P-Funk",2,998.4,240.6,6,0],["Funk rock",2,1153.8,340.7,5,0],["Nu-funk",2,1129.6,174.1,5,0],["Jazz-funk",2,1108.1,310.6,5,0],["Boogie",2,971.6,385.6,4,0],["Acid jazz",2,1156.3,144.1,5,0],["Jazz",3,1330.6,204.2,10,1],["Bebop",3,1337.7,335.7,8,0],["Soul jazz",3,1197.3,204.2,6,0],["Modern jazz",3,1261.3,152.7,7,0],["Jazz fusion",3,1289,284.2,7,0],["Spiritual jazz",3,1427.7,164.1,6,0],["Swing",3,1476.8,339.7,7,0],["Big band",3,1517.9,309.6,5,0],["Dixieland",3,1446.5,392.2,4,0],["Cool jazz",3,1235.4,370.7,6,0],["Hard bop",3,1365.9,244.2,6,0],["Free jazz",3,1446.4,199.1,5,0],["Latin jazz",3,980.4,527.4,5,0],["Smooth jazz",3,1224.4,244.2,6,0],["Vocal jazz",3,1435.4,369.7,5,0],["Nu jazz",3,1101.6,258.1,4,0],["Post-bop",3,1413.8,221.7,4,0],["Blues",4,1287.8,410.7,10,1],["Delta blues",4,1454.6,556.4,5,0],["Chicago blues",4,1511.7,586.5,5,0],["Electric blues",4,1440.8,616.5,5,0],["Rock",5,1146.5,570.8,10,1],["Classic rock",5,1171.2,753.5,8,0],["Indie rock",5,1075.2,638.4,7,0],["Alternative",5,1144.9,470.8,7,0],["Punk",5,1185.4,805,7,0],["Blues rock",5,1263.8,577.5,6,0],["Hard rock",5,1253.2,678.5,7,0],["Progressive rock",5,1229.6,440.8,5,0],["Psychedelic rock",5,1209.6,510.8,6,0],["Garage rock",5,1165.3,593.3,4,0],["Grunge",5,1208.3,638.4,6,0],["Post-punk",5,1127.8,683.5,5,0],["Shoegaze",5,1161.8,661,4,0],["Britpop",5,1088.3,518.3,4,0],["Folk rock",5,1163.8,723.5,5,0],["Soft rock",5,1024,554.3,4,0],["Glam rock",5,1214.8,615.9,4,0],["Rockabilly",5,1117.7,615.9,4,0],["New wave",5,1051,599.4,5,0],["Emo",5,1187.8,561.4,4,0],["Pop punk",5,1111.3,540.8,5,0],["Hardcore punk",5,1315.6,711.6,4,0],["Southern rock",5,1203.8,701,4,0],["Post-rock",5,929.4,567.8,4,0],["Rock and roll",5,1087.6,430.7,6,0],["Dream pop",5,1079.4,576.8,4,0],["Metal",6,1463.9,1144,10,1],["Heavy metal",6,1447,769.7,8,0],["Thrash metal",6,1477.1,820.9,6,0],["Death metal",6,1525.7,879,5,0],["Black metal",6,1566.2,912.7,4,0],["Doom metal",6,1532.7,856.4,4,0],["Metalcore",6,1460.3,843.5,4,0],["Nu metal",6,1108.5,783.6,5,0],["Country & Folk",7,1192.7,1031.5,10,1],["Country",7,1054.3,956.5,9,0],["Americana",7,1183.1,916.5,6,0],["Bluegrass",7,1135.7,1061.5,5,0],["Folk",7,1113.7,856.4,7,0],["Outlaw country",7,1143.9,961.5,4,0],["Honky-tonk",7,1136.7,1084.1,4,0],["Country pop",7,991,926.5,5,0],["Alt-country",7,1141.2,939,4,0],["Country rock",7,1157.8,886.4,5,0],["Indie folk",7,1050.4,896.5,6,0],["Classical",8,846.9,813.5,10,1],["Piano",8,792.1,853.5,6,0],["Orchestral",8,787.6,1098.7,7,0],["Chamber",8,810.8,1038.6,5,0],["Opera",8,821.9,938.6,6,0],["Baroque",8,862.8,978.6,6,0],["Romantic era",8,832.8,1068.6,5,0],["Minimalism",8,698.2,744.4,4,0],["Contemporary classical",8,769.7,876,4,0],["Choral",8,807.7,961.1,4,0],["Film score",8,769.4,898.5,6,0],["Neoclassical",8,717.2,767,5,0],["Symphony",8,840,1008.6,5,0],["World",9,485.2,860.3,10,1],["Flamenco",9,346.5,963.9,4,0],["Bollywood",9,473.4,954.7,6,0],["Indian classical",9,426.9,909.5,4,0],["Bhangra",9,439.3,887,4,0],["Arabic pop",9,447.6,932.1,4,0],["Latin",10,239.2,992.8,10,1],["Reggaeton",10,195.7,838.4,9,0],["Salsa",10,348.1,762.7,7,0],["Bachata",10,204.4,889.8,7,0],["Latin pop",10,287.1,941.3,7,0],["Cumbia",10,114.8,957.5,6,0],["Merengue",10,176.5,957.5,4,0],["Bossa nova",10,573.6,729.6,6,0],["Samba",10,312.8,822.8,6,0],["MPB",10,306.7,792.7,5,0],["Tango",10,187.9,980,4,0],["Mariachi",10,88.3,884.4,4,0],["Norteño",10,74.1,980,4,0],["Corridos tumbados",10,123.3,860.9,4,0],["Bolero",10,151,935,4,0],["Sertanejo",10,525.6,882.9,4,0],["Baile funk",10,281.8,722.6,4,0],["Son cubano",10,194.7,912.4,4,0],["Latin trap",10,204.4,785.9,4,0],["Afro",11,521.6,689.6,10,1],["Afrobeats",11,456.9,613.7,9,0],["Amapiano",11,356,463.2,8,0],["Highlife",11,575.9,649.5,6,0],["Afro-fusion",11,534.2,553,5,0],["Afrobeat",11,777.8,472.8,6,0],["Afroswing",11,395,541,4,0],["Gqom",11,383.6,518.4,4,0],["Soukous",11,484.6,636.2,4,0],["Bongo flava",11,488.3,575.5,4,0],["Afro-soul",11,595.6,501.2,4,0],["Reggae",12,168.3,763.3,10,1],["Roots reggae",12,163.1,613.3,8,0],["Dancehall",12,233.9,688.3,8,0],["Dub",12,193.1,449.6,6,0],["Reggae fusion",12,292,583.8,5,0],["Ska",12,68.8,688.5,5,0],["Rocksteady",12,95.4,666,4,0],["Lovers rock",12,304.5,561.2,4,0],["Soca",12,130.8,643.4,5,0],["Electronic",13,235.1,81.3,10,1],["Afro-house",13,256,538.3,8,0],["Deep house",13,243.7,156.3,8,0],["Techno",13,111.9,449.4,8,0],["Drum and bass",13,90.6,231.4,8,0],["Ambient",13,500.4,522.9,7,0],["Downtempo",13,471.8,426.6,6,0],["House",13,280.8,306.4,9,0],["Tech house",13,138,163.8,5,0],["Progressive house",13,161,307.9,5,0],["Trance",13,156.9,337.9,7,0],["Dubstep",13,158.9,389.4,7,0],["Electro",13,92.4,186.3,4,0],["Synthwave",13,382.5,495.9,5,0],["IDM",13,212.8,371.9,4,0],["Breakbeat",13,130.9,285.3,4,0],["Jungle",13,135,419.4,5,0],["UK garage",13,200.7,277.9,5,0],["Minimal techno",13,75,208.8,4,0],["Acid house",13,156.9,208.8,4,0],["Hardstyle",13,177,255.3,4,0],["Future bass",13,303.3,407.4,5,0],["Lo-fi beats",13,461.7,231.4,6,0],["EDM",13,286,266.4,6,0],["Trip hop",13,354.2,316.5,5,0],["Pop",14,728,701,10,1],["Indie pop",14,898.2,701,7,0],["Synth-pop",14,762.1,649.5,7,0],["Dance pop",14,663.3,518,7,0],["Singer-songwriter",14,960.4,752.4,7,0],["Electropop",14,654.6,609.5,6,0],["Teen pop",14,812.7,672,4,0],["K-pop",14,717.5,569.5,7,0],["J-pop",14,802.8,536.7,5,0],["Art pop",14,789.3,694.6,4,0],["Bedroom pop",14,728.1,592,4,0],["Pop rock",14,947.2,590.4,6,0],["Adult contemporary",14,890.6,534.1,4,0],["City pop",14,869.3,502.4,4,0],["Afropop",14,662.8,639.6,5,0]],"e":[[1,3],[1,5],[1,7],[1,10],[2,6],[2,4],[2,14],[3,5],[3,12],[4,15],[4,16],[5,18],[6,17],[7,10],[7,37],[8,11],[8,9],[8,10],[9,11],[9,39],[12,1],[12,20],[12,48],[13,2],[14,22],[15,186],[15,162],[15,16],[16,155],[17,2],[18,193],[18,12],[20,22],[20,47],[20,30],[20,159],[21,25],[21,26],[21,27],[22,30],[22,29],[22,23],[22,197],[23,34],[23,58],[24,35],[24,21],[24,26],[25,28],[25,32],[26,62],[27,31],[28,21],[29,0],[29,37],[30,193],[31,37],[31,176],[31,197],[31,43],[32,33],[32,90],[33,62],[33,90],[34,22],[35,36],[36,22],[38,39],[38,40],[38,47],[38,21],[39,40],[40,41],[40,72],[41,38],[41,44],[42,47],[42,49],[42,38],[42,44],[43,38],[44,47],[44,60],[46,55],[46,54],[46,51],[46,61],[47,55],[48,61],[48,49],[48,56],[49,40],[49,73],[50,56],[50,48],[51,52],[51,59],[51,53],[52,59],[53,62],[54,137],[54,55],[54,58],[55,61],[57,132],[57,137],[57,46],[58,42],[59,54],[60,175],[60,48],[63,62],[64,65],[64,63],[65,71],[67,72],[67,71],[67,90],[67,74],[68,69],[68,77],[68,75],[68,195],[69,76],[69,79],[69,85],[70,87],[70,86],[70,75],[70,77],[71,88],[72,93],[72,82],[73,74],[74,75],[76,72],[76,70],[77,84],[77,78],[78,91],[78,69],[79,68],[79,205],[80,104],[80,67],[80,109],[81,205],[81,67],[81,198],[82,67],[83,90],[83,101],[84,196],[84,70],[85,86],[86,205],[87,98],[88,109],[89,174],[89,68],[91,195],[93,94],[94,87],[94,95],[95,96],[96,97],[97,93],[98,95],[99,0],[101,102],[101,106],[101,107],[101,109],[101,103],[102,108],[102,104],[102,62],[104,110],[105,101],[105,106],[105,109],[107,194],[108,68],[108,109],[109,67],[110,198],[110,195],[112,122],[112,117],[112,114],[113,123],[113,121],[114,116],[115,120],[115,117],[115,113],[116,120],[117,113],[118,174],[118,119],[118,122],[121,122],[122,174],[125,140],[126,127],[126,128],[131,162],[131,148],[131,134],[132,147],[132,133],[133,136],[133,134],[134,194],[134,144],[135,142],[135,136],[136,132],[137,138],[137,139],[138,139],[140,144],[141,143],[143,148],[144,147],[145,101],[146,0],[146,131],[148,2],[150,153],[150,208],[150,162],[150,155],[151,170],[151,156],[152,154],[153,159],[153,22],[154,38],[154,42],[155,162],[156,170],[157,152],[158,150],[158,0],[161,163],[161,166],[161,167],[162,164],[162,163],[163,180],[163,193],[164,0],[165,166],[167,22],[168,162],[170,176],[170,171],[171,176],[171,175],[172,187],[172,188],[173,185],[173,184],[173,180],[174,175],[175,193],[175,191],[176,177],[176,178],[176,188],[177,172],[177,187],[178,179],[180,190],[180,186],[181,172],[181,184],[182,196],[183,174],[183,184],[183,172],[184,185],[185,162],[186,176],[189,179],[189,192],[190,192],[190,199],[191,1],[191,12],[192,176],[192,179],[192,197],[195,204],[195,196],[196,199],[197,199],[198,104],[200,197],[200,205],[201,197],[201,22],[201,0],[202,201],[202,207],[203,195],[203,199],[204,191],[206,81],[206,23],[207,31],[207,43],[207,81],[208,197],[0,19],[19,37],[37,45],[45,62],[62,66],[66,92],[66,194],[194,169],[194,19],[169,0],[160,0],[160,149],[149,37],[149,130],[130,194],[45,111],[111,124],[124,130],[100,62],[100,66],[149,45],[124,149],[169,160],[169,149]]};
+const GM_DATA = {"v":2,"w":3954,"h":2624,"fam":[["hiphop","Hip-Hop",27,88,"Hip-Hop"],["rnb","R&B / Soul",326,78,"R&B / Soul"],["funk","Funk",47,92,"Funk"],["jazz","Jazz",242,82,"Jazz"],["blues","Blues",272,62,null],["rock","Rock",356,80,"Rock"],["metal","Metal",222,14,null],["country","Country & Folk",74,62,"Country & Folk"],["classical","Classical",210,70,"Classical"],["world","World",30,22,null],["latin","Latin",164,72,"Latin"],["afro","Afro",96,70,"Afro"],["reggae","Reggae",136,66,"Reggae"],["electronic","Electronic",188,82,"Electronic"],["pop","Pop",292,70,"Pop"]],"cols":[["",121.5],["<1900",430],["1900s",711.5],["1910s",864],["1920s",1032],["1930s",1200],["1940s",1387.5],["1950s",1622],["1960s",1970],["1970s",2415],["1980s",2852],["1990s",3297],["2000s",3621],["2010s",3820.5]],"lanes":[[4,24,124],[1,134,306],[3,316,488],[2,498,634],[0,644,852],[13,862,1070],[12,1080,1252],[11,1262,1434],[10,1444,1580],[14,1590,1762],[5,1772,1980],[6,1990,2162],[7,2172,2272],[9,2282,2382],[8,2392,2600]],"n":[["Hip-Hop",0,121.5,748,10,1,0],["Old school hip-hop",0,2415,676,6,0,1970],["East Coast rap",0,2746.5,676,5,0,1980],["West Coast rap",0,2746.5,712,5,0,1980],["Conscious rap",0,2746.5,748,7,0,1980],["UK rap",0,2957.5,676,5,0,1980],["Boom bap",0,2957.5,712,8,0,1980],["Gangsta rap",0,2957.5,748,6,0,1980],["G-funk",0,3297,820,5,0,1990],["Southern rap",0,3297,676,7,0,1990],["Underground rap",0,3297,712,6,0,1990],["Alternative hip-hop",0,3297,748,5,0,1990],["Jazz rap",0,3297,784,5,0,1990],["Crunk",0,3621,676,4,0,2000],["Trap",0,3621,712,9,0,2000],["Grime",0,3621,748,6,0,2000],["Drill",0,3820.5,712,7,0,2010],["Melodic rap",0,3820.5,748,5,0,2010],["Cloud rap",0,3820.5,676,4,0,2010],["R&B / Soul",1,121.5,220,10,1,0],["Gospel",1,1200,166,6,0,1930],["Rhythm and blues",1,1387.5,166,4,0,1940],["Doo-wop",1,1622,166,4,0,1950],["Classic soul",1,1622,202,8,0,1950],["Motown",1,1970,166,6,0,1960],["Southern soul",1,1970,202,5,0,1960],["Gospel soul",1,1970,238,5,0,1960],["Northern soul",1,2415,166,4,0,1970],["Philly soul",1,2415,238,5,0,1970],["Quiet storm",1,2415,274,6,0,1970],["Disco",1,2415,202,7,0,1970],["Slow jams",1,2852,274,4,0,1980],["New jack swing",1,2852,166,5,0,1980],["Contemporary R&B",1,2852,238,9,0,1980],["Neo-soul",1,3297,238,8,0,1990],["Contemporary gospel",1,3297,202,4,0,1990],["Alternative R&B",1,3820.5,238,6,0,2010],["Funk",2,121.5,566,10,1,0],["Classic funk",2,1970,530,8,0,1960],["P-Funk",2,2415,530,6,0,1970],["Funk rock",2,2415,566,5,0,1970],["Jazz-funk",2,2415,602,5,0,1970],["Boogie",2,2852,530,4,0,1980],["Acid jazz",2,2852,602,5,0,1980],["Nu-funk",2,3621,530,5,0,2000],["Jazz",3,121.5,402,10,1,0],["Dixieland",3,864,348,4,0,1910],["Swing",3,1200,348,7,0,1930],["Big band",3,1200,384,5,0,1930],["Vocal jazz",3,1200,420,5,0,1930],["Bebop",3,1387.5,348,8,0,1940],["Latin jazz",3,1387.5,384,5,0,1940],["Cool jazz",3,1622,348,6,0,1950],["Hard bop",3,1622,384,6,0,1950],["Modern jazz",3,1622,420,7,0,1950],["Soul jazz",3,1622,456,6,0,1950],["Free jazz",3,1970,348,5,0,1960],["Post-bop",3,1970,420,4,0,1960],["Spiritual jazz",3,1970,384,6,0,1960],["Jazz fusion",3,2415,420,7,0,1970],["Smooth jazz",3,2852,420,6,0,1980],["Nu jazz",3,3297,348,4,0,1990],["Blues",4,121.5,74,10,1,0],["Delta blues",4,1032,56,5,0,1920],["Chicago blues",4,1387.5,56,5,0,1940],["Electric blues",4,1387.5,92,5,0,1940],["Rock",5,121.5,1876,10,1,0],["Rock and roll",5,1622,1804,6,0,1950],["Rockabilly",5,1622,1840,4,0,1950],["Folk rock",5,1860.5,1804,5,0,1960],["Garage rock",5,2079.5,1804,4,0,1960],["Classic rock",5,1860.5,1840,8,0,1960],["Blues rock",5,1860.5,1876,6,0,1960],["Psychedelic rock",5,2079.5,1840,6,0,1960],["Hard rock",5,2079.5,1876,7,0,1960],["Progressive rock",5,2302,1876,5,0,1970],["Glam rock",5,2302,1804,4,0,1970],["Southern rock",5,2302,1912,4,0,1970],["Soft rock",5,2528,1804,4,0,1970],["Punk",5,2302,1840,7,0,1970],["Post-punk",5,2528,1840,5,0,1970],["New wave",5,2528,1876,5,0,1970],["Hardcore punk",5,2852,1840,4,0,1980],["Alternative",5,2852,1876,7,0,1980],["Shoegaze",5,2852,1912,4,0,1980],["Dream pop",5,2852,1948,4,0,1980],["Grunge",5,3180,1840,6,0,1990],["Emo",5,3414,1840,4,0,1990],["Indie rock",5,3180,1876,7,0,1990],["Pop punk",5,3180,1912,5,0,1990],["Britpop",5,3414,1876,4,0,1990],["Post-rock",5,3414,1804,4,0,1990],["Metal",6,121.5,2076,10,1,0],["Heavy metal",6,2415,2022,8,0,1970],["Doom metal",6,2852,2022,4,0,1980],["Thrash metal",6,2852,2058,6,0,1980],["Death metal",6,2852,2094,5,0,1980],["Black metal",6,2852,2130,4,0,1980],["Metalcore",6,3297,2058,4,0,1990],["Nu metal",6,3297,2022,5,0,1990],["Country & Folk",7,121.5,2222,10,1,0],["Folk",7,711.5,2204,7,0,1900],["Country",7,1032,2204,9,0,1920],["Bluegrass",7,1387.5,2204,5,0,1940],["Honky-tonk",7,1387.5,2240,4,0,1940],["Country rock",7,1970,2204,5,0,1960],["Outlaw country",7,2415,2240,4,0,1970],["Country pop",7,2415,2204,5,0,1970],["Americana",7,3297,2204,6,0,1990],["Alt-country",7,3297,2240,4,0,1990],["Indie folk",7,3621,2204,6,0,2000],["Classical",8,121.5,2496,10,1,0],["Opera",8,324.5,2424,6,0,1600],["Choral",8,324.5,2460,4,0,1500],["Baroque",8,324.5,2496,6,0,1600],["Chamber",8,535.5,2496,5,0,1700],["Orchestral",8,535.5,2532,7,0,1700],["Symphony",8,535.5,2568,5,0,1750],["Piano",8,324.5,2532,6,0,1800],["Romantic era",8,535.5,2424,5,0,1800],["Film score",8,1200,2424,6,0,1930],["Contemporary classical",8,1622,2424,4,0,1950],["Minimalism",8,1970,2424,4,0,1960],["Neoclassical",8,3621,2424,5,0,2000],["World",9,121.5,2332,10,1,0],["Indian classical",9,430,2314,4,0,1600],["Flamenco",9,430,2350,4,0,1800],["Bollywood",9,1200,2314,6,0,1930],["Arabic pop",9,2415,2314,4,0,1970],["Bhangra",9,2852,2314,4,0,1980],["Latin",10,121.5,1512,10,1,0],["Mariachi",10,430,1476,4,0,1800],["Tango",10,711.5,1476,4,0,1900],["Merengue",10,430,1512,4,0,1800],["Son cubano",10,864,1476,4,0,1910],["Samba",10,864,1512,6,0,1910],["Sertanejo",10,1032,1476,4,0,1920],["Bolero",10,1200,1476,4,0,1930],["Cumbia",10,1387.5,1476,6,0,1940],["Norteño",10,711.5,1512,4,0,1900],["Bossa nova",10,1622,1512,6,0,1950],["Salsa",10,1970,1476,7,0,1960],["Bachata",10,1970,1512,7,0,1960],["MPB",10,1970,1548,5,0,1960],["Latin pop",10,2852,1476,7,0,1980],["Baile funk",10,3297,1476,4,0,1990],["Reggaeton",10,3297,1512,9,0,1990],["Latin trap",10,3820.5,1512,4,0,2010],["Corridos tumbados",10,3820.5,1548,4,0,2010],["Afro",11,121.5,1348,10,1,0],["Highlife",11,1032,1294,6,0,1920],["Afrobeat",11,2415,1294,6,0,1970],["Soukous",11,1970,1294,4,0,1960],["Afro-soul",11,3621,1294,4,0,2000],["Bongo flava",11,3297,1294,4,0,1990],["Afrobeats",11,3621,1330,9,0,2000],["Gqom",11,3820.5,1294,4,0,2010],["Amapiano",11,3820.5,1330,8,0,2010],["Afro-fusion",11,3820.5,1366,5,0,2010],["Afroswing",11,3820.5,1402,4,0,2010],["Reggae",12,121.5,1166,10,1,0],["Ska",12,1622,1112,5,0,1950],["Rocksteady",12,1970,1112,4,0,1960],["Roots reggae",12,2415,1112,8,0,1970],["Dub",12,2415,1148,6,0,1970],["Lovers rock",12,2415,1184,4,0,1970],["Soca",12,2415,1220,5,0,1970],["Dancehall",12,2852,1148,8,0,1980],["Reggae fusion",12,3297,1148,5,0,1990],["Electronic",13,121.5,966,10,1,0],["Ambient",13,2415,894,7,0,1970],["Electro",13,2746.5,894,4,0,1980],["House",13,2746.5,930,9,0,1980],["Acid house",13,2957.5,966,4,0,1980],["Techno",13,2957.5,930,8,0,1980],["Deep house",13,2957.5,1002,8,0,1980],["Breakbeat",13,2746.5,966,4,0,1980],["Synthwave",13,3621,894,5,0,2000],["Trance",13,3180,930,7,0,1990],["Jungle",13,3180,1038,5,0,1990],["Drum and bass",13,3414,1038,8,0,1990],["UK garage",13,3414,1002,5,0,1990],["Trip hop",13,3180,894,5,0,1990],["Downtempo",13,3414,894,6,0,1990],["IDM",13,3414,930,4,0,1990],["Minimal techno",13,3414,966,4,0,1990],["Progressive house",13,3180,966,5,0,1990],["Tech house",13,3180,1002,5,0,1990],["Afro-house",13,3621,1002,8,0,2000],["Dubstep",13,3621,1038,7,0,2000],["Hardstyle",13,3621,930,4,0,2000],["Future bass",13,3820.5,1038,5,0,2010],["EDM",13,3820.5,930,6,0,2010],["Lo-fi beats",13,3820.5,894,6,0,2010],["Pop",14,121.5,1676,10,1,0],["Pop rock",14,1970,1622,6,0,1960],["Singer-songwriter",14,1970,1658,7,0,1960],["Adult contemporary",14,2415,1622,4,0,1970],["City pop",14,2415,1658,4,0,1970],["Synth-pop",14,2852,1622,7,0,1980],["Dance pop",14,2852,1658,7,0,1980],["Indie pop",14,2852,1694,7,0,1980],["Afropop",14,2852,1730,5,0,1980],["K-pop",14,3297,1658,7,0,1990],["J-pop",14,3297,1694,5,0,1990],["Teen pop",14,3297,1622,4,0,1990],["Electropop",14,3621,1622,6,0,2000],["Bedroom pop",14,3820.5,1694,4,0,2010],["Art pop",14,3820.5,1622,4,0,2010]],"e":[[38,1],[23,1],[30,1],[1,2],[1,3],[1,4],[1,5],[2,6],[3,7],[7,8],[39,8],[1,9],[6,10],[6,11],[6,12],[9,13],[9,14],[181,15],[167,15],[14,16],[14,17],[62,21],[47,21],[21,22],[20,23],[21,23],[22,24],[21,24],[20,25],[21,25],[20,26],[23,26],[24,27],[23,28],[23,29],[38,30],[28,30],[29,31],[1,32],[29,33],[32,33],[23,34],[33,34],[20,35],[33,35],[33,36],[23,38],[38,39],[38,40],[71,40],[38,41],[55,41],[30,42],[38,42],[41,43],[55,43],[38,44],[62,46],[46,47],[47,48],[47,49],[47,50],[50,51],[134,51],[50,52],[50,53],[53,55],[50,56],[53,57],[52,57],[56,58],[57,58],[57,59],[38,59],[59,60],[43,61],[62,63],[63,64],[63,65],[21,67],[102,67],[102,68],[21,68],[101,69],[67,69],[67,70],[67,71],[65,72],[67,72],[70,73],[69,73],[72,74],[73,75],[67,76],[72,77],[105,77],[69,78],[70,79],[79,80],[79,81],[79,82],[80,83],[80,84],[73,84],[80,85],[82,86],[93,86],[82,87],[80,88],[79,89],[195,89],[88,90],[74,93],[72,93],[93,94],[93,95],[82,95],[95,96],[95,97],[82,98],[95,98],[93,99],[40,99],[101,102],[62,102],[101,103],[102,104],[102,105],[69,105],[104,106],[102,107],[195,107],[102,108],[101,108],[105,109],[106,109],[101,110],[88,110],[114,115],[114,116],[114,117],[117,119],[119,120],[121,122],[122,123],[125,127],[135,140],[52,140],[134,141],[51,141],[137,142],[140,143],[135,143],[137,144],[9,145],[167,146],[1,146],[14,147],[146,147],[139,148],[14,148],[150,151],[38,151],[41,151],[134,152],[34,153],[1,154],[33,154],[150,155],[151,155],[167,155],[33,155],[172,156],[175,157],[155,158],[155,159],[167,159],[5,159],[21,161],[161,162],[162,163],[163,164],[163,165],[23,165],[163,167],[164,167],[167,168],[38,171],[30,172],[172,173],[171,174],[172,174],[172,175],[1,176],[199,177],[174,178],[176,179],[167,179],[179,180],[172,181],[179,181],[164,182],[6,182],[170,183],[182,183],[174,184],[170,184],[174,185],[172,186],[172,187],[174,187],[175,188],[181,189],[164,189],[178,190],[189,191],[172,192],[178,192],[12,193],[67,195],[101,196],[78,197],[30,198],[78,198],[81,199],[30,200],[199,200],[80,201],[150,202],[152,202],[200,203],[33,203],[198,204],[199,206],[201,207]]};
 /* GENRE-MAP-DATA:END */
 
 // Shared zoom/pan gestures: wheel and pinch zoom around the pointer, drag to pan, double tap/click to zoom in.
@@ -10520,22 +10537,29 @@ let gm = null, gmFailed = false;
 function gmViewIsMap(){ return !gmFailed && lsGet(LS_GENRE_VIEW, 'map') !== 'list'; }
 function gmReduced(){ try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch(e){ return false; } }
 
+const GM_HEADER = 26;   // px of decade axis along the top of the stage
 function gmInit(){
   const D = GM_DATA;
-  if (!D || !Array.isArray(D.n) || !D.n.length || !Array.isArray(D.fam)) throw new Error('no genre map data');
-  const nodes = D.n.map((r) => ({ name: r[0], fam: r[1], x: r[2], y: r[3], prom: r[4], root: !!r[5], w: gmLabelW(r[0]), h: GM_LABEL_H, nb: [], el: null }));
-  D.e.forEach(([a, b]) => { if (nodes[a] && nodes[b]){ nodes[a].nb.push(b); nodes[b].nb.push(a); } });
-  const byName = new Map(nodes.map((n, i) => [n.name.toLowerCase(), i]));
-  const sorted = nodes.map((_, i) => i).sort((a, b) => nodes[b].prom - nodes[a].prom || nodes[b].nb.length - nodes[a].nb.length || a - b);
+  if (!D || D.v !== 2 || !Array.isArray(D.n) || !D.n.length || !Array.isArray(D.fam) || !Array.isArray(D.cols)) throw new Error('no genre map data');
+  const nodes = D.n.map((r) => ({ name: r[0], fam: r[1], x: r[2], y: r[3], prom: r[4], root: !!r[5], dec: r[6], w: gmLabelW(r[0]), h: GM_LABEL_H, from: [], to: [], inE: [], outE: [], el: null }));
+  const edges = [];
+  D.e.forEach(([a, b]) => {
+    if (!nodes[a] || !nodes[b]) return;
+    const i = edges.length;
+    edges.push({ a, b, cross: nodes[a].fam !== nodes[b].fam, el: null, off: false });
+    nodes[a].to.push(b); nodes[b].from.push(a); nodes[a].outE.push(i); nodes[b].inE.push(i);
+  });
+  const sorted = nodes.map((_, i) => i).sort((a, b) => nodes[b].prom - nodes[a].prom || (nodes[b].from.length + nodes[b].to.length) - (nodes[a].from.length + nodes[a].to.length) || a - b);
   const el = document.createElement('div');
   el.className = 'gm-wrap';
   el.innerHTML =
-    '<div class="gm-stage" tabindex="0" role="group" aria-label="Genre map. Related genres sit close together. Plus and minus zoom, arrow keys move, zero fits the whole map. The list view has every genre."><div class="gm-note" role="status">Drawing the map&hellip;</div></div>' +
-    '<div class="gm-zoomctl"><button type="button" data-z="in" aria-label="Zoom in">+</button><button type="button" data-z="out" aria-label="Zoom out">&minus;</button><button type="button" class="gm-zreset" data-z="reset" aria-label="Show the whole map">Fit</button></div>' +
+    '<div class="gm-stage" tabindex="0" role="group" aria-label="Genre flow chart. Time runs left to right, each family has its own row, arrows point from a genre to the styles it led to. Plus and minus zoom, arrow keys move, zero fits the whole chart. The list view has every genre."><div class="gm-note" role="status">Drawing the chart&hellip;</div></div>' +
+    '<div class="gm-zoomctl"><button type="button" data-z="in" aria-label="Zoom in">+</button><button type="button" data-z="out" aria-label="Zoom out">&minus;</button><button type="button" class="gm-zreset" data-z="reset" aria-label="Show the whole chart">Fit</button></div>' +
     '<div class="gm-sugg" role="listbox" aria-label="Matching genres" hidden></div>' +
     '<div class="gm-panel" role="region" aria-label="Selected genre" hidden></div>';
-  const g = gm = { D, nodes, byName, sorted, el, stage: el.querySelector('.gm-stage'), panel: el.querySelector('.gm-panel'), sugg: el.querySelector('.gm-sugg'),
-    view: { s: 1, tx: 0, ty: 0 }, sMin: 0.2, shown: new Set(), raf: 0, glide: 0, sel: -1, touched: false, ro: null, zmT: 0, kbd: false };
+  const g = gm = { D, nodes, edges, sorted, el, stage: el.querySelector('.gm-stage'), panel: el.querySelector('.gm-panel'), sugg: el.querySelector('.gm-sugg'),
+    view: { s: 1, tx: 0, ty: 0 }, sMin: 0.1, shown: new Set(), raf: 0, glide: 0, sel: -1, touched: false, ro: null, kbd: false, floor: -1, mk: 0, decs: [] };
+  gmBuildSvg(g);
   g.stage.addEventListener('click', (e) => { const b = e.target.closest('[data-gm]'); if (b) gmSelect(+b.dataset.gm, { kbd: e.detail === 0 }); });
   el.querySelector('.gm-zoomctl').addEventListener('click', (e) => {
     const b = e.target.closest('[data-z]'); if (!b) return;
@@ -10552,9 +10576,8 @@ function gmInit(){
     if (k === '+' || k === '=') gmZoomAt(1.4, cx, cy);
     else if (k === '-' || k === '_') gmZoomAt(1 / 1.4, cx, cy);
     else if (k === '0') gmFitView(true);
-    else if (k.startsWith('Arrow')){
-      g.touched = true; g.view.tx += k === 'ArrowLeft' ? 60 : k === 'ArrowRight' ? -60 : 0; g.view.ty += k === 'ArrowUp' ? 60 : k === 'ArrowDown' ? -60 : 0; gmDirty();
-    } else return;
+    else if (k.startsWith('Arrow')){ g.touched = true; g.view.tx += k === 'ArrowLeft' ? 60 : k === 'ArrowRight' ? -60 : 0; g.view.ty += k === 'ArrowUp' ? 60 : k === 'ArrowDown' ? -60 : 0; gmDirty(); }
+    else return;
     e.preventDefault();
   });
   el.addEventListener('keydown', (e) => {   // Escape closes the genre sheet first, the page second
@@ -10568,10 +10591,45 @@ function gmInit(){
   });
   g.sugg.addEventListener('click', (e) => { const b = e.target.closest('[data-gs]'); if (b) gmPickSuggestion(+b.dataset.gs); });
   if (typeof ResizeObserver === 'function'){
-    g.ro = new ResizeObserver(() => { if (!g.stage.clientWidth) return; g.sMin = Math.min(0.5, gmFit(D.w, D.h, g.stage.clientWidth, g.stage.clientHeight).s * 0.8); if (!g.touched && g.sel < 0) gmFitView(false); else gmDirty(); });
+    g.ro = new ResizeObserver(() => { if (!g.stage.clientWidth) return; g.sMin = gmSMin(); if (!g.touched && g.sel < 0) gmFitView(false); else gmDirty(); });
     g.ro.observe(g.stage);
   }
   return g;
+}
+// the chart's static drawing: lane tints, decade lines, one curve per lineage arrow. Built once; zooming only moves the viewBox.
+function gmBuildSvg(g){
+  const NS = 'http://www.w3.org/2000/svg', D = g.D;
+  const mk = (tag, attrs, parent) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; };
+  const svg = mk('svg', { class: 'gm-svg', 'aria-hidden': 'true', focusable: 'false', preserveAspectRatio: 'none' });
+  const defs = mk('defs', {}, svg);
+  g.markers = ['gmA0', 'gmA1', 'gmA2'].map((id) => { const m = mk('marker', { id, viewBox: '0 0 10 10', refX: '5', refY: '5', markerUnits: 'userSpaceOnUse', markerWidth: '9', markerHeight: '9', orient: 'auto' }, defs); mk('path', { d: 'M1 1L9 5L1 9z', class: 'gm-ah gm-ah' + id.slice(-1) }, m); return m; });
+  const bands = mk('g', {}, svg);
+  D.lanes.forEach(([fi, y0, y1]) => { const f = D.fam[fi]; mk('rect', { x: 0, y: y0, width: D.w, height: y1 - y0, rx: 10, class: 'gm-band', style: '--gm-h:' + f[2] + ';--gm-s:' + f[3] + '%' }, bands); });
+  D.cols.forEach((c, i) => { if (i > 0){ const x = c[1] - (i < D.cols.length - 1 ? (D.cols[i][1] - D.cols[i - 1][1]) / 2 : 0); if (i > 1) mk('line', { x1: x, x2: x, y1: 0, y2: D.h, class: 'gm-col' }, bands); } });
+  const eg = mk('g', {}, svg);
+  g.edges.forEach((e) => {
+    const A = g.nodes[e.a], B = g.nodes[e.b], dx = B.x - A.x;
+    const c = dx > 1 ? Math.max(30, dx * 0.5) : 70, p1 = [A.x + c, A.y], p2 = [dx > 1 ? B.x - c : B.x + c, B.y];
+    const mx = (A.x + 3 * p1[0] + 3 * p2[0] + B.x) / 8, my = (A.y + 3 * p1[1] + 3 * p2[1] + B.y) / 8;
+    const r = (n) => Math.round(n * 10) / 10;
+    const d = 'M' + r(A.x) + ' ' + r(A.y) + 'C' + r((A.x + p1[0]) / 2) + ' ' + r((A.y + p1[1]) / 2) + ' ' + r((A.x + 2 * p1[0] + p2[0]) / 4) + ' ' + r((A.y + 2 * p1[1] + p2[1]) / 4) + ' ' + r(mx) + ' ' + r(my) +
+      'C' + r((p1[0] + 2 * p2[0] + B.x) / 4) + ' ' + r((p1[1] + 2 * p2[1] + B.y) / 4) + ' ' + r((p2[0] + B.x) / 2) + ' ' + r((p2[1] + B.y) / 2) + ' ' + r(B.x) + ' ' + r(B.y);
+    e.el = mk('path', { d, class: 'gm-e' + (e.cross ? ' is-x' : '') }, eg);
+  });
+  // every genre is a dot, so arrows always end somewhere even when its label is thinned out
+  const dg = mk('g', {}, svg);
+  g.nodes.forEach((n) => { const f = D.fam[n.fam]; mk('path', { d: 'M' + n.x + ' ' + n.y + 'h0', class: 'gm-dot', style: '--gm-h:' + f[2] + ';--gm-s:' + f[3] + '%' }, dg); });
+  g.eg = eg; g.svg = svg;
+  g.stage.insertBefore(svg, g.stage.firstChild);
+  const ax = document.createElement('div'); ax.className = 'gm-axis'; ax.setAttribute('aria-hidden', 'true');
+  D.cols.forEach((c, i) => { const s = document.createElement('span'); s.className = 'gm-dec'; s.textContent = c[0]; ax.appendChild(s); g.decs.push(s); });
+  g.axis = ax; g.stage.insertBefore(ax, svg.nextSibling);
+  // family names stay at the left edge while their lane is on screen (until its own label is drawn)
+  g.lanes = D.lanes.map(([fi, y0, y1]) => {
+    const s = document.createElement('span'); s.className = 'gm-lane'; s.setAttribute('aria-hidden', 'true'); s.textContent = D.fam[fi][1];
+    s.style.setProperty('--gm-h', D.fam[fi][2]); s.style.setProperty('--gm-s', D.fam[fi][3] + '%'); ax.after(s);
+    return { s, y0, y1, root: g.nodes.findIndex(n => n.root && n.fam === fi), hid: false };
+  });
 }
 function gmEl(g, i){
   const n = g.nodes[i];
@@ -10579,7 +10637,7 @@ function gmEl(g, i){
     const f = g.D.fam[n.fam];
     const b = document.createElement('button'); b.type = 'button'; b.className = 'gm-lab' + (n.root ? ' is-root' : '');
     b.dataset.gm = String(i); b.style.setProperty('--gm-h', f[2]); b.style.setProperty('--gm-s', f[3] + '%');
-    b.setAttribute('aria-label', n.name + (n.root ? ', genre family' : ', ' + f[1])); b.setAttribute('aria-pressed', 'false');
+    b.setAttribute('aria-label', n.name + (n.root ? ', genre family' : ', ' + f[1] + ', ' + gmDecade(n)) ); b.setAttribute('aria-pressed', 'false');
     const dot = document.createElement('i'); dot.setAttribute('aria-hidden', 'true');
     const t = document.createElement('span'); t.textContent = n.name;
     b.appendChild(dot); b.appendChild(t);
@@ -10588,36 +10646,50 @@ function gmEl(g, i){
   }
   return n.el;
 }
+function gmDecade(n){ return n.root ? '' : n.dec < 1900 ? 'before 1900' : n.dec + 's'; }
 function gmApply(){
   const g = gm; if (!g) return;
   g.raf = 0;
-  const W = g.stage.clientWidth, H = g.stage.clientHeight;
+  const W = g.stage.clientWidth, H = g.stage.clientHeight, v = g.view;
   if (!W || !H) return;
+  g.svg.setAttribute('viewBox', (-v.tx / v.s).toFixed(2) + ' ' + (-v.ty / v.s).toFixed(2) + ' ' + (W / v.s).toFixed(2) + ' ' + (H / v.s).toFixed(2));
+  const ms = 9 / v.s;   // arrowheads stay about 9 px whatever the zoom
+  if (Math.abs(ms - g.mk) > g.mk * 0.04){ g.mk = ms; g.markers.forEach(m => { m.setAttribute('markerWidth', ms.toFixed(2)); m.setAttribute('markerHeight', ms.toFixed(2)); }); }
+  const cols = g.D.cols, step = cols.length > 2 ? (cols[cols.length - 1][1] - cols[1][1]) / (cols.length - 2) * v.s : 99, every = Math.max(1, Math.ceil(46 / Math.max(step, 1)));
+  cols.forEach((c, i) => {
+    const sx = c[1] * v.s + v.tx, d = g.decs[i], show = i > 0 && i % every === 0 && sx > -30 && sx < W + 30;
+    if (show){ d.style.transform = 'translateX(' + Math.round(sx - 22) + 'px)'; if (d.dataset.h) { d.dataset.h = ''; d.style.visibility = ''; } }
+    else if (!d.dataset.h){ d.dataset.h = '1'; d.style.visibility = 'hidden'; }
+  });
   const sel = g.sel >= 0 ? g.nodes[g.sel] : null;
   let order = g.sorted, forced = 0;
-  if (sel){ const pins = [g.sel].concat(sel.nb.slice().sort((a, b) => g.nodes[b].prom - g.nodes[a].prom)); forced = pins.length; const ps = new Set(pins); order = pins.concat(g.sorted.filter(i => !ps.has(i))); }
-  const keep = gmDeclutter(g.nodes, order, g.view, W, H, { forced });
+  if (sel){ const pins = [g.sel].concat(sel.from, sel.to); forced = pins.length; const ps = new Set(pins); order = pins.concat(g.sorted.filter(i => !ps.has(i))); }
+  const keep = gmDeclutter(g.nodes, order, v, W, H, { forced, top: GM_HEADER });
   const want = new Set(keep.map(k => k.i));
   g.shown.forEach(i => { if (!want.has(i)){ const e = g.nodes[i].el; if (e && e.parentNode) e.remove(); g.shown.delete(i); } });
   const fresh = [], st = g.stage;
-  const nbSet = sel ? new Set(sel.nb) : null;
   keep.forEach((k) => {
     const n = g.nodes[k.i], e = gmEl(g, k.i);
     if (!g.shown.has(k.i)){ g.shown.add(k.i); e.classList.add('is-out'); st.appendChild(e); fresh.push(e); }
     e.style.transform = 'translate(' + Math.round(k.sx - n.w / 2) + 'px,' + Math.round(k.sy - n.h / 2) + 'px)';
-    const on = k.i === g.sel, nb = !!(nbSet && nbSet.has(k.i));
+    const on = k.i === g.sel;
     if (e.classList.contains('is-sel') !== on){ e.classList.toggle('is-sel', on); e.setAttribute('aria-pressed', String(on)); }
-    if (e.classList.contains('is-nb') !== nb) e.classList.toggle('is-nb', nb);
+    const rel = !!sel && (sel.from.includes(k.i) || sel.to.includes(k.i));
+    if (e.classList.contains('is-nb') !== rel) e.classList.toggle('is-nb', rel);
+  });
+  g.lanes.forEach((l) => {
+    const t = Math.max(l.y0 * v.s + v.ty, GM_HEADER), b = Math.min(l.y1 * v.s + v.ty, H), show = b - t >= 22 && !want.has(l.root);
+    if (show){ l.s.style.transform = 'translateY(' + Math.round((t + b) / 2 - 9) + 'px)'; if (l.hid){ l.hid = false; l.s.style.visibility = ''; } }
+    else if (!l.hid){ l.hid = true; l.s.style.visibility = 'hidden'; }
   });
   const note = st.querySelector('.gm-note');
   if (note && keep.length) note.remove();
   if (fresh.length){ st.offsetWidth; fresh.forEach(e => e.classList.remove('is-out')); }
-  g.vis = keep.length;
   st.setAttribute('data-shown', String(keep.length));
 }
 function gmClamp(){
   const g = gm, v = g.view, W = g.stage.clientWidth, H = g.stage.clientHeight, w = g.D.w * v.s, h = g.D.h * v.s, m = 90;
-  v.tx = Math.min(W - m, Math.max(m - w, v.tx)); v.ty = Math.min(H - m, Math.max(m - h, v.ty));
+  v.tx = Math.min(W - m, Math.max(m - w, v.tx)); v.ty = Math.min(H - m, Math.max(m - h + GM_HEADER, v.ty));
 }
 function gmDirty(){
   const g = gm; if (!g) return;
@@ -10639,7 +10711,6 @@ function gmGlideTo(s1, tx1, ty1){
   const g = gm, v = g.view; gmGlideStop();
   if (gmReduced()){ v.s = s1; v.tx = tx1; v.ty = ty1; gmClamp(); gmApply(); return; }
   const s0 = v.s, tx0 = v.tx, ty0 = v.ty, t0 = performance.now();
-  // zoom out and back in around the way when travelling far, so the move reads as a flight
   const step = (now) => {
     g.glide = 0;
     if (gm !== g || !g.stage.isConnected) return;
@@ -10650,32 +10721,49 @@ function gmGlideTo(s1, tx1, ty1){
   };
   g.glide = requestAnimationFrame(step);
 }
+function gmFitTarget(){
+  const g = gm, W = g.stage.clientWidth, H = g.stage.clientHeight;
+  const f = gmFit(g.D.w, g.D.h, W, H - GM_HEADER, 8);
+  f.ty += GM_HEADER;
+  return f;
+}
+function gmSMin(){ return Math.min(0.5, gmFitTarget().s * 0.8); }
+// whole chart on open; on a phone that is too small to read, start at the beginning of the story instead (Fit still shows it all)
 function gmFitView(animate){
   const g = gm, W = g.stage.clientWidth, H = g.stage.clientHeight;
   if (!W || !H) return;
-  const f = gmFit(g.D.w, g.D.h, W, H);
+  const f = gmFitTarget();
   g.sMin = Math.min(0.5, f.s * 0.8);
   g.touched = false;
-  if (!animate && W < 500 && f.s < 0.34){ f.s = 0.34; f.tx = W / 2 - g.D.w * f.s / 2; f.ty = H / 2 - g.D.h * f.s / 2; }   // phones: start a little closer so names stay readable; Fit on a phone shows everything below
+  if (!animate && W < 500 && f.s < 0.4){ f.s = 0.4; f.tx = 8; f.ty = GM_HEADER + 8; }
   if (animate) gmGlideTo(f.s, f.tx, f.ty);
   else { gmGlideStop(); g.view.s = f.s; g.view.tx = f.tx; g.view.ty = f.ty; gmApply(); }
 }
 // where on the stage a selected genre should sit: left of the side panel on desktop, above the sheet on phones
 function gmFocusPoint(){
   const g = gm, W = g.stage.clientWidth, H = g.stage.clientHeight;
-  return W >= 640 ? { x: (W - 330) / 2, y: H / 2 } : { x: W / 2, y: H * 0.3 };
+  return W >= 640 ? { x: (W - 330) / 2, y: (H + GM_HEADER) / 2 } : { x: W / 2, y: GM_HEADER + (H - GM_HEADER) * 0.28 };
 }
 function gmFlyTo(i){
   const g = gm, n = g.nodes[i], p = gmFocusPoint();
-  const s1 = Math.max(Math.min(g.view.s, GM_SMAX), g.stage.clientWidth >= 640 ? 1.7 : 1.9);
+  const s1 = Math.max(Math.min(g.view.s, GM_SMAX), 1);
   g.touched = true;
   gmGlideTo(s1, p.x - n.x * s1, p.y - n.y * s1);
+}
+function gmMarkEdges(g){
+  g.edges.forEach((e) => { if (e.hl){ e.hl = 0; e.el.classList.remove('is-in', 'is-out'); } });
+  g.svg.classList.toggle('has-sel', g.sel >= 0);
+  if (g.sel < 0) return;
+  const n = g.nodes[g.sel];
+  n.inE.forEach(i => { const e = g.edges[i]; e.hl = 1; e.el.classList.add('is-in'); g.eg.appendChild(e.el); });
+  n.outE.forEach(i => { const e = g.edges[i]; e.hl = 1; e.el.classList.add('is-out'); g.eg.appendChild(e.el); });
 }
 function gmSelect(i, o){
   const g = gm; if (!g || !g.nodes[i]) return;
   o = o || {};
   g.sel = i; g.kbd = !!o.kbd;
   gmHideSugg();
+  gmMarkEdges(g);
   gmPanel();
   gmFlyTo(i);
   if (!g.statsSent){ g.statsSent = true; try { statsFeature('genre_map'); } catch(e){} }
@@ -10684,21 +10772,23 @@ function gmSelect(i, o){
 function gmDeselect(){
   const g = gm; if (!g) return;
   g.sel = -1; g.panel.hidden = true; g.panel.classList.remove('is-open');
+  gmMarkEdges(g);
   gmDirty();
 }
-function gmFamLabel(n){ return gm.D.fam[n.fam][1]; }
 function gmPanel(){
   const g = gm, n = g.nodes[g.sel], f = g.D.fam[n.fam], p = g.panel;
   const chip = (i) => '<button type="button" class="gm-chip" style="--gm-h:' + g.D.fam[g.nodes[i].fam][2] + ';--gm-s:' + g.D.fam[g.nodes[i].fam][3] + '%" data-gp="go" data-i="' + i + '"><i aria-hidden="true"></i>' + escapeHtml(g.nodes[i].name) + '</button>';
-  const rel = n.nb.slice().sort((a, b) => g.nodes[b].prom - g.nodes[a].prom || a - b);
+  const byProm = (a, b) => g.nodes[b].prom - g.nodes[a].prom || a - b;
+  const from = n.from.slice().sort(byProm), to = n.to.slice().sort(byProm);
   let styles = [];
-  if (n.root) styles = g.nodes.map((m, i) => i).filter(i => g.nodes[i].fam === n.fam && !g.nodes[i].root && !n.nb.includes(i)).sort((a, b) => g.nodes[b].prom - g.nodes[a].prom || a - b).slice(0, 14);
+  if (n.root) styles = g.nodes.map((m, i) => i).filter(i => g.nodes[i].fam === n.fam && !g.nodes[i].root).sort(byProm).slice(0, 14);
   p.innerHTML =
     '<div class="gm-phead"><div><h2 class="gm-ptitle" tabindex="-1">' + escapeHtml(n.name) + '</h2>' +
-    '<div class="gm-pfam" style="--gm-h:' + f[2] + ';--gm-s:' + f[3] + '%"><i aria-hidden="true"></i>' + (n.root ? 'Genre family' : escapeHtml(f[1])) + '</div></div>' +
+    '<div class="gm-pfam" style="--gm-h:' + f[2] + ';--gm-s:' + f[3] + '%"><i aria-hidden="true"></i>' + (n.root ? 'Genre family' : escapeHtml(f[1]) + ' &middot; ' + escapeHtml(gmDecade(n))) + '</div></div>' +
     '<button type="button" class="gm-pclose" data-gp="close" aria-label="Close">&times;</button></div>' +
     '<button type="button" class="gm-play" data-gp="play"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>Play</button>' +
-    (rel.length ? '<div class="gm-plab">Sounds close to</div><div class="gm-chips">' + rel.map(chip).join('') + '</div>' : '') +
+    (from.length ? '<div class="gm-plab">Came from</div><div class="gm-chips">' + from.map(chip).join('') + '</div>' : '') +
+    (to.length ? '<div class="gm-plab">Led to</div><div class="gm-chips">' + to.map(chip).join('') + '</div>' : '') +
     (styles.length ? '<div class="gm-plab">Styles</div><div class="gm-chips">' + styles.map(chip).join('') + '</div>' : '');
   p.hidden = false; p.offsetWidth; p.classList.add('is-open');
 }
@@ -15575,7 +15665,7 @@ function mmApply(){
   const fp = g.nodes.get(g.focus), order = fp && v.s >= 0.5 ? [fp].concat(g.sorted) : g.sorted;   // zoomed far out the focus box gets no special room
   for (const p of order){
     const sx = p.x * v.s + v.tx, sy = p.y * v.s + v.ty;
-    if (sx < -M - p.w / 2 || sx > W + M + p.w / 2 || sy < -M - p.h / 2 || sy > H + M + p.h / 2) continue;
+    if (sx < -M - p.w / 2 || sx > W + M + p.w / 2 || sy < top + p.h / 2 || sy > H + M + p.h / 2) continue;   // labels never sit under the decade axis
     if (keep.length >= MM_DOM) break;
     const l = sx - p.w / 2 - 3, r = sx + p.w / 2 + 3, t = sy - p.h / 2 - 2, b = sy + p.h / 2 + 2;
     let hit = false;
@@ -23972,8 +24062,8 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
-  { version: 540, date: '2026-11-12', items: [
-    'Browse by genre now opens a genre map: related genres sit close together, each family has its own color, and you can zoom in to find smaller styles. Tap a genre to hear it, or jump to the ones that sound close.',
+  { version: 541, date: '2026-11-12', items: [
+    'Browse by genre now opens a genre flow chart: time runs left to right, each family has its own row, and arrows show which genres led to which. Zoom in to find smaller styles, tap one to hear it, or jump to what it came from and led to.',
     'The old genre cards are still there under List, and there is a link to more genres on EveryNoise.',
   ]},
   { version: 539, date: '2026-11-12', items: [
