@@ -14776,8 +14776,8 @@ const MM_MORE_ICON = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5
 const MM_ICON_PERSON = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 12a4 4 0 100-8 4 4 0 000 8zm0 2c-3.3 0-8 1.7-8 5v1h16v-1c0-3.3-4.7-5-8-5z"/></svg>';
 const MM_ICON_FOLLOW = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 12a4 4 0 100-8 4 4 0 000 8zm0 2c-3.3 0-8 1.7-8 5v1h12.5a6 6 0 01-.5-2.4c0-1.3.4-2.5 1.1-3.5-1.8-.7-3.7-1.1-5.1-1.1zm9 0v3h3v2h-3v3h-2v-3h-3v-2h3v-3h2z"/></svg>';
 const mmMemo = new Map(), mmSongsMemo = new Map();
-let mmNodes = [], mmView = { s: 1, tx: 0, ty: 0 }, mmRaf = 0, mmZmT = 0, mmSuppressClick = false;
-let mmEl = null, mmTrail = [], mmLastTrail = [], mmToken = 0, mmData = null, mmResizeT = 0, mmMenu = null;
+let mmView = { s: 1, tx: 0, ty: 0 }, mmRaf = 0, mmZmT = 0, mmSuppressClick = false;
+let mmEl = null, mmTrail = [], mmLastTrail = [], mmToken = 0, mmResizeT = 0, mmMenu = null;
 
 function musicMapOpen(){ return !!(mmEl && !mmEl.hidden); }
 
@@ -14828,7 +14828,7 @@ async function mmFromSimilar(name){
 }
 
 // null = couldn't reach anything (worth a retry); artists [] = nothing mapped yet
-async function mmFetch(name){
+async function mmFetch(name, lite){
   const key = artistNameKey(name);
   if (mmMemo.has(key)) return mmMemo.get(key);
   let reached = false, center = name, artists = [];
@@ -14841,13 +14841,14 @@ async function mmFetch(name){
       artists = (Array.isArray(d.artists) ? d.artists : []).filter(a => a && a.name);
     }
   } catch(e){}
-  if (!artists.length){
+  if (!artists.length && !lite){
     const fb = await mmFromSimilar(center).catch(() => []);
     if (fb.length){ artists = fb; reached = true; }
   }
-  if (!reached && !artists.length) return null;
+  if (!reached) return null;
+  if (lite && !artists.length) return { artist: center, artists };   // not remembered: a tap still tries the fuller fallback
   // typed or lower-case names get the catalog's spelling when Last.fm didn't correct them
-  if (center === name){ const s = await mmArtistSongs(name).catch(() => []); if (s.artistName) center = s.artistName; }
+  if (center === name && !lite){ const s = await mmArtistSongs(name).catch(() => []); if (s.artistName) center = s.artistName; }
   const out = { artist: center, artists };
   mmMemo.set(key, out);
   return out;
@@ -14909,16 +14910,78 @@ function mmBuild(){
 // never squeeze together or blow up. Only transforms change, one rAF per
 // gesture step, nothing runs while the map is closed.
 const MM_SMIN = 0.05, MM_SMAX = 200;
+const MM_MAX = 400, MM_DOM = 120, MM_CONC = 2;   // data cap, nodes in the DOM at once, parallel /artistmap calls
+let mmG = null, mmAutoT = 0, mmGlideRaf = 0;
+// Render only what is on screen: nodes inside the viewport (plus a margin) are
+// sorted by prominence and kept if their label doesn't land on one already
+// kept, so zoomed out you see the big names, zoomed in you see everything. The
+// rest stay as data only, their elements detached. Transforms only.
 function mmApply(){
   mmRaf = 0;
-  const v = mmView;
-  mmNodes.forEach(p => { p.el.style.transform = 'translate(' + Math.round(p.x * v.s + v.tx - p.w / 2) + 'px,' + Math.round(p.y * v.s + v.ty - p.h / 2) + 'px)'; });
+  const g = mmG, st = $('mmStage');
+  if (!g || !st) return;
+  const v = mmView, W = st.clientWidth, H = st.clientHeight, M = 60;
+  if (g.sorted === null){
+    g.sorted = Array.from(g.nodes.values()).sort((a, b) => mmPr(g, b) - mmPr(g, a));
+  }
+  const grid = new Map(), keep = [];
+  const fp = g.nodes.get(g.focus), order = fp && v.s >= 0.5 ? [fp].concat(g.sorted) : g.sorted;   // zoomed far out the focus box gets no special room
+  for (const p of order){
+    const sx = p.x * v.s + v.tx, sy = p.y * v.s + v.ty;
+    if (sx < -M - p.w / 2 || sx > W + M + p.w / 2 || sy < -M - p.h / 2 || sy > H + M + p.h / 2) continue;
+    if (keep.length >= MM_DOM) break;
+    const l = sx - p.w / 2 - 3, r = sx + p.w / 2 + 3, t = sy - p.h / 2 - 2, b = sy + p.h / 2 + 2;
+    let hit = false;
+    const x0 = Math.floor(l / 120), x1 = Math.floor(r / 120), y0 = Math.floor(t / 80), y1 = Math.floor(b / 80);
+    for (let gx = x0; gx <= x1 && !hit; gx++) for (let gy = y0; gy <= y1 && !hit; gy++){
+      const c = grid.get(gx + ',' + gy);
+      if (c) for (const q of c) if (l < q.r && r > q.l && t < q.b && b > q.t){ hit = true; break; }
+    }
+    if (hit) continue;
+    const box = { l, r, t, b };
+    for (let gx = x0; gx <= x1; gx++) for (let gy = y0; gy <= y1; gy++){
+      const k = gx + ',' + gy; (grid.get(k) || grid.set(k, []).get(k)).push(box);
+    }
+    p.sx = sx; p.sy = sy; keep.push(p);
+  }
+  const want = new Set(keep);
+  g.shown.forEach(p => { if (!want.has(p)){ const e = mmElOf(g, p); if (e.parentNode) e.remove(); p.shown = false; g.shown.delete(p); } });
+  const fresh = [];
+  keep.forEach(p => {
+    const e = mmElOf(g, p);
+    if (!p.shown){ p.shown = true; g.shown.add(p); e.classList.add('is-out'); st.appendChild(e); fresh.push(e); }
+    e.style.transform = 'translate(' + Math.round(p.sx - p.w / 2) + 'px,' + Math.round(p.sy - p.h / 2) + 'px)';
+  });
+  if (fresh.length){ st.offsetWidth; fresh.forEach(e => e.classList.remove('is-out')); }
+}
+function mmElOf(g, p){ return p.key === g.focus && p.fel ? p.fel : p.el; }
+function mmPr(g, p){
+  return p.rel * 0.6 + Math.min(p.links.size, 6) * 0.15 + (p.exp === 1 ? 0.3 : 0) - p.n * 1e-4;
 }
 function mmDirty(){
   const st = $('mmStage');
   st.classList.add('is-zm');
   clearTimeout(mmZmT); mmZmT = setTimeout(() => st.classList.remove('is-zm'), 250);
+  mmGlideStop();
   if (!mmRaf) mmRaf = requestAnimationFrame(mmApply);
+  mmAutoSoon();
+}
+function mmGlideStop(){ if (mmGlideRaf){ cancelAnimationFrame(mmGlideRaf); mmGlideRaf = 0; } }
+// finite ease of the view onto a node, at a readable scale
+function mmGlide(p){
+  const st = $('mmStage'), v = mmView, W = st.clientWidth, H = st.clientHeight;
+  const s0 = v.s, s1 = s0 < 0.6 || s0 > 1.6 ? 1 : s0, tx0 = v.tx, ty0 = v.ty;
+  const tx1 = W / 2 - p.x * s1, ty1 = H / 2 - p.y * s1, t0 = performance.now();
+  mmGlideStop();
+  const step = (now) => {
+    mmGlideRaf = 0;
+    if (!mmG) return;
+    const k = Math.min(1, (now - t0) / 380), e = 1 - Math.pow(1 - k, 3);
+    v.s = s0 + (s1 - s0) * e; v.tx = tx0 + (tx1 - tx0) * e; v.ty = ty0 + (ty1 - ty0) * e;
+    mmApply();
+    if (k < 1) mmGlideRaf = requestAnimationFrame(step); else mmAutoSoon();
+  };
+  mmGlideRaf = requestAnimationFrame(step);
 }
 function mmZoomAt(f, px, py){
   const v = mmView, s2 = Math.max(MM_SMIN, Math.min(MM_SMAX, v.s * f));
@@ -14928,10 +14991,12 @@ function mmZoomAt(f, px, py){
   mmCloseMenu(); mmDirty();
 }
 function mmResetView(){
-  mmView.s = 1; mmView.tx = 0; mmView.ty = 0;
+  mmGlideStop();
   const st = $('mmStage'); st.classList.remove('is-zm');
   if (mmRaf){ cancelAnimationFrame(mmRaf); mmRaf = 0; }
-  mmApply();
+  const f = mmG && mmG.nodes.get(mmG.focus);
+  mmView.s = 1; mmView.tx = st.clientWidth / 2 - (f ? f.x : 0); mmView.ty = st.clientHeight / 2 - (f ? f.y : 0);
+  mmApply(); mmAutoSoon();
 }
 function mmBindZoom(){
   const st = $('mmStage');
@@ -15026,7 +15091,7 @@ function openMusicMap(rawName){
   // back on the artist the map was last left on: the trail picks up where it was
   const last = mmLastTrail[mmLastTrail.length - 1];
   mmTrail = last && artistNameKey(last) === artistNameKey(name) ? mmLastTrail.slice(0, -1) : [];
-  mmData = null;
+  mmReset();
   $('mmStage').innerHTML = '';
   if (!name){ mmTrail = []; mmRenderTrail(); $('mmStage').innerHTML = '<div class="mm-center"><div class="mm-center-name">Pick an artist</div><div class="mm-note">Type a name above to start your map.</div></div>'; }
   mmEl.hidden = false;
@@ -15045,8 +15110,8 @@ function closeMusicMap(){
   if (!musicMapOpen()) return;
   mmCloseMenu();
   mmToken++;
-  if (mmRaf){ cancelAnimationFrame(mmRaf); mmRaf = 0; }
-  clearTimeout(mmZmT); mmNodes = [];
+  mmReset();
+  clearTimeout(mmZmT);
   mmLastTrail = mmTrail.slice();
   mmEl.hidden = true;
   $('mmStage').innerHTML = '';
@@ -15072,7 +15137,7 @@ function mmOnResize(){
   mmCloseMenu();
   mmResizeT = setTimeout(() => {
     if (!musicMapOpen()) return;
-    if (mmData) mmLayout(false);
+    if (mmG){ mmApply(); mmAutoSoon(); }
     else { const c = $('mmStage').querySelector('.mm-center'); if (c) mmPlaceCenter(c); }   // loading or couldn't load
   }, 150);
 }
@@ -15099,113 +15164,267 @@ function mmPlaceCenter(c){
   c.style.transform = 'translate(' + Math.round((st.clientWidth - c.offsetWidth) / 2) + 'px,' + Math.round((st.clientHeight - c.offsetHeight) / 2) + 'px)';
 }
 
-// Tapped node glides into the middle while the rest fade, then the new ring
-// grows out of the center. fromNode null = a plain jump (open, trail, retry).
-async function mmGo(name, fromNode, keepTrail){
-  const token = ++mmToken, st = $('mmStage');
-  mmCloseMenu();
-  mmData = null;   // a resize mid-load must not redraw the previous map
-  mmView.s = 1; mmView.tx = 0; mmView.ty = 0; mmNodes = [];
-  if (!keepTrail && mmTrail[mmTrail.length - 1] !== name) mmTrail.push(name);
-  mmRenderTrail();
-  st.querySelectorAll('.mm-node,.mm-center').forEach(el => { if (el !== fromNode) el.classList.add('is-out'); });
-  if (fromNode){
-    const r = fromNode.getBoundingClientRect(), sr = st.getBoundingClientRect();
-    fromNode.style.transform = 'translate(' + Math.round((sr.width - r.width) / 2) + 'px,' + Math.round((sr.height - r.height) / 2) + 'px) scale(1.25)';
-  }
-  const wait = new Promise(r => setTimeout(r, fromNode ? 420 : 0));
-  // a plain jump shows the name at once while the map loads
-  if (!fromNode){
-    st.innerHTML = '';
-    const c = document.createElement('div');
-    c.className = 'mm-center';
-    c.innerHTML = mmCenterHtml(name, 'Finding artists near ' + escapeHtml(name) + '&hellip;');
-    st.appendChild(c); mmPlaceCenter(c);
-  }
-  const [data] = await Promise.all([mmFetch(name), wait]);
-  if (token !== mmToken || !musicMapOpen()) return;
-  if (!data){
-    mmData = null;
-    st.innerHTML = '<div class="mm-center">' + mmCenterHtml(name, 'Couldn&rsquo;t load the map right now.', true) + '</div>';
-    mmPlaceCenter(st.firstChild);
-    return;
-  }
-  // Last.fm's spelling for the trail too
-  if (data.artist && artistNameKey(data.artist) === artistNameKey(name) && data.artist !== name){ mmTrail[mmTrail.length - 1] = data.artist; mmRenderTrail(); }
-  const narrow = st.clientWidth < 600;
-  mmData = { artist: data.artist || name, artists: data.artists.slice(0, narrow ? 15 : 20) };
-  mmLayout(true);
+/* The map is one growing graph in world space (1 unit = 1 px at zoom 1).
+   Tapping a name focuses it and grows the map around it; panning or zooming
+   toward an empty edge grows it outward (mmAuto). Nothing is thrown away
+   while the map is open; only the elements on screen exist (mmApply). */
+function mmReset(){
+  mmGlideStop();
+  clearTimeout(mmAutoT); mmAutoT = 0;
+  mmQ.splice(0).forEach(j => j.res(null));
+  mmG = null;
+  if (mmRaf){ cancelAnimationFrame(mmRaf); mmRaf = 0; }
 }
 
-function mmLayout(animate){
-  const st = $('mmStage'), d = mmData;
-  const W = st.clientWidth, H = st.clientHeight;
-  st.innerHTML = '';
-  const c = document.createElement('div');
-  c.className = 'mm-center';
-  c.innerHTML = mmCenterHtml(d.artist, d.artists.length ? '' : 'Not much mapped around ' + escapeHtml(d.artist) + ' yet. Their songs still play.');
-  st.appendChild(c);
-  const top = d.artists.length ? Math.max(...d.artists.map(a => a.match)) || 1 : 1;
-  const narrow = W < 600;
-  const nodes = d.artists.map((a, i) => {
-    const rel = Math.max(0, Math.min(1, a.match / top));
-    const el = document.createElement('div');
-    el.className = 'mm-node';
-    el.innerHTML = '<button type="button" class="mm-name" data-mm="go" data-v="' + escapeHtml(a.name) + '" style="font-size:' + ((narrow ? 13 : 14) + Math.round(rel * (narrow ? 5 : 8))) + 'px">' + escapeHtml(a.name) + '</button>' +
-      '<button type="button" class="mm-play" data-mm="play" data-v="' + escapeHtml(a.name) + '" aria-label="Play songs by ' + escapeHtml(a.name) + '">' + MM_PLAY_ICON + '</button>' +
-      '<button type="button" class="mm-more" data-mm="more" data-v="' + escapeHtml(a.name) + '" aria-label="More for ' + escapeHtml(a.name) + '">' + MM_MORE_ICON + '</button>';
-    el.style.setProperty('--o', (0.62 + 0.38 * rel).toFixed(2));
-    st.appendChild(el);
-    return { el, rel, i, w: el.offsetWidth, h: el.offsetHeight, x: 0, y: 0 };
+// at most MM_CONC /artistmap calls at once; a tap jumps the queue; cached names cost nothing
+const mmQ = []; let mmActive = 0;
+function mmFetchQ(name, hi, lite){
+  const key = artistNameKey(name);
+  if (mmMemo.has(key)) return Promise.resolve(mmMemo.get(key));
+  return new Promise(res => {
+    const job = { name, lite, res, g: mmG };
+    if (hi) mmQ.unshift(job); else mmQ.push(job);
+    mmPump();
   });
-  const cw = c.offsetWidth, ch = c.offsetHeight, cx = W / 2, cy = H / 2;
-  mmView.s = 1; mmView.tx = 0; mmView.ty = 0;
-  // nearer = closer to the middle: half match score, half rank, so a flat
-  // run of similar scores still spreads out. Golden-angle spin, seeded by
-  // the name so the same artist always draws the same map.
-  let seed = 0; for (const ch2 of d.artist) seed = (seed * 31 + ch2.charCodeAt(0)) % 3600;
-  const n = nodes.length;
-  nodes.forEach(p => {
-    const dist = 0.38 + 0.6 * (0.5 * (1 - p.rel) + 0.5 * (n > 1 ? p.i / (n - 1) : 0));
-    const ang = seed / 10 * Math.PI / 180 + p.i * 2.39996;
-    p.x = cx + Math.cos(ang) * dist * (W / 2 - p.w / 2 - 6);
-    p.y = cy + Math.sin(ang) * dist * (H / 2 - p.h / 2 - 6);
-  });
-  // push overlapping names apart (and off the center block); a fixed number
-  // of passes, run once here, never per frame
-  const pad = 4, clamp = (p) => {
-    p.x = Math.max(p.w / 2 + 4, Math.min(W - p.w / 2 - 4, p.x));
-    p.y = Math.max(p.h / 2 + 4, Math.min(H - p.h / 2 - 4, p.y));
-  };
-  const cBox = { x: cx, y: cy, w: cw + 16, h: ch + 12, fixed: true };
-  for (let it = 0; it < 400; it++){
-    let moved = false;
-    for (let a = 0; a < n; a++){
-      const p = nodes[a];
-      for (let b = a + 1; b <= n; b++){
-        const q = b === n ? cBox : nodes[b];
-        const dx = q.x - p.x, dy = q.y - p.y;
-        const ox = (p.w + q.w) / 2 + pad - Math.abs(dx), oy = (p.h + q.h) / 2 + pad - Math.abs(dy);
-        if (ox <= 0 || oy <= 0) continue;
-        moved = true;
-        const share = q.fixed ? 1 : 0.5;
-        if (ox < oy){ const s = (dx >= 0 ? -1 : 1) * ox; p.x += s * share; if (!q.fixed) q.x -= s * share; }
-        else { const s = (dy >= 0 ? -1 : 1) * oy; p.y += s * share; if (!q.fixed) q.y -= s * share; }
-      }
-      clamp(p);
-    }
-    if (!moved) break;
+}
+function mmPump(){
+  while (mmActive < MM_CONC && mmQ.length){
+    const j = mmQ.shift();
+    if (j.g !== mmG){ j.res(null); continue; }
+    mmActive++;
+    mmFetch(j.name, j.lite).catch(() => null).then(d => { mmActive--; j.res(d); mmPump(); });
   }
-  const at = (p, scale) => 'translate(' + Math.round(p.x - p.w / 2) + 'px,' + Math.round(p.y - p.h / 2) + 'px)' + (scale ? ' scale(' + scale + ')' : '');
-  mmNodes = nodes.map(p => ({ el: p.el, x: p.x, y: p.y, w: p.w, h: p.h })).concat([{ el: c, x: cx, y: cy, w: cw, h: ch }]);
-  mmPlaceCenter(c);
-  if (!animate){ nodes.forEach(p => { p.el.style.transform = at(p); }); return; }
-  // start every name at the center, invisible, then let them glide out
-  nodes.forEach(p => { p.el.style.transform = at({ x: cx, y: cy, w: p.w, h: p.h }, 0.6); p.el.classList.add('is-out'); });
-  c.classList.add('is-out');
-  st.offsetWidth; // commit the start positions before the glide
-  c.classList.remove('is-out');
-  nodes.forEach(p => { p.el.style.transform = at(p); p.el.classList.remove('is-out'); });
+}
+
+// collision-free placement: world-space spatial hash of every node's box
+const MM_CELL = 160, MM_PAD = 8;
+function mmCells(x, y, w, h, fn){
+  const x0 = Math.floor((x - w / 2 - MM_PAD) / MM_CELL), x1 = Math.floor((x + w / 2 + MM_PAD) / MM_CELL);
+  const y0 = Math.floor((y - h / 2 - MM_PAD) / MM_CELL), y1 = Math.floor((y + h / 2 + MM_PAD) / MM_CELL);
+  for (let a = x0; a <= x1; a++) for (let b = y0; b <= y1; b++) fn(a + ',' + b);
+}
+function mmHashAdd(g, p){ mmCells(p.x, p.y, p.w, p.h, k => { (g.hash.get(k) || g.hash.set(k, new Set()).get(k)).add(p); }); }
+function mmHashDel(g, p){ mmCells(p.x, p.y, p.w, p.h, k => { const s = g.hash.get(k); if (s) s.delete(p); }); }
+function mmHits(g, x, y, w, h, skip){
+  let hit = false;
+  mmCells(x, y, w, h, k => {
+    if (hit) return;
+    const s = g.hash.get(k);
+    if (s) for (const q of s){
+      if (q !== skip && Math.abs(q.x - x) < (q.w + w) / 2 + MM_PAD && Math.abs(q.y - y) < (q.h + h) / 2 + MM_PAD){ hit = true; return; }
+    }
+  });
+  return hit;
+}
+// rings (wider than tall, names are wide) around cx,cy, starting at angle a0
+// and alternating either side, first free spot wins; bounded
+function mmFindSpot(g, w, h, cx, cy, a0, rBase, skip){
+  let last = { x: cx + rBase, y: cy };
+  for (let ring = 0; ring < 80; ring++){
+    const r = rBase + ring * 28, n = Math.max(6, Math.min(56, Math.ceil(2 * Math.PI * r * 0.8 / (w + 10))));
+    for (let j = 0; j < n; j++){
+      const off = (j % 2 ? 1 : -1) * Math.ceil(j / 2) * 2 * Math.PI / n, a = a0 + off;
+      const x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r * 0.7;
+      last = { x, y };
+      if (!mmHits(g, x, y, w, h, skip)) return last;
+    }
+  }
+  return last;
+}
+
+function mmMeasure(el){
+  let pr = mmEl.querySelector('.mm-probe');
+  if (!pr){ pr = document.createElement('div'); pr.className = 'mm-probe'; pr.style.cssText = 'position:absolute;left:0;top:0;visibility:hidden;pointer-events:none'; mmEl.appendChild(pr); }
+  pr.appendChild(el);
+  const r = { w: el.offsetWidth, h: el.offsetHeight };
+  el.remove();
+  return r;
+}
+function mmNodeEl(p, narrow){
+  const el = document.createElement('div');
+  el.className = 'mm-node';
+  el.style.transition = 'opacity .35s var(--ease-out)';   // moves are instant, only fades ease
+  const nm = escapeHtml(p.name);
+  el.innerHTML = '<button type="button" class="mm-name" data-mm="go" data-v="' + nm + '" style="font-size:' + ((narrow ? 13 : 14) + Math.round(p.rel * (narrow ? 5 : 8))) + 'px">' + nm + '</button>' +
+    '<button type="button" class="mm-play" data-mm="play" data-v="' + nm + '" aria-label="Play songs by ' + nm + '">' + MM_PLAY_ICON + '</button>' +
+    '<button type="button" class="mm-more" data-mm="more" data-v="' + nm + '" aria-label="More for ' + nm + '">' + MM_MORE_ICON + '</button>';
+  el.style.setProperty('--o', (0.62 + 0.38 * p.rel).toFixed(2));
+  return el;
+}
+function mmAddNode(g, name, rel, x, y){
+  const key = artistNameKey(name);
+  const p = { key, name, rel, x: 0, y: 0, w: 0, h: 0, exp: 0, failAt: 0, err: false, nb: -1, links: new Set(), el: null, fel: null, shown: false, n: g.count++ };
+  const narrow = $('mmStage').clientWidth < 600;
+  p.el = mmNodeEl(p, narrow);
+  const m = mmMeasure(p.el); p.nw = p.w = m.w; p.nh = p.h = m.h;
+  if (x === undefined){ x = 0; y = 0; }
+  p.x = x; p.y = y;
+  g.nodes.set(key, p); mmHashAdd(g, p); g.sorted = null;
+  return p;
+}
+function mmLink(a, b){ a.links.add(b.key); b.links.add(a.key); }
+
+function mmFocusHtml(p){
+  const note = p.exp === 2 ? 'Finding artists near ' + escapeHtml(p.name) + '&hellip;'
+    : p.err ? 'Couldn&rsquo;t load the map right now.'
+    : p.nb === 0 ? 'Not much mapped around ' + escapeHtml(p.name) + ' yet. Their songs still play.' : '';
+  return mmCenterHtml(p.name, note, p.err && p.exp !== 2);
+}
+function mmRefreshFocus(g, p){
+  if (g.focus !== p.key || !p.fel) return;
+  mmHashDel(g, p);
+  p.fel.innerHTML = mmFocusHtml(p);
+  if (p.shown){ p.w = p.fel.offsetWidth + 16; p.h = p.fel.offsetHeight + 12; } else { const m = mmMeasure(p.fel); p.w = m.w + 16; p.h = m.h + 12; }
+  mmHashAdd(g, p);
+}
+// the focused artist is the big one with Play songs / Radio / ...; the previous
+// one shrinks back to a name, and anything the bigger box lands on steps aside
+function mmFocus(g, p){
+  const old = g.focus && g.nodes.get(g.focus);
+  if (old === p) return;
+  if (old){
+    mmHashDel(g, old);
+    if (old.fel && old.fel.parentNode) old.fel.remove();
+    old.w = old.nw; old.h = old.nh; old.shown = false; g.shown.delete(old);
+    mmHashAdd(g, old);
+  }
+  mmHashDel(g, p);
+  if (p.el.parentNode) p.el.remove();
+  p.shown = false; g.shown.delete(p);
+  g.focus = p.key;
+  if (!p.fel){ p.fel = document.createElement('div'); p.fel.className = 'mm-center'; p.fel.style.transition = 'opacity .35s var(--ease-out)'; }
+  p.fel.innerHTML = mmFocusHtml(p);
+  const m = mmMeasure(p.fel); p.w = m.w + 16; p.h = m.h + 12;
+  const stepAside = [];
+  mmCells(p.x, p.y, p.w, p.h, k => { const s = g.hash.get(k); if (s) s.forEach(q => { if (q !== p && Math.abs(q.x - p.x) < (q.w + p.w) / 2 + MM_PAD && Math.abs(q.y - p.y) < (q.h + p.h) / 2 + MM_PAD && stepAside.indexOf(q) < 0) stepAside.push(q); }); });
+  mmHashAdd(g, p);
+  stepAside.forEach(q => {
+    mmHashDel(g, q);
+    const s = mmFindSpot(g, q.w, q.h, p.x, p.y, Math.atan2((q.y - p.y) / 0.7, q.x - p.x), Math.max(130, p.w / 2 + q.w / 2 + 10), q);
+    q.x = s.x; q.y = s.y; mmHashAdd(g, q);
+  });
+  g.sorted = null;
+}
+
+// grow the map around p from its /artistmap neighbors (existing names just get a link)
+function mmExpand(p, hi){
+  const g = mmG;
+  if (!g || p.exp !== 0) return;
+  if (g.nodes.size >= MM_MAX && !hi) return;
+  p.exp = 2; p.err = false; mmRefreshFocus(g, p);
+  mmFetchQ(p.name, hi, !hi).then(d => {
+    if (g !== mmG || !musicMapOpen()) return;
+    if (!d){
+      p.exp = 0; p.failAt = Date.now(); p.err = !!hi; mmRefreshFocus(g, p); mmDirty();
+      return;
+    }
+    p.exp = 1;
+    if (d.artist && artistNameKey(d.artist) === p.key && d.artist !== p.name && g.focus === p.key){
+      p.name = d.artist;
+      if (mmTrail[mmTrail.length - 1] && artistNameKey(mmTrail[mmTrail.length - 1]) === p.key){ mmTrail[mmTrail.length - 1] = d.artist; mmRenderTrail(); }
+    }
+    const narrow = $('mmStage').clientWidth < 600, list = d.artists.slice(0, narrow ? 11 : 14);
+    const top = list.length ? Math.max(...list.map(a => a.match)) || 1 : 1;
+    // keep going the way this node already points away from what it links to
+    let a0 = ((p.key.length * 37) % 628) / 100;
+    if (p.links.size){ let sx = 0, sy = 0; p.links.forEach(k => { const q = g.nodes.get(k); if (q){ sx += q.x; sy += q.y; } }); a0 = Math.atan2(p.y - sy / p.links.size, p.x - sx / p.links.size); }
+    let fresh = 0;
+    list.forEach(a => {
+      const k = artistNameKey(a.name);
+      if (!k || k === p.key) return;
+      const have = g.nodes.get(k);
+      if (have){ mmLink(p, have); return; }
+      if (g.nodes.size >= MM_MAX) return;
+      const rel = Math.max(0, Math.min(1, a.match / top));
+      const q = mmAddNode(g, a.name, rel);
+      const s = mmFindSpot(g, q.w, q.h, p.x, p.y, a0, Math.max(100, p.w / 2 + q.w / 2 + 24));
+      mmHashDel(g, q); q.x = s.x; q.y = s.y; mmHashAdd(g, q);
+      mmLink(p, q); fresh++;
+    });
+    p.nb = list.length;
+    mmRefreshFocus(g, p);
+    g.sorted = null;
+    mmDirty();
+  });
+}
+
+// pick what to grow next: toward whichever viewport edge shows empty space,
+// and into any name the view has zoomed in on. Debounced, at most MM_CONC in flight.
+function mmAutoSoon(){
+  if (!mmG) return;
+  clearTimeout(mmAutoT); mmAutoT = setTimeout(mmAuto, 450);
+}
+function mmAuto(){
+  mmAutoT = 0;
+  const g = mmG, st = $('mmStage');
+  if (!g || !musicMapOpen() || document.hidden || mmMenu) return;
+  const room = MM_CONC - mmActive - mmQ.length;
+  if (room <= 0){ return; }
+  if (g.nodes.size >= MM_MAX) return;
+  const v = mmView, W = st.clientWidth, H = st.clientHeight;
+  const V = { l: (-0.2 * W - v.tx) / v.s, r: (1.2 * W - v.tx) / v.s, t: (-0.2 * H - v.ty) / v.s, b: (1.2 * H - v.ty) / v.s };
+  const vcx = (V.l + V.r) / 2, vcy = (V.t + V.b) / 2, now = Date.now();
+  let bl = Infinity, br = -Infinity, bt = Infinity, bb = -Infinity;
+  const cand = [];
+  g.nodes.forEach(p => {
+    if (p.x < bl) bl = p.x; if (p.x > br) br = p.x; if (p.y < bt) bt = p.y; if (p.y > bb) bb = p.y;
+    if (p.exp === 0 && now - p.failAt > 20000) cand.push(p);
+  });
+  if (!cand.length) return;
+  const picks = [];
+  const sides = [
+    [V.l < bl ? bl - V.l : 0, p => (p.x - V.l) + 0.5 * Math.abs(p.y - vcy)],
+    [V.r > br ? V.r - br : 0, p => (V.r - p.x) + 0.5 * Math.abs(p.y - vcy)],
+    [V.t < bt ? bt - V.t : 0, p => (p.y - V.t) + 0.5 * Math.abs(p.x - vcx)],
+    [V.b > bb ? V.b - bb : 0, p => (V.b - p.y) + 0.5 * Math.abs(p.x - vcx)]
+  ].filter(s => s[0] > 0).sort((a, b) => b[0] - a[0]);
+  sides.forEach(([, score]) => {
+    if (picks.length >= room) return;
+    let best = null, bs = Infinity;
+    cand.forEach(p => { if (picks.indexOf(p) >= 0) return; const sc = score(p); if (sc < bs){ bs = sc; best = p; } });
+    if (best) picks.push(best);
+  });
+  if (!picks.length && v.s >= 1.8){   // zoomed in on a name that hasn't grown yet
+    let best = null, bd = Infinity;
+    cand.forEach(p => {
+      const sx = p.x * v.s + v.tx, sy = p.y * v.s + v.ty;
+      if (Math.abs(sx - W / 2) > W * 0.2 || Math.abs(sy - H / 2) > H * 0.2) return;
+      const d = Math.hypot(sx - W / 2, sy - H / 2);
+      if (d < bd){ bd = d; best = p; }
+    });
+    if (best) picks.push(best);
+  }
+  picks.forEach(p => mmExpand(p, false));
+}
+
+// Tapped name (or trail step, search, retry): put it on the map if it isn't
+// there, focus it, grow around it, glide the view onto it.
+function mmGo(name, fromNode, keepTrail){
+  const st = $('mmStage');
+  ++mmToken;
+  mmCloseMenu();
+  if (!keepTrail && mmTrail[mmTrail.length - 1] !== name) mmTrail.push(name);
+  mmRenderTrail();
+  let g = mmG, fresh = false;
+  if (!g){
+    st.innerHTML = '';
+    g = mmG = { nodes: new Map(), hash: new Map(), shown: new Set(), sorted: null, focus: '', count: 0 };
+    fresh = true;
+  }
+  const key = artistNameKey(name);
+  let p = g.nodes.get(key);
+  if (!p){
+    const v = mmView, W = st.clientWidth, H = st.clientHeight;
+    const cx = fresh ? 0 : (W / 2 - v.tx) / v.s, cy = fresh ? 0 : (H / 2 - v.ty) / v.s;
+    p = mmAddNode(g, name, 1, cx, cy);
+    if (!fresh){ mmHashDel(g, p); const s = mmFindSpot(g, p.w, p.h, cx, cy, 0, 0, p); p.x = s.x; p.y = s.y; mmHashAdd(g, p); }
+  }
+  if (p.err && p.exp === 0){ p.err = false; }
+  mmFocus(g, p);
+  if (fresh){ mmView.s = 1; mmView.tx = st.clientWidth / 2; mmView.ty = st.clientHeight / 2; mmApply(); }
+  else { mmDirty(); mmGlide(p); }
+  mmExpand(p, true);
+  mmDirty();
 }
 
 // Play an artist's songs right away; the map stays open to keep wandering.
@@ -23122,6 +23341,9 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
+  { version: 536, date: '2026-11-12', items: [
+    'The music map never runs out: tap an artist and the map grows around them, and zoom out or drag toward empty space and it keeps finding more artists to explore. Everything you already found stays put.'
+  ]},
   { version: 535, date: '2026-11-12', items: [
     'The matching bar at the bottom now counts every song as it is found (the music map too) and goes away when the last one is done.',
     'The music map now zooms without limit: pinch, scroll wheel, double-tap, or the + and - buttons, and drag to move around. Names stay readable at every zoom, so artists no longer squeeze together.'

@@ -12916,3 +12916,12 @@ Add entries in this shape:
 - **Touches:** index.html (music map)
 - **Branch:** agent/music-map-zoom
 - **Notes:** Verified at phone width: no overlaps at start, wheel zoom in/out 20-60 steps, drag and pinch pan, tap still recenters, no console errors or gpu-watchdog warnings. Cache v535.
+
+### music-map-infinite: Music map: infinite expanding artist map
+- **Status:** review
+- **Priority:** medium
+- **Description:** Owner: "the music map should be infinite". The map is now one growing graph in world space. Tapping a name focuses it (it gets Play songs / Radio / ...) and grows the map around it from the existing /artistmap call, keeping everything already placed; an artist seen twice is one node with links. Zooming out or dragging toward empty space auto-grows outward from the nearest unexpanded names, and zooming in on an unexpanded name grows it. New names are placed by a collision-free ring search (spatial hash), so nothing overlaps. Only names inside the view are in the DOM (max 120, biggest first, label-collision decluttered); the rest stay as data.
+- **Touches:** index.html (music map)
+- **Branch:** agent/music-map-infinite
+- **Notes:** Cost: no worker change. /artistmap responses cached per session (mmMemo), max 2 calls in flight, taps jump the queue, auto growth debounced 450 ms and skipped while the tab is hidden; auto growth uses the cheap path (no /similar fallback, no iTunes lookups). Data capped at 400 names, so it is very large but not literally endless. No lines between names (the old design had none). Verified at 1264 and 374 wide: 0 overlaps among all nodes, expand, search-adds-absent-artist, reset, zoom 0.06x-8x. Cache v536.
+
