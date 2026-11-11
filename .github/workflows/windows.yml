@@ -1,0 +1,52 @@
+# Builds the Windows installer (EBBLESS-Setup-<version>.exe) and attaches it to
+# the matching Mac release, so the exe follows the Mac app. Runs when a release
+# is published, or by hand with a tag (e.g. v1.0.14). The Mac app is built
+# locally; this only adds the exe to that release (never creates or edits it).
+name: Windows build
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to build and attach the exe to (e.g. v1.0.14)'
+        required: true
+
+jobs:
+  build:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    env:
+      TAG: ${{ github.event.release.tag_name || github.event.inputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name || github.event.inputs.tag }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install
+        working-directory: desktop
+        run: npm ci
+
+      - name: Build installer
+        working-directory: desktop
+        shell: bash
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          if [ "v$VERSION" != "$TAG" ]; then
+            echo "::error::desktop/package.json is $VERSION but the release tag is $TAG"; exit 1
+          fi
+          npm run dist:win
+          ls dist/EBBLESS-Setup-*.exe
+
+      - name: Attach to release
+        working-directory: desktop
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$TAG" dist/EBBLESS-Setup-*.exe --clobber
