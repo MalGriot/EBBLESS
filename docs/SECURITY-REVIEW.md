@@ -103,3 +103,11 @@ automates the greppable parts.
   (SSRF n/a), no secrets. `privacy.html` section 5b and `PRIVACY-AUDIT.md` updated.
   Left: the per-IP throttle is the existing per-colo cache counter, so it is
   approximate; the daily ceiling is the hard guard.
+- 2026-11-11: desktop yt-dlp self-update (`desktop/ytdlp-update.js`, `updater.js`,
+  `wave.js`) tightened. Before: trusted the release's own unsigned checksum file and
+  followed redirects to any host. Now: checksum file must be signed by yt-dlp's pinned
+  release key, zip must match it and GitHub's asset digest, https and GitHub hosts only
+  (redirects included), size caps while streaming, unpacked tree may not link outside its
+  folder, yt-dlp runs with `--ignore-config --no-plugin-dirs`, no system copy in the
+  packaged app. App self-update path unchanged. Left: yt-dlp's key is pinned, so a key
+  rotation by yt-dlp stops updates until an app release.

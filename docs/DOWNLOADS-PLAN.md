@@ -179,18 +179,41 @@ the app holds a valid grant (section 5) and the listener turns the offline queue
   would add a code-loading path for no size saving. Only the two heavy third-party
   programs (the Android yt-dlp fallback and Deno) are ever fetched, and only after signup.
 - Hardening for those two fetches:
-  1. **Hash pinned in the app, not taken from the download site.** Each app release
-     compiles in the exact SHA-256 of the pack (Android) and of the Deno build (desktop)
-     it was tested with. The app refuses anything else, even a newer official release.
-     That is stricter than the yt-dlp waveform updater, which trusts the yt-dlp release's
-     own checksum file; it means a compromised GitHub account or release cannot push code
-     to EBBLESS users. The cost: a Deno or fallback update arrives with an app release
-     (the Android and desktop self-updaters already handle that).
+  1. **The signer is pinned, not the version, so updates are automatic (owner,
+     2026-11-11: no app patch and no user step for routine updates).** Each program is
+     accepted only with a valid signature from a key compiled into the app; any newer
+     release with that signature installs on its own, in the background.
+     - **yt-dlp** (desktop, and the yt-dlp inside the Android fallback): yt-dlp signs
+       every release's `SHA2-256SUMS` with its own key (fingerprint
+       `AC0C BBE6 848D 6A87 3464 AF4E 57CF 6593 3B5A 7581`). The app checks that
+       signature with the pinned key, then the file's SHA-256 against the signed list
+       and against GitHub's own digest for the asset. **Built and verified on desktop on
+       2026-11-11** for the existing waveform updater (`desktop/ytdlp-update.js`); the
+       offline queue reuses it unchanged. Android does the same check in Java
+       (`SHA512withRSA` with the same key) before handing a new yt-dlp to
+       youtubedl-android, instead of trusting the library's own unverified updater
+       (how to hook that is unverified until phase 2).
+     - **Android pack** (the Python runtime the fallback needs): signed by an EBBLESS
+       release key that lives offline on the owner's Mac, never in GitHub secrets;
+       its public key is compiled into the APK. A new pack installs by itself on the
+       next check. It only changes when the library itself changes (rare); yt-dlp
+       inside it, the part YouTube breaks, updates by the signed path above.
+     - **Deno** (only if needed): first choice, verify Deno's own release signature or
+       GitHub attestation with a pinned identity, if Deno publishes one (check in
+       phase 1). Otherwise: Deno's published SHA-256 and GitHub's asset digest must
+       agree, from the one allowed release path, and a release must be 7 days old
+       before it is taken (a bad or hijacked release is usually pulled within that
+       time; Deno is a runtime, so a week's delay costs nothing). Updated when yt-dlp
+       asks for a newer Deno, or monthly.
+     - If a pinned key is ever rotated by its owner, updates for that program stop
+       (the current copy keeps working) until an app release carries the new key. That
+       is rare (yt-dlp's key dates from 2023) and is the only case needing a release.
   2. **One allowed source.** HTTPS from the project's own GitHub release (Android pack)
      or the exact pinned Deno release URL, no redirects to other hosts, size cap checked
      while downloading.
-  3. **Checked again on every start, not only on download.** The hash is rechecked
-     before each load; a mismatch deletes the copy and fetches again.
+  3. **Checked again on every start, not only on download.** The verified hash is stored
+     with the copy and rechecked before each load; a mismatch deletes the copy and
+     fetches again.
   4. **Read-only once verified.** The file is made read-only before it is loaded (also
      required by Android 14 for loaded code) and lives only in app-private storage
      (`getFilesDir()` on Android, `userData` on desktop), never in shared storage or a
@@ -209,8 +232,8 @@ the app holds a valid grant (section 5) and the listener turns the offline queue
   present with the right hash is never fetched again.
 - Residual risk, stated plainly: yt-dlp, youtubedl-android and Deno are large third-party
   programs that parse untrusted web pages. Pinning, hashing and least rights stop someone
-  swapping the file; they do not protect against a bug inside the pinned version. Keep
-  them current through app releases.
+  swapping the file; they do not protect against a bug inside a genuine release. Automatic
+  signed updates keep that window short.
 
 ## 3. Storage layout and eviction
 
@@ -335,9 +358,10 @@ the app holds a valid grant (section 5) and the listener turns the offline queue
 - **Deno, only if needed (decided 2026-11-11): fetched on plan activation, not in the
   installer.** The installer stays the same size. The first time the app sees a valid
   deeeep or horizonnn grant (section 5) and the listener turns the offline queue on, it
-  fetches Deno in the background: one pinned github.com/denoland/deno release URL, its
-  SHA-256 compiled into the app (section 2b, not the release's own checksum file), atomic
-  swap, updated only with an app release. About 40 MB, once. Until it lands, the
+  fetches Deno in the background from the one allowed github.com/denoland/deno release
+  path, checked as in section 2b (signature if Deno provides one, else two sources that
+  must agree plus a 7-day release age), atomic swap, and updated by itself the same way.
+  About 40 MB, once. Until it lands, the
   offline queue shows "Getting ready" and streaming is unaffected. It is deleted together
   with the kept files when a plan lapses (14 days, section 3). Free and flowwww installs
   never fetch it.

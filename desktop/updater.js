@@ -44,41 +44,53 @@ function evaluateRelease(release, current, arch, platform){
   return { current, latest, available, asset: asset && { name: asset.name, url: asset.browser_download_url, size: asset.size || 0, digest: asset.digest || '' } };
 }
 
-function get(url, cb, hops){
+// opts (optional): hosts = only these hosts, https only, checked on every redirect too; maxBytes = stop past this size.
+function get(url, cb, hops, opts){
+  if (opts && opts.hosts){
+    let u; try { u = new URL(url); } catch(e){ return cb(new Error('Bad address')); }
+    if (u.protocol !== 'https:' || !opts.hosts.includes(u.hostname)) return cb(new Error('Refused host ' + u.hostname));
+  }
   const lib = url.startsWith('https:') ? https : http;
   const req = lib.get(url, { headers: { 'User-Agent': 'EBBLESS-desktop', Accept: 'application/vnd.github+json' } }, res => {
     if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location){
       res.resume();
       if ((hops || 0) > 5) return cb(new Error('Too many redirects'));
-      return get(new URL(res.headers.location, url).href, cb, (hops || 0) + 1);
+      return get(new URL(res.headers.location, url).href, cb, (hops || 0) + 1, opts);
     }
     if (res.statusCode !== 200){ res.resume(); return cb(new Error('http ' + res.statusCode)); }
+    const max = opts && opts.maxBytes;
+    if (max && Number(res.headers['content-length'] || 0) > max){ res.destroy(); return cb(new Error('Too large')); }
     cb(null, res);
   });
   req.setTimeout(30000, () => req.destroy(new Error('Timed out')));
   req.on('error', cb);
 }
-function fetchJson(url){
+function fetchJson(url, opts){
   return new Promise((resolve, reject) => get(url, (err, res) => {
     if (err) return reject(err);
-    let s = ''; res.setEncoding('utf8');
-    res.on('data', d => { s += d; });
+    let s = '', n = 0; res.setEncoding('utf8');
+    res.on('data', d => { n += d.length; if (opts && opts.maxBytes && n > opts.maxBytes){ res.destroy(); return reject(new Error('Too large')); } s += d; });
     res.on('end', () => { try { resolve(JSON.parse(s)); } catch(e){ reject(new Error('Bad release data')); } });
     res.on('error', reject);
-  }));
+  }, 0, opts));
 }
-function download(url, dest, onProgress){
+function download(url, dest, onProgress, opts){
   return new Promise((resolve, reject) => get(url, (err, res) => {
     if (err) return reject(err);
     const total = Number(res.headers['content-length'] || 0);
+    const max = opts && opts.maxBytes;
     let got = 0;
     const out = fs.createWriteStream(dest);
-    res.on('data', d => { got += d.length; if (total && onProgress) onProgress(Math.min(1, got / total)); });
+    res.on('data', d => {
+      got += d.length;
+      if (max && got > max){ res.unpipe(out); res.destroy(); out.destroy(); return reject(new Error('Too large')); }
+      if (total && onProgress) onProgress(Math.min(1, got / total));
+    });
     res.on('error', e => { out.destroy(); reject(e); });
     out.on('error', reject);
     out.on('finish', () => (total && got !== total) ? reject(new Error('Download was cut short')) : resolve(got));
     res.pipe(out);
-  }));
+  }, 0, opts));
 }
 
 // Runs after the app quits. Args: $1 pid, $2 dmg, $3 app bundle to replace.
