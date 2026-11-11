@@ -635,6 +635,7 @@ body.split-desktop #view-search .st-chips{grid-template-columns:repeat(auto-fill
 #view-search .st-chip.is-prompt .st-chip-art{width:72px;height:72px;right:10px;bottom:-14px}
 #view-search .st-chip{padding-right:60px}
 #view-search .st-form{margin:0 0 24px}
+@media (min-width:860px){#view-search .st-form{display:none}}
 #view-search .st-field input{padding:16px 16px 16px 50px;border-radius:16px;font-size:16px;background:color-mix(in srgb,var(--panel-2) 80%,transparent);border-color:color-mix(in srgb,var(--text) 10%,transparent)}
 #view-search .st-go{left:6px;width:44px;height:44px;color:var(--accent)}
 #view-search .st-sec h2{font-size:18px;font-weight:700;letter-spacing:0;text-transform:none;color:var(--text);margin:0 0 12px}
@@ -20510,8 +20511,8 @@ function openDesktopSearch(){
   if (state.deskFsOpen && typeof closeDesktopFs === 'function') closeDesktopFs();
   state.preSearchView = state.currentView;
   setView('search');
-  searchTabInput.value = urlInput.value; urlInput.value = '';
-  searchTabInput.focus();
+  // #800: on desktop the top bar is the one search field; the page's own field is hidden
+  urlInput.focus();
 }
 function closeDesktopSearch(){
   if (state.currentView !== 'search') return;
@@ -23344,6 +23345,9 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
+  { version: 538, date: '2026-11-12', items: [
+    'On a computer there is now one search field, the one at the top: opening Search no longer shows a second copy of it.'
+  ]},
   { version: 537, date: '2026-11-12', items: [
     'On the music map, tapping the big artist name in the middle opens that artist\'s page.'
   ]},
