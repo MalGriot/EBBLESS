@@ -174,20 +174,43 @@ the app holds a valid grant (section 5) and the listener turns the offline queue
 | Offline code (desktop `offline*.js`, Android `Offline*.java`, the page's OFFLINE block) | Ships dormant: a few tens of KB, never run, no folder, no key, no Settings row, no network call | Wakes up |
 | `offline/` folder, encryption key | Not created | Created on first keep |
 
-- The offline code itself ships dormant rather than being fetched, because it weighs
-  almost nothing and fetching code adds a code-loading path (a bigger security surface)
-  for no size saving. If the owner wants the code fetched too, the Android pack can carry
-  it as a dex loaded with `DexClassLoader` (read-only file, Android 14 rule) and desktop
-  as a pinned-hash JS bundle; noted, not planned.
-- Offline pack fetch: built with each release and attached to the same GitHub release.
-  Its SHA-256 is compiled into the app, so a phone or computer accepts only the exact pack
-  built for that version, over HTTPS from the project's own release (SECURITY-REVIEW.md
-  self-update rule). Background, Wi-Fi only on Android, into `getFilesDir()` /
-  `userData`. Until it lands, Settings shows "Getting ready" and streaming is unaffected.
-  Deleted together with the kept files when a plan lapses (14 days, section 3), so a
-  lapsed account goes back to light.
-- Idempotent: an interrupted fetch resumes or restarts; a pack already present with the
-  right hash is never fetched again.
+- **Owner direction (2026-11-11): minimize security risk.** So the offline code ships
+  dormant inside the app and is never fetched. It weighs almost nothing; fetching it
+  would add a code-loading path for no size saving. Only the two heavy third-party
+  programs (the Android yt-dlp fallback and Deno) are ever fetched, and only after signup.
+- Hardening for those two fetches:
+  1. **Hash pinned in the app, not taken from the download site.** Each app release
+     compiles in the exact SHA-256 of the pack (Android) and of the Deno build (desktop)
+     it was tested with. The app refuses anything else, even a newer official release.
+     That is stricter than the yt-dlp waveform updater, which trusts the yt-dlp release's
+     own checksum file; it means a compromised GitHub account or release cannot push code
+     to EBBLESS users. The cost: a Deno or fallback update arrives with an app release
+     (the Android and desktop self-updaters already handle that).
+  2. **One allowed source.** HTTPS from the project's own GitHub release (Android pack)
+     or the exact pinned Deno release URL, no redirects to other hosts, size cap checked
+     while downloading.
+  3. **Checked again on every start, not only on download.** The hash is rechecked
+     before each load; a mismatch deletes the copy and fetches again.
+  4. **Read-only once verified.** The file is made read-only before it is loaded (also
+     required by Android 14 for loaded code) and lives only in app-private storage
+     (`getFilesDir()` on Android, `userData` on desktop), never in shared storage or a
+     temp folder another app can write to.
+  5. **Fewest rights while running.** Started with an argument array (never a shell),
+     only a validated 11-character video id ever reaches it, lowest priority, a byte cap
+     and a timeout. On desktop it runs as a child process with no access to the app's
+     sign-in session or the encryption key; it writes to stdout only, and the main
+     process encrypts.
+  6. **Removed when not needed.** Deleted with the kept files when a plan lapses (14 days,
+     section 3) or on sign-out, so a lapsed account goes back to light and carries no
+     third-party code it does not use.
+- Background, Wi-Fi only on Android. Until it lands, Settings shows "Getting ready" and
+  streaming is unaffected.
+- Idempotent: an interrupted fetch restarts from zero into a temp file; a copy already
+  present with the right hash is never fetched again.
+- Residual risk, stated plainly: yt-dlp, youtubedl-android and Deno are large third-party
+  programs that parse untrusted web pages. Pinning, hashing and least rights stop someone
+  swapping the file; they do not protect against a bug inside the pinned version. Keep
+  them current through app releases.
 
 ## 3. Storage layout and eviction
 
@@ -312,9 +335,9 @@ the app holds a valid grant (section 5) and the listener turns the offline queue
 - **Deno, only if needed (decided 2026-11-11): fetched on plan activation, not in the
   installer.** The installer stays the same size. The first time the app sees a valid
   deeeep or horizonnn grant (section 5) and the listener turns the offline queue on, it
-  fetches Deno in the background with the same flow as `ytdlp-update.js`: only
-  github.com/denoland/deno release URLs, SHA-256 checked against the release's own
-  checksums, atomic swap, daily update check. About 40 MB, once. Until it lands, the
+  fetches Deno in the background: one pinned github.com/denoland/deno release URL, its
+  SHA-256 compiled into the app (section 2b, not the release's own checksum file), atomic
+  swap, updated only with an app release. About 40 MB, once. Until it lands, the
   offline queue shows "Getting ready" and streaming is unaffected. It is deleted together
   with the kept files when a plan lapses (14 days, section 3). Free and flowwww installs
   never fetch it.
