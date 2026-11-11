@@ -12925,3 +12925,11 @@ Add entries in this shape:
 - **Branch:** agent/music-map-infinite
 - **Notes:** Cost: no worker change. /artistmap responses cached per session (mmMemo), max 2 calls in flight, taps jump the queue, auto growth debounced 450 ms and skipped while the tab is hidden; auto growth uses the cheap path (no /similar fallback, no iTunes lookups). Data capped at 400 names, so it is very large but not literally endless. No lines between names (the old design had none). Verified at 1264 and 374 wide: 0 overlaps among all nodes, expand, search-adds-absent-artist, reset, zoom 0.06x-8x. Cache v536.
 
+
+### browse-pages: Dedicated Browse by genre / region / vibe pages from Home
+- **Status:** review
+- **Priority:** medium
+- **Description:** Owner: "browse by buttons should lead to their own dedicated pages. well designed, robust." The three Browse cards (and the Home genre pills, and the empty-player Find music button) now open their own full-screen page (#browsePage) with Search-style gradient cards, a filter box (genre, region), tempo and "describe your vibe" (vibe). A pick opens the existing artists window on top, whose back returns to the page with scroll kept. Artists window got a loading skeleton and a Try again state. The old Find music tabs were removed.
+- **Touches:** index.html (Home, Find music, Browse pages), sw.js
+- **Branch:** agent/browse-pages
+- **Notes:** Test: node --test tools/browse-pages.test.js. Back button, Escape and browser back close the topmost layer. Not a deep link (the app has no view deep links). Region cards have no sub line: the data has only search terms, no artists or languages. No worker change. Cache v539.

@@ -336,7 +336,7 @@ svg{display:block}
   transition:opacity calc(var(--dur-surface) * 1.6) var(--ease-in-out);}
 #ambient .layer.is-active{opacity:.9;animation:ambient-drift var(--vibe-breathe,32s) ease-in-out infinite;will-change:transform}
 /* #487: fullscreen covers this completely, so stop animating it underneath */
-body:has(#milkLayer.is-open) #ambient .layer,body:has(#flow-layer.is-open) #ambient .layer,body:has(#findMusic:not([hidden])) #ambient .layer,body:has(#musicMap:not([hidden])) #ambient .layer{animation-play-state:paused}
+body:has(#milkLayer.is-open) #ambient .layer,body:has(#flow-layer.is-open) #ambient .layer,body:has(#findMusic:not([hidden])) #ambient .layer,body:has(#browsePage:not([hidden])) #ambient .layer,body:has(#musicMap:not([hidden])) #ambient .layer{animation-play-state:paused}
 #ambient .layer.is-active:nth-child(2){animation-duration:42s;animation-direction:alternate-reverse}
 @keyframes ambient-drift{
   0%{transform:translate(0,0) scale(1.2)}
@@ -350,7 +350,7 @@ body:has(#milkLayer.is-open) #ambient .layer,body:has(#flow-layer.is-open) #ambi
    black veil fades over it, opacity only, in step with the 32s drift (#748: halved from 16s, it read as distracting) */
 .ambient-veil{position:absolute;inset:0;background:#000;opacity:.25;pointer-events:none}
 #ambient:has(.layer.is-active) .ambient-veil{animation:ambient-breathe var(--vibe-breathe,32s) ease-in-out infinite}
-body:has(#milkLayer.is-open) #ambient .ambient-veil,body:has(#flow-layer.is-open) #ambient .ambient-veil,body:has(#findMusic:not([hidden])) #ambient .ambient-veil,body:has(#musicMap:not([hidden])) #ambient .ambient-veil{animation-play-state:paused}
+body:has(#milkLayer.is-open) #ambient .ambient-veil,body:has(#flow-layer.is-open) #ambient .ambient-veil,body:has(#findMusic:not([hidden])) #ambient .ambient-veil,body:has(#browsePage:not([hidden])) #ambient .ambient-veil,body:has(#musicMap:not([hidden])) #ambient .ambient-veil{animation-play-state:paused}
 @keyframes ambient-breathe{
   0%{opacity:.48}
   20%{opacity:.1}
@@ -1305,17 +1305,7 @@ html.reduce-motion .lib-grid:not(.is-list) .lib-card .info .name{display:block;w
 .bn-row{display:flex;gap:8px;flex-wrap:wrap}.bn-row .bm-btn{flex:1 1 auto;text-align:center}
 .bn-never{width:100%;margin-top:4px}
 .fm-service{padding:12px;border-radius:12px;background:var(--panel-2);border:1px solid var(--border);color:var(--text);font:inherit;font-size:14px}
-.fm-tabs{display:flex;gap:6px;margin:16px 0 12px}
-.fm-tab{flex:1;height:38px;border-radius:19px;border:1px solid var(--border-2);color:var(--faint);font:inherit;font-weight:600;font-size:13.5px}
-.fm-tab.is-active{background:var(--accent);border-color:var(--accent);color:var(--on-accent,#151107)}
-.fm-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-.fm-tile{min-height:64px;padding:10px 12px;border-radius:14px;background:var(--panel-2);border:1px solid var(--border);color:var(--text);font:inherit;font-weight:700;font-size:15px;text-align:left}
-.fm-tile[data-open]{border-color:var(--accent)}
-.fm-subs{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px;padding:2px 0 6px}
-.fm-subs .fm-tile{min-height:38px;padding:8px 14px;border-radius:19px;font-size:13.5px;font-weight:600}
-.fm-tempo.is-active{background:var(--accent);border-color:var(--accent);color:var(--on-accent,#151107)}
 .fm-artist-name small{font-weight:400;opacity:.6}
-.fm-tempos{margin-bottom:12px}
 .fm-picks{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
 .fm-pick{display:flex;align-items:center;gap:12px;width:100%;padding:11px 12px;border-radius:12px;background:var(--panel-2);border:1px solid var(--border);color:var(--text);font:inherit;text-align:left}
 .fm-pick .fm-box{flex:none;width:22px;height:22px;border-radius:6px;border:2px solid var(--border-2);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700}
@@ -1343,7 +1333,58 @@ html.reduce-motion .lib-grid:not(.is-list) .lib-card .info .name{display:block;w
 .fm-artist-name{display:block;margin-top:6px;font-size:12.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .fm-add{position:absolute;right:0;top:0;width:34px;height:34px;border-radius:50%;background:var(--accent);color:var(--on-accent,#151107);font-size:20px;font-weight:700;line-height:1;display:flex;align-items:center;justify-content:center}
 .rec-artists .fm-add{width:22px;height:22px;font-size:15px}
-@media (min-width:860px){.fm-scroll{max-width:760px;width:100%;margin:0 auto}.fm-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.fm-artist-grid{grid-template-columns:repeat(5,minmax(0,1fr))}}
+/* results skeleton (static shapes, no animation) and the retry state */
+.fm-skel .fm-artist-open i{display:block;width:100%;aspect-ratio:1;border-radius:50%;background:var(--panel-2)}
+.fm-skel .fm-artist-name{height:10px;width:70%;margin:10px auto 0;border-radius:5px;background:var(--panel-2)}
+.fm-retry{display:block;margin:14px auto 0;padding:10px 22px;border-radius:999px;border:1px solid var(--border-2);background:var(--panel-2);color:var(--text);font:inherit;font-weight:600;font-size:14px}
+@media (min-width:860px){.fm-scroll{max-width:760px;width:100%;margin:0 auto}.fm-artist-grid{grid-template-columns:repeat(5,minmax(0,1fr))}}
+/* Browse pages (genre, region, vibe): their own full-screen page under Find music's results. Same gradient cards as the Search page (#722).
+   Static fills only: nothing here animates, and the page is display:none when closed (GPU budget). */
+#browsePage{position:fixed;inset:0;z-index:54;background:var(--bg);display:flex;flex-direction:column}
+#browsePage[hidden]{display:none}
+.bp-head{flex:none;display:flex;align-items:center;gap:8px;padding:10px 14px;padding-top:calc(10px + var(--safe-t))}
+.bp-title{font-size:26px;font-weight:800;letter-spacing:-.4px;margin:0;color:var(--text);min-width:0;overflow-wrap:anywhere}
+.bp-title:focus{outline:none}
+.bp-scroll{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;padding:4px 16px calc(28px + var(--safe-b))}
+.bp-inner{max-width:900px;margin:0 auto}
+.bp-lead{margin:0 2px 14px;font-size:14px;line-height:1.45;color:var(--faint)}
+.bp-field{position:relative;display:block;margin:0 0 18px}
+.bp-field svg{position:absolute;left:16px;top:50%;margin-top:-10px;width:20px;height:20px;color:var(--accent);pointer-events:none}
+.bp-field input{display:block;width:100%;min-width:0;box-sizing:border-box;padding:15px 16px 15px 46px;border-radius:16px;font:inherit;font-size:16px;color:var(--text);background:color-mix(in srgb,var(--panel-2) 80%,transparent);border:1px solid color-mix(in srgb,var(--text) 10%,transparent)}
+.bp-field input::placeholder{color:var(--faint-2)}
+.bp-field input:focus{outline:none;border-color:var(--accent)}
+.bp-sec{margin:0 0 24px}
+.bp-sec h2{font-size:18px;font-weight:700;margin:0 0 12px;color:var(--text)}
+.bp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,136px),1fr));gap:12px}
+.bp-card{position:relative;overflow:hidden;min-height:96px;padding:14px;border-radius:16px;border:0;text-align:left;color:#fff;font:inherit;font-size:17px;font-weight:800;line-height:1.15;letter-spacing:-.2px;overflow-wrap:anywhere;hyphens:auto;
+  text-shadow:0 1px 6px rgba(0,0,0,.35);background:linear-gradient(135deg,var(--c1,#6b4fbb),var(--c2,#2a1d5c));display:flex;align-items:flex-start;cursor:pointer}
+.bp-card.is-wide{grid-column:1 / -1;min-height:76px;font-size:18px;background:linear-gradient(120deg,var(--c1,#d9622b),var(--c2,#7a1f3d))}
+.bp-card::after{content:'';position:absolute;right:-18px;bottom:-22px;width:70px;height:70px;border-radius:50%;background:rgba(255,255,255,.14);pointer-events:none}
+.bp-grid>.bp-card:nth-of-type(6n+1),.bp-card.c1{--c1:#d9622b;--c2:#7a1f3d}
+.bp-grid>.bp-card:nth-of-type(6n+2),.bp-card.c2{--c1:#2e8f8a;--c2:#12365a}
+.bp-grid>.bp-card:nth-of-type(6n+3),.bp-card.c3{--c1:#7b4fd1;--c2:#2a1d5c}
+.bp-grid>.bp-card:nth-of-type(6n+4),.bp-card.c4{--c1:#c9a227;--c2:#7a4a12}
+.bp-grid>.bp-card:nth-of-type(6n+5),.bp-card.c5{--c1:#c2417a;--c2:#4e1536}
+.bp-grid>.bp-card:nth-of-type(6n),.bp-card.c6{--c1:#3a8f4f;--c2:#15432c}
+.bp-card[aria-expanded="true"]{box-shadow:0 0 0 2px var(--accent)}
+.bp-card:active{transform:scale(.97)}
+.bp-card:focus-visible,.bp-sub:focus-visible,.bp-tempo:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.bp-card .bp-art{position:absolute;right:-8px;bottom:-10px;width:56px;height:56px;border-radius:10px;object-fit:cover;transform:rotate(18deg);box-shadow:0 6px 14px rgba(0,0,0,.45);pointer-events:none}
+.bp-card.is-wide .bp-art{width:64px;height:64px;right:10px;bottom:-12px}
+.bp-subs{grid-column:1 / -1;display:flex;flex-wrap:wrap;gap:8px;padding:0 0 6px}
+.bp-sub,.bp-tempo{min-height:40px;padding:8px 14px;border-radius:999px;background:var(--panel-2);border:1px solid var(--border);color:var(--text);font:inherit;font-size:13.5px;font-weight:600;cursor:pointer;overflow-wrap:anywhere}
+.bp-tempos{display:flex;flex-wrap:wrap;gap:8px}
+.bp-tempo[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent,#151107)}
+.bp-vibe{padding:18px;border-radius:20px;background:linear-gradient(135deg,rgba(190,70,120,.30),rgba(60,90,170,.26));border:1px solid rgba(255,255,255,.08);margin:0 0 24px}
+.bp-vibe h2{font-size:20px;font-weight:800;margin:0 0 4px;color:var(--text)}
+.bp-vibe p{margin:0 0 12px;font-size:13.5px;color:var(--faint)}
+.bp-vibe form{display:flex;gap:8px}
+.bp-vibe input{flex:1;min-width:0;font:inherit;font-size:16px;padding:12px 16px;border-radius:999px;border:1px solid rgba(255,255,255,.14);background:rgba(0,0,0,.32);color:var(--text);outline:none}
+.bp-vibe input:focus{border-color:var(--accent)}
+.bp-vibe button{flex:none;font:inherit;font-size:15px;font-weight:700;padding:0 22px;border-radius:999px;background:var(--accent);color:var(--on-accent,#151107);cursor:pointer}
+.bp-empty{padding:36px 10px;text-align:center;color:var(--faint)}
+.bp-empty button{display:block;margin:12px auto 0;padding:10px 22px;border-radius:999px;border:1px solid var(--border-2);background:var(--panel-2);color:var(--text);font:inherit;font-weight:600}
+@media (min-width:860px){.bp-grid{grid-template-columns:repeat(auto-fill,minmax(180px,1fr))}.bp-card{min-height:112px}}
 /* Music map (Geethub #597): same layer as Find music. Static by default; a recenter is one
    finite transform/opacity glide, nothing runs while it sits still or is hidden (#487). */
 #musicMap{position:fixed;inset:0;z-index:55;background:radial-gradient(circle at 50% 50%,var(--panel-2) 0,transparent 62%),var(--bg);display:flex;flex-direction:column}
@@ -1692,7 +1733,7 @@ html.ebb-cinema:not(.ebb-pip) body:has(#artworkWrap.yt-video) #ambient :is(.laye
 .art-dvd img{position:absolute;display:block;width:104.83%;height:auto;left:-2.9%;top:-3.19%;opacity:.85}
 .player-stage:has(.track-meta.is-empty) .artwork-wrap[data-mode="art"][data-art-style="default"] .art-dvd, body:has(.track-meta.is-empty) #flow-layer.is-open #flowArtWrap:is(:not([data-art-style]),[data-art-style="default"]) .art-dvd{display:block;animation:dvd-y 13.8s linear calc((6 - var(--i,0)) * -1s) infinite alternate;will-change:transform}
 .player-stage:has(.track-meta.is-empty) .artwork-wrap[data-mode="art"][data-art-style="default"] .art-dvd-x, body:has(.track-meta.is-empty) #flow-layer.is-open #flowArtWrap:is(:not([data-art-style]),[data-art-style="default"]) .art-dvd-x{animation:dvd-x 9s linear calc((6 - var(--i,0)) * -1s) infinite alternate;will-change:transform}
-body:has(#flow-layer.is-open) .artwork-wrap .art-dvd,body:has(#flow-layer.is-open) .artwork-wrap .art-dvd-x,body:has(#flow-layer.is-open) .artwork-wrap .art-dvd img,body:has(#findMusic:not([hidden])) .artwork-wrap .art-dvd,body:has(#findMusic:not([hidden])) #flowArtWrap .art-dvd,body:has(#findMusic:not([hidden])) .artwork-wrap .art-dvd-x,body:has(#findMusic:not([hidden])) #flowArtWrap .art-dvd-x,body:has(#findMusic:not([hidden])) .artwork-wrap .art-dvd img,body:has(#findMusic:not([hidden])) #flowArtWrap .art-dvd img,body:has(#musicMap:not([hidden])) .artwork-wrap .art-dvd,body:has(#musicMap:not([hidden])) #flowArtWrap .art-dvd,body:has(#musicMap:not([hidden])) .artwork-wrap .art-dvd-x,body:has(#musicMap:not([hidden])) #flowArtWrap .art-dvd-x,body:has(#musicMap:not([hidden])) .artwork-wrap .art-dvd img,body:has(#musicMap:not([hidden])) #flowArtWrap .art-dvd img{animation-play-state:paused}
+body:has(#browsePage:not([hidden])) .artwork-wrap .art-dvd,body:has(#browsePage:not([hidden])) #flowArtWrap .art-dvd,body:has(#browsePage:not([hidden])) .artwork-wrap .art-dvd-x,body:has(#browsePage:not([hidden])) #flowArtWrap .art-dvd-x,body:has(#browsePage:not([hidden])) .artwork-wrap .art-dvd img,body:has(#browsePage:not([hidden])) #flowArtWrap .art-dvd img,body:has(#flow-layer.is-open) .artwork-wrap .art-dvd,body:has(#flow-layer.is-open) .artwork-wrap .art-dvd-x,body:has(#flow-layer.is-open) .artwork-wrap .art-dvd img,body:has(#findMusic:not([hidden])) .artwork-wrap .art-dvd,body:has(#findMusic:not([hidden])) #flowArtWrap .art-dvd,body:has(#findMusic:not([hidden])) .artwork-wrap .art-dvd-x,body:has(#findMusic:not([hidden])) #flowArtWrap .art-dvd-x,body:has(#findMusic:not([hidden])) .artwork-wrap .art-dvd img,body:has(#findMusic:not([hidden])) #flowArtWrap .art-dvd img,body:has(#musicMap:not([hidden])) .artwork-wrap .art-dvd,body:has(#musicMap:not([hidden])) #flowArtWrap .art-dvd,body:has(#musicMap:not([hidden])) .artwork-wrap .art-dvd-x,body:has(#musicMap:not([hidden])) #flowArtWrap .art-dvd-x,body:has(#musicMap:not([hidden])) .artwork-wrap .art-dvd img,body:has(#musicMap:not([hidden])) #flowArtWrap .art-dvd img{animation-play-state:paused}
 /* #694: tap the bouncing E -> it hops and rings ripple out. Ripples are short-lived (max 3, removed on animationend), transform + opacity only. */
 .logo-ripple{position:absolute;width:60%;aspect-ratio:1;border:2px solid var(--accent);border-radius:50%;pointer-events:none;z-index:0;opacity:0;transform:translate(-50%,-50%) scale(.1);box-shadow:0 0 6px var(--accent);animation:logo-ripple 1.2s ease-out calc(var(--rd,0) * 160ms) forwards}
 @keyframes logo-ripple{0%{opacity:0;transform:translate(-50%,-50%) scale(.1)}8%{opacity:.6}to{opacity:0;transform:translate(-50%,-50%) scale(2)}}
@@ -9863,7 +9904,7 @@ const trackTitle = $('trackTitle'), trackArtist = $('trackArtist');
 // #761: with no songs of your own yet, Find music lands on Home, where import and genres sit together
 $('emptyFindBtn').addEventListener('click', () => {
   const mine = getLibrary().filter(id => ![SWELL_ID, BLEND_ID, NP_ID, LIKED_ID].includes(id));
-  if (mine.length) openFindMusic(); else { leaveFullscreen(true); setView('home'); }
+  if (mine.length) openBrowsePage('genre'); else { leaveFullscreen(true); setView('home'); }
 });
 $('emptyVibeBtn').addEventListener('click', () => openHomeVibe());
 $('hubBringMusic').addEventListener('click', () => openBring());
@@ -9948,7 +9989,7 @@ const FM_GENRE_RE = { 'Hip-Hop': /hip|rap/i, 'R&B / Soul': /r&b|soul/i, 'Funk': 
   'Latin': /latin|reggaet|salsa|urbano/i, 'Classical': /classical|opera/i, 'Country & Folk': /country|folk|americana|bluegrass/i };
 let fmFromBring = false;
 const FM_TEMPOS = [['', 'Any tempo', null], ['slow', 'Slow', [60, 90]], ['mid', 'Mid', [90, 115]], ['up', 'Upbeat', [115, 135]], ['fast', 'Fast', [135, 200]]];
-let fmEl = null, fmTab = 'genres', fmOpenGenre = null, fmArtists = null, fmTempo = '', fmPicker = null;
+let fmEl = null, fmArtists = null, fmTempo = '', fmPicker = null;
 
 function fmBuild(){
   fmEl = document.createElement('div');
@@ -9960,16 +10001,12 @@ function fmBuild(){
     '<div class="fm-head"><button type="button" class="fm-back" id="fmBack" aria-label="Back"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20z"/></svg></button><div class="fm-title" id="fmTitle">Find music</div></div>' +
     '<div class="fm-scroll" id="fmScroll"></div>';
   document.body.appendChild(fmEl);
-  $('fmBack').addEventListener('click', () => { if (fmPicker && !fmPicker.busy){ fmPicker = null; if (fmFromBring){ closeFindMusic(); openBring(); } else fmRender(); } else if (fmArtists){ fmArtists = null; fmRender(); } else if (!fmPicker) closeFindMusic(); });
+  $('fmBack').addEventListener('click', () => { if (fmPicker && !fmPicker.busy){ fmPicker = null; if (fmFromBring){ closeFindMusic(); openBring(); } else fmRender(); } else if (fmArtists || !fmPicker) closeFindMusic(); });
   fmEl.addEventListener('click', (e) => {
     const t = e.target.closest('[data-fm]');
     if (!t) return;
     const k = t.dataset.fm, v = t.dataset.v;
-    if (k === 'tab'){ fmTab = v; fmOpenGenre = null; fmRender(); }
-    else if (k === 'genre'){ fmOpenGenre = fmOpenGenre === v ? null : v; fmRender(); }
-    else if (k === 'pick') fmShowArtists(v, t.dataset.t, t.dataset.g, fmTab === 'vibe' ? (FM_TEMPOS.find(x => x[0] === fmTempo) || [])[2] : null);
-    else if (k === 'tempo'){ fmTempo = v; fmRender(); }
-    else if (k === 'bring'){ closeFindMusic(); openBring(); }
+    if (k === 'retry' && fmArtists && fmArtists.args) fmShowArtists.apply(null, fmArtists.args);
     else if (k === 'ck'){ const it = fmPicker && fmPicker.items.find(x => x.key === v); if (it){ it.on = !it.on; if (it.songs) it.songs.forEach(t => { t.on = it.on; }); fmRender(); } }
     else if (k === 'all'){ if (fmPicker){ const to = !fmPicker.items.every(x => x.on); fmPicker.items.forEach(x => { x.on = to; if (x.songs) x.songs.forEach(t => { t.on = to; }); }); fmRender(); } }
     else if (k === 'exp') spotifyPickerOpen(v);
@@ -9992,9 +10029,6 @@ function fmBuild(){
       beginImportFromParsedLink({ source: 'applemusic', type: 'artist', id: v, storefront: 'us' });
     }
   });
-}
-function fmTile(kind, label, v, extra){
-  return '<button type="button" class="fm-tile" data-fm="' + kind + '" data-v="' + escapeHtml(v) + '"' + (extra || '') + '>' + escapeHtml(label) + '</button>';
 }
 function fmRender(){
   const sc = $('fmScroll');
@@ -10032,38 +10066,30 @@ function fmRender(){
     return;
   }
   if (fmArtists){
-    if (fmArtists.loading){ sc.innerHTML = '<div class="fm-note">' + escapeHtml(fmArtists.note || 'Finding artists') + '&hellip;</div>'; return; }
-    if (!fmArtists.list.length){ sc.innerHTML = '<div class="fm-note">No artists found. Try another pick.</div>'; return; }
+    if (fmArtists.loading){
+      sc.innerHTML = '<div class="fm-note" role="status" style="padding:18px 10px 16px">' + escapeHtml(fmArtists.note || 'Finding artists') + '&hellip;</div><div class="fm-artist-grid fm-skel" aria-hidden="true">' + '<div class="fm-artist"><span class="fm-artist-open"><i></i><span class="fm-artist-name"></span></span></div>'.repeat(9) + '</div>';
+      return;
+    }
+    if (!fmArtists.list.length){
+      sc.innerHTML = '<div class="fm-note" role="status">' + (fmArtists.error ? 'Could not load artists. Check your connection and try again.' : 'No artists found. Try another pick.') + '</div>' +
+        (fmArtists.error ? '<button type="button" class="fm-retry" data-fm="retry">Try again</button>' : '');
+      return;
+    }
     sc.innerHTML = '<div class="fm-artist-grid">' + fmArtists.list.map(a =>
       '<div class="fm-artist"><button type="button" class="fm-artist-open" data-fm="artist" data-v="' + escapeHtml(a.name) + '">' +
       '<img src="' + escapeHtml(a.image || '') + '" alt="" loading="lazy"><span class="fm-artist-name">' + escapeHtml(a.name) + (a.bpm ? ' <small>' + escapeHtml(a.bpm) + '</small>' : '') + '</span></button>' +
       '<button type="button" class="fm-add" data-fm="add" data-v="' + escapeHtml(a.id) + '" aria-label="Add ' + escapeHtml(a.name) + ' to your library">+</button></div>').join('') + '</div>';
     return;
   }
-  let body = '';
-  if (fmTab === 'genres'){
-    body = '<div class="fm-grid">' + Object.keys(FM_GENRES).map(g => {
-      const open = fmOpenGenre === g;
-      return fmTile('genre', g, g, open ? ' aria-expanded="true" data-open="1"' : ' aria-expanded="false"') +
-        (open ? '<div class="fm-subs">' + FM_GENRES[g].map(sg => fmTile('pick', sg, sg + ' ' + g.split(/[ /&]+/)[0], ' data-t="' + escapeHtml(sg) + '" data-g="' + escapeHtml(g) + '"')).join('') + '</div>' : '');
-    }).join('') + '</div>';
-  } else {
-    const src = fmTab === 'region' ? FM_REGIONS : FM_VIBES;
-    if (fmTab === 'vibe') body = '<div class="fm-subs fm-tempos" role="group" aria-label="Tempo">' + FM_TEMPOS.map(([k, l, r]) =>
-      '<button type="button" class="fm-tile fm-tempo' + (fmTempo === k ? ' is-active' : '') + '" data-fm="tempo" data-v="' + k + '">' + l + (r ? ' ' + r[0] + (r[1] > 150 ? '+' : '-' + r[1]) : '') + '</button>').join('') + '</div>';
-    body += '<div class="fm-grid">' + Object.keys(src).map(k => fmTile('pick', k, src[k], ' data-t="' + escapeHtml(k) + '"')).join('') + '</div>';
-  }
-  sc.innerHTML =
-    '<button type="button" class="fm-load" data-fm="bring">Import your music from another app</button>' +
-    '<div class="fm-tabs" role="tablist">' + [['genres', 'Genres'], ['region', 'Region'], ['vibe', 'Vibe']].map(([k, l]) =>
-      '<button type="button" role="tab" class="fm-tab' + (fmTab === k ? ' is-active' : '') + '" aria-selected="' + (fmTab === k) + '" data-fm="tab" data-v="' + k + '">' + l + '</button>').join('') + '</div>' + body;
+  sc.textContent = '';
 }
 async function fmShowArtists(term, title, genre, bpmRange){
-  const token = fmArtists = { title: bpmRange ? title + ' \u00b7 ' + bpmRange[0] + (bpmRange[1] > 150 ? '+' : '-' + bpmRange[1]) + ' bpm' : title, loading: true, list: [], note: bpmRange ? 'Matching tempo' : '' };
+  const token = fmArtists = { args: [term, title, genre, bpmRange], title: bpmRange ? title + ' \u00b7 ' + bpmRange[0] + (bpmRange[1] > 150 ? '+' : '-' + bpmRange[1]) + ' bpm' : title, loading: true, list: [], note: bpmRange ? 'Matching tempo' : '' };
   fmRender();
   try{
     const r = await fetch('https://itunes.apple.com/search?' + new URLSearchParams({ term, entity: 'song', limit: '120' }));
-    const d = r.ok ? await r.json() : { results: [] };
+    if (!r.ok) throw new Error('search failed');
+    const d = await r.json();
     const seen = new Set(), list = [];
     (d.results || []).forEach(t => {
       if (!t || !t.artistId || seen.has(t.artistId)) return;
@@ -10104,17 +10130,209 @@ async function fmShowArtists(term, title, genre, bpmRange){
       }
       token.list = hit;
     } else token.list = list.slice(0, 30);
-  } catch(e){ if (fmArtists !== token) return; token.list = []; }
+  } catch(e){ if (fmArtists !== token) return; token.list = []; token.error = true; }
   token.loading = false;
   fmRender();
 }
-function openFindMusic(){
+// Find music is now only the results window (artists for a pick) and the sign-in picker; browsing lives on the Browse pages
+function openFindMusic(){ openBrowsePage('genre'); }
+function fmOpenResults(term, title, genre, bpmRange){
   if (!fmEl) fmBuild();
   fmEl.hidden = false;
-  fmRender();
   statsFeature('find_music');
+  fmShowArtists(term, title, genre, bpmRange);
 }
-function closeFindMusic(){ if (fmEl) fmEl.hidden = true; fmFromBring = false; }
+function closeFindMusic(){
+  if (fmEl) fmEl.hidden = true;
+  fmFromBring = false; fmArtists = null;
+  if (bpEl && !bpEl.hidden && bpLastEl && bpLastEl.isConnected) try { bpLastEl.focus({ preventScroll: true }); } catch(e){}
+}
+/* =========================================================================
+   BROWSE PAGES: Browse by genre / region / vibe, each its own full-screen page
+   One page element (#browsePage) is built once and reused, so scroll and the
+   typed filter are still there when the results window above it closes.
+   A card does what it did in the old Find music tabs: genre cards open their
+   styles, a style / region / mood opens the artists window (fmOpenResults).
+   Static layer: no animation, display:none while closed.
+   ========================================================================= */
+/* BROWSE-PAGES:BEGIN (pure helpers, tested by tools/browse-pages.test.js) */
+// genres (and styles) that match what was typed; a style hit alone lists just the matching styles
+function bpFilterGenres(map, q){
+  q = String(q || '').trim().toLowerCase();
+  const out = [];
+  Object.keys(map).forEach(g => {
+    if (!q){ out.push({ g, subs: map[g], byStyle: false }); return; }
+    const nameHit = g.toLowerCase().includes(q);
+    const subs = nameHit ? map[g] : map[g].filter(x => x.toLowerCase().includes(q));
+    if (nameHit || subs.length) out.push({ g, subs, byStyle: !nameHit });
+  });
+  return out;
+}
+function bpFilterKeys(keys, q){
+  q = String(q || '').trim().toLowerCase();
+  return q ? keys.filter(k => k.toLowerCase().includes(q)) : keys.slice();
+}
+/* BROWSE-PAGES:END */
+const BP_KINDS = {
+  genre: { title: 'Browse by genre', lead: 'Pick a genre, then a style, to meet artists you can add.', filter: 'Find a genre or style' },
+  region: { title: 'Browse by region', lead: 'Pick a place to meet artists from there.', filter: 'Find a region' },
+  vibe: { title: 'Browse by vibe', lead: 'Describe a mood, or pick one, and we find songs and artists for it.' }
+};
+let bpEl = null, bpKind = '', bpFilter = '', bpOpenGenre = null, bpLastEl = null, bpOpener = null, bpFilterEl = null;
+const bpScroll = {};
+function bpBuild(){
+  bpEl = document.createElement('div');
+  bpEl.id = 'browsePage';
+  bpEl.hidden = true;
+  bpEl.setAttribute('role', 'dialog');
+  bpEl.setAttribute('aria-modal', 'true');
+  bpEl.setAttribute('aria-labelledby', 'bpTitle');
+  bpEl.innerHTML =
+    '<div class="bp-head"><button type="button" class="fm-back" id="bpBack" aria-label="Back"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20z"/></svg></button><h1 class="bp-title" id="bpTitle" tabindex="-1"></h1></div>' +
+    '<div class="bp-scroll" id="bpScroll"><div class="bp-inner"><p class="bp-lead" id="bpLead"></p><div id="bpTop"></div><div id="bpList"></div></div></div>';
+  document.body.appendChild(bpEl);
+  $('bpBack').addEventListener('click', closeBrowsePage);
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape' || bpEl.hidden || (fmEl && !fmEl.hidden) || importOverlay.classList.contains('is-open')) return;
+    e.preventDefault();
+    if (bpFilterEl && document.activeElement === bpFilterEl && bpFilterEl.value){ bpFilterEl.value = ''; bpFilter = ''; bpRender(); return; }
+    closeBrowsePage();
+  });
+}
+function bpMk(tag, cls, text){ const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+// a gradient card like the Search page's; the album cover for it is looked up once and kept (same cache as Search)
+function bpCard(label, artTerm, onClick, cls){
+  const b = bpMk('button', 'bp-card' + (cls ? ' ' + cls : ''), label); b.type = 'button';
+  b.addEventListener('click', () => { bpLastEl = b; onClick(b); });
+  if (artTerm) stGenreArt(artTerm).then(u => { if (u && b.isConnected && !b.querySelector('.bp-art')){ const im = document.createElement('img'); im.className = 'bp-art'; im.alt = ''; im.src = u; im.onerror = () => im.remove(); b.appendChild(im); } }).catch(() => {});
+  return b;
+}
+function bpPick(term, title, genre, range, from){
+  bpLastEl = from || bpLastEl;
+  fmOpenResults(term, title, genre, range);
+}
+function bpEmpty(list, what){
+  const d = bpMk('div', 'bp-empty'); d.setAttribute('role', 'status');
+  d.appendChild(bpMk('p', '', 'No ' + what + ' match “' + bpFilter.trim() + '”.'));
+  const c = bpMk('button', '', 'Clear'); c.type = 'button';
+  c.addEventListener('click', () => { bpFilter = ''; if (bpFilterEl){ bpFilterEl.value = ''; bpFilterEl.focus(); } bpRender(); });
+  d.appendChild(c); list.appendChild(d);
+}
+function bpStartVibe(text){
+  text = String(text || '').trim();
+  if (!text) return false;
+  closeBrowsePage(true);
+  beginConversationalVibe(text);
+  return true;
+}
+function bpRenderTop(){
+  const top = $('bpTop');
+  top.textContent = '';
+  bpFilterEl = null;
+  if (bpKind === 'vibe'){
+    const box = bpMk('section', 'bp-vibe');
+    box.appendChild(bpMk('h2', '', 'What\'s the vibe?'));
+    box.appendChild(bpMk('p', '', 'Say it how you\'d say it to a friend. We build the songs, in an order that flows.'));
+    const form = bpMk('form'); form.autocomplete = 'off';
+    const input = bpMk('input'); input.type = 'text'; input.maxLength = 300; input.placeholder = 'rainy drive home';
+    input.setAttribute('aria-label', 'Describe your vibe'); input.spellcheck = false; input.setAttribute('enterkeyhint', 'go');
+    const go = bpMk('button', '', 'Play'); go.type = 'submit';
+    form.appendChild(input); form.appendChild(go); box.appendChild(form);
+    form.addEventListener('submit', (e) => { e.preventDefault(); if (!bpStartVibe(input.value)) input.focus(); });
+    top.appendChild(box);
+    return;
+  }
+  const f = bpMk('label', 'bp-field');
+  f.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>';
+  const input = bpMk('input'); input.type = 'search'; input.maxLength = 60; input.placeholder = BP_KINDS[bpKind].filter;
+  input.setAttribute('aria-label', BP_KINDS[bpKind].filter); input.autocomplete = 'off'; input.spellcheck = false; input.setAttribute('enterkeyhint', 'search');
+  input.addEventListener('input', () => { bpFilter = input.value; bpRender(); });
+  f.appendChild(input); top.appendChild(f); bpFilterEl = input;
+}
+function bpRender(){
+  const list = $('bpList');
+  list.textContent = '';
+  if (bpKind === 'genre'){
+    const hits = bpFilterGenres(FM_GENRES, bpFilter);
+    if (!hits.length){ bpEmpty(list, 'genres or styles'); return; }
+    const grid = bpMk('div', 'bp-grid');
+    grid.setAttribute('role', 'group'); grid.setAttribute('aria-label', 'Genres');
+    hits.forEach(({ g, subs, byStyle }, i) => {
+      const open = bpOpenGenre === g || byStyle;
+      const c = bpCard(g, g, () => { bpOpenGenre = bpOpenGenre === g ? null : g; const y = $('bpScroll').scrollTop; bpRender(); $('bpScroll').scrollTop = y; const again = [...document.querySelectorAll('#bpList .bp-card')].find(x => x.firstChild && x.firstChild.textContent === g); if (again){ bpLastEl = again; again.focus({ preventScroll: true }); } });
+      c.setAttribute('aria-expanded', String(!!open)); c.setAttribute('aria-controls', 'bpSubs' + i);
+      grid.appendChild(c);
+      if (open){
+        const box = bpMk('div', 'bp-subs'); box.id = 'bpSubs' + i; box.setAttribute('role', 'group'); box.setAttribute('aria-label', g + ' styles');
+        subs.forEach(sg => {
+          const b = bpMk('button', 'bp-sub', sg); b.type = 'button';
+          b.addEventListener('click', () => bpPick(sg + ' ' + g.split(/[ /&]+/)[0], sg, g, null, b));
+          box.appendChild(b);
+        });
+        grid.appendChild(box);
+      }
+    });
+    list.appendChild(grid);
+    return;
+  }
+  if (bpKind === 'region'){
+    const keys = bpFilterKeys(Object.keys(FM_REGIONS), bpFilter);
+    if (!keys.length){ bpEmpty(list, 'regions'); return; }
+    const grid = bpMk('div', 'bp-grid'); grid.setAttribute('role', 'group'); grid.setAttribute('aria-label', 'Regions');
+    keys.forEach(k => grid.appendChild(bpCard(k, FM_REGIONS[k], (b) => bpPick(FM_REGIONS[k], k, null, null, b))));
+    list.appendChild(grid);
+    return;
+  }
+  // vibe: what fits right now (same picks as Home), tempo, then the moods
+  let picks = [];
+  try { const seen = new Set(); picks = homeVibePicks().filter(p => { const k = p.q.toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; }); } catch(e){}
+  if (picks.length){
+    const sec = bpMk('section', 'bp-sec'); sec.appendChild(bpMk('h2', '', 'Right now'));
+    const grid = bpMk('div', 'bp-grid');
+    picks.forEach((p, i) => grid.appendChild(bpCard(p.q, '', () => bpStartVibe(p.q), 'is-wide c' + (i % 6 + 1))));
+    sec.appendChild(grid); list.appendChild(sec);
+  }
+  const ts = bpMk('section', 'bp-sec'); ts.appendChild(bpMk('h2', '', 'Tempo'));
+  const tg = bpMk('div', 'bp-tempos'); tg.setAttribute('role', 'group'); tg.setAttribute('aria-label', 'Tempo for the moods below');
+  FM_TEMPOS.forEach(([k, l, r]) => {
+    const b = bpMk('button', 'bp-tempo', l + (r ? ' ' + r[0] + (r[1] > 150 ? '+' : '-' + r[1]) : '')); b.type = 'button';
+    b.setAttribute('aria-pressed', String(fmTempo === k));
+    b.addEventListener('click', () => { fmTempo = k; tg.querySelectorAll('.bp-tempo').forEach(x => x.setAttribute('aria-pressed', String(x === b))); });
+    tg.appendChild(b);
+  });
+  ts.appendChild(tg); list.appendChild(ts);
+  const ms = bpMk('section', 'bp-sec'); ms.appendChild(bpMk('h2', '', 'Moods'));
+  const grid = bpMk('div', 'bp-grid');
+  Object.keys(FM_VIBES).forEach(k => grid.appendChild(bpCard(k, FM_VIBES[k], (b) => bpPick(FM_VIBES[k], k, null, (FM_TEMPOS.find(x => x[0] === fmTempo) || [])[2] || null, b))));
+  ms.appendChild(grid); list.appendChild(ms);
+}
+function openBrowsePage(kind, genre){
+  if (!BP_KINDS[kind]) kind = 'genre';
+  if (!bpEl) bpBuild();
+  if (!bpEl.hidden && bpKind) bpScroll[bpKind] = $('bpScroll').scrollTop;
+  else bpOpener = document.activeElement;
+  const changed = bpKind !== kind;
+  bpKind = kind; bpFilter = '';
+  bpOpenGenre = kind === 'genre' && genre && FM_GENRES[genre] ? genre : null;
+  $('bpTitle').textContent = BP_KINDS[kind].title;
+  $('bpLead').textContent = BP_KINDS[kind].lead;
+  bpRenderTop();
+  bpRender();
+  bpEl.hidden = false;
+  $('bpScroll').scrollTop = bpOpenGenre ? 0 : (bpScroll[kind] || 0);
+  if (bpOpenGenre){ const c = $('bpList').querySelector('.bp-card[aria-expanded="true"]'); if (c) c.scrollIntoView({ block: 'start' }); }
+  $('bpTitle').focus({ preventScroll: true });
+  statsFeature('browse_' + kind);
+}
+function closeBrowsePage(keepFocus){
+  if (!bpEl || bpEl.hidden) return;
+  bpScroll[bpKind] = $('bpScroll').scrollTop;
+  bpEl.hidden = true;
+  if (fmEl && !fmEl.hidden && bpKind) closeFindMusic();
+  if (keepFocus !== true && bpOpener && bpOpener.isConnected) try { bpOpener.focus({ preventScroll: true }); } catch(e){}
+  bpOpener = null;
+}
+
 
 /* =========================================================================
    BRING YOUR MUSIC: its own page (not Find music's genre/region/vibe page).
@@ -10452,7 +10670,7 @@ function bringNudgeBuild(kind){
 }
 function bringNudgeBusy(){
   const sp = $('splash');
-  return document.body.classList.contains('onb-active') || (sp && !sp.classList.contains('is-hidden')) || (fmEl && !fmEl.hidden) || (bringEl && !bringEl.hidden);
+  return document.body.classList.contains('onb-active') || (sp && !sp.classList.contains('is-hidden')) || (fmEl && !fmEl.hidden) || (bpEl && !bpEl.hidden) || (bringEl && !bringEl.hidden);
 }
 // Asked for the Spotify file: remind every 2 days from day 3 until it is added or they stop it.
 function bringFileRemindMaybe(tries){
@@ -10900,7 +11118,7 @@ async function lastfmImportSelected(){
    queue rows, tracks, filter pills, inputs) and anything while a sheet, window or menu is open. */
 (function(){
   const order = ['home', 'search', 'library', 'player', 'queue', 'settings'];   // #725: Home and Search join the row; from the Player, swipe up for the queue and down for Home
-  const SKIP = 'input,textarea,select,button,a,canvas,.slider,.artwork-wrap,.visual-tabs,.q-row,.q-now,.track-row,.lib-filter,#libpl-panel,#import-overlay,#flow-layer,#findMusic,#musicMap,.lib-ctx-menu,.paste-guide,#splash,#mini-bar,.lyrics-wrap,.controls-row,.seek-row,.hm-row,.st-grid';
+  const SKIP = 'input,textarea,select,button,a,canvas,.slider,.artwork-wrap,.visual-tabs,.q-row,.q-now,.track-row,.lib-filter,#libpl-panel,#import-overlay,#flow-layer,#findMusic,#browsePage,#musicMap,.lib-ctx-menu,.paste-guide,#splash,#mini-bar,.lyrics-wrap,.controls-row,.seek-row,.hm-row,.st-grid';
   let x0 = 0, y0 = 0, ok = false;
   const phone = () => window.matchMedia('(max-width:859.98px)').matches && !document.body.classList.contains('onb-active');
   document.addEventListener('touchstart', (e) => {
@@ -11418,6 +11636,7 @@ function closeTopOverlay(){
     [() => open(importOverlay), closeImportOverlay],
     [() => playHistOpen, closePlayHistory],
     [() => !!fmEl && !fmEl.hidden, closeFindMusic],
+    [() => !!bpEl && !bpEl.hidden, closeBrowsePage],
   ];
   for (const [isOpen, close] of steps){
     try { if (isOpen()){ close(); return true; } } catch(e){}
@@ -20200,14 +20419,14 @@ function renderHome(){
     const r = mk('div', 'hm-add-row');
     const big = (t, sub, fn) => { const b = mk('button', 'hm-add-btn'); b.type = 'button'; b.appendChild(mk('b', '', t)); b.appendChild(mk('span', '', sub)); b.addEventListener('click', fn); return b; };
     r.appendChild(big('Import your music', 'Spotify, YouTube Music and more', () => openBring()));
-    r.appendChild(big('Browse by genre', 'Hip-Hop, Soul, Funk and more', () => openFindMusic()));
-    r.appendChild(big('Browse by region', 'West Africa, Brazil, India, Korea and more', () => { openFindMusic(); fmTab = 'region'; fmOpenGenre = null; fmRender(); }));
-    r.appendChild(big('Browse by vibe', 'Chill, workout, focus, by tempo', () => { openFindMusic(); fmTab = 'vibe'; fmOpenGenre = null; fmRender(); }));
+    r.appendChild(big('Browse by genre', 'Hip-Hop, Soul, Funk and more', () => openBrowsePage('genre')));
+    r.appendChild(big('Browse by region', 'West Africa, Brazil, India, Korea and more', () => openBrowsePage('region')));
+    r.appendChild(big('Browse by vibe', 'Chill, workout, focus, by tempo', () => openBrowsePage('vibe')));
     sec.appendChild(r);
     const chips = mk('div', 'hm-add-chips');
     Object.keys(FM_GENRES).slice(0, 6).forEach(g => {
       const c = mk('button', 'hm-add-chip', g); c.type = 'button';
-      c.addEventListener('click', () => { openFindMusic(); fmTab = 'genres'; fmOpenGenre = g; fmRender(); });
+      c.addEventListener('click', () => openBrowsePage('genre', g));
       chips.appendChild(c);
     });
     sec.appendChild(chips);
@@ -20278,6 +20497,25 @@ function renderHome(){
    typed here is a vibe (no song-search guessing). The chips: the vibe you
    usually play around now, one for the time of day, then five of the house
    vibes, the same five all day. Static: no animation, no network until a tap. */
+// the vibe prompts Home offers: your usual for now, the time-of-day mood, then house vibes in languages you listen to
+function homeVibePicks(){
+  const picks = [];
+  try { const u = vibeRightNow(); if (u) picks.push({ q: u.q, usual: true }); } catch(e){}
+  try {
+    const block = getTimeContext().block;
+    const mood = PASTE_HINT_MOOD[block];
+    if (mood) picks.push({ q: (PASTE_HINT_WHEN[block] || 'tonight').replace(/^./, c => c.toUpperCase()) + ', ' + mood });
+  } catch(e){}
+  // house vibes: ones in a language you listen to lead; ones in a language you don't stay off screen
+  const langs = musicLangs();
+  const day = Math.floor((Date.now() - new Date().getTimezoneOffset() * 60000) / 86400000);
+  const local = houseVibeShow.filter(h => h.langs.length && h.langs.some(l => langs.includes(l)));
+  const general = houseVibeShow.filter(h => !h.langs.length);
+  const take = (arr, k, off) => { for (let i = 0; i < Math.min(k, arr.length); i++) picks.push({ q: arr[(day * 7 + off + i * 11) % arr.length].q }); };
+  take(local, 3, 0);
+  take(general, 5 - Math.min(3, local.length), 3);
+  return picks;
+}
 function renderHomeVibe(body, mk){
   const sec = mk('section', 'hm-sec hm-vibe');
   if (regionLooksIndian()){   // India: one tap to Hindi (or back), whatever the phone is set to
@@ -20306,21 +20544,7 @@ function renderHomeVibe(body, mk){
   sec.appendChild(mk('p', 'hm-vibe-note', pictureNoteText(!!lsGet(LS_PICTURE_SEEN, false))));
   const start = (t) => { t = String(t || '').trim(); if (!t){ input.focus(); return; } beginConversationalVibe(t); };   // counted as vibe_search there
   form.addEventListener('submit', (e) => { e.preventDefault(); start(input.value); });
-  const picks = [];
-  try { const u = vibeRightNow(); if (u) picks.push({ q: u.q, usual: true }); } catch(e){}
-  try {
-    const block = getTimeContext().block;
-    const mood = PASTE_HINT_MOOD[block];
-    if (mood) picks.push({ q: (PASTE_HINT_WHEN[block] || 'tonight').replace(/^./, c => c.toUpperCase()) + ', ' + mood });
-  } catch(e){}
-  // house vibes: ones in a language you listen to lead; ones in a language you don't stay off screen
-  const langs = musicLangs();
-  const day = Math.floor((Date.now() - new Date().getTimezoneOffset() * 60000) / 86400000);
-  const local = houseVibeShow.filter(h => h.langs.length && h.langs.some(l => langs.includes(l)));
-  const general = houseVibeShow.filter(h => !h.langs.length);
-  const take = (arr, k, off) => { for (let i = 0; i < Math.min(k, arr.length); i++) picks.push({ q: arr[(day * 7 + off + i * 11) % arr.length].q }); };
-  take(local, 3, 0);
-  take(general, 5 - Math.min(3, local.length), 3);
+  const picks = homeVibePicks();
   const seen = new Set(), chips = mk('div', 'hm-vibe-chips');
   picks.forEach(p => {
     const k = p.q.toLowerCase();
@@ -23376,6 +23600,10 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
+  { version: 539, date: '2026-11-12', items: [
+    'Browse by genre, region and vibe on Home each open their own page now, with a filter for genres and regions, and the same colorful cards as Search.',
+    'If artists fail to load, you now see a Try again button instead of an empty screen.',
+  ]},
   { version: 538, date: '2026-11-12', items: [
     'On a computer there is now one search field, the one at the top: opening Search no longer shows a second copy of it.',
     'Search now lets you pick what you are looking for: All, Songs, Artists, Albums or Playlists. Your pick stays until you close the app.',
@@ -44115,7 +44343,7 @@ else { markInviteShown(TUTORIAL_INVITE_DAY_KEY); showSplashChoice(); }
   let rings = [], raf = 0, lastX = -999, lastY = -999, dragging = false;
   const SKIP = 'button,a,input,select,textarea,label,summary,canvas,img,video,svg,iframe,[role],[tabindex],[draggable="true"],[contenteditable],[data-art-style]';
   function covered(){
-    return !!document.querySelector('#flow-layer.is-open,#findMusic:not([hidden]),#musicMap:not([hidden])');
+    return !!document.querySelector('#flow-layer.is-open,#findMusic:not([hidden]),#browsePage:not([hidden]),#musicMap:not([hidden])');
   }
   // bare = no control, no painted box, no text of its own under the pointer
   function isBare(el){
