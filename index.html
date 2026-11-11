@@ -9368,6 +9368,7 @@ async function resolvePlaylistInner(playlistId, type, onProgress, onFirstTrack){
   let firstTrackFired = false;
   for (let i = 0; i < tracks.length; i++){
     const t = tracks[i];
+    if (i > 0) onProgress({ stage: 'matching', done: i, total: tracks.length, track: t }); // #797: the footer names the song being matched now
     // SoundCloud-sourced tracks play natively (see soundcloud-native-
     // playback) - build the match straight off t.scId instead of asking
     // searchYouTubeCached() to find a YouTube stand-in for it.
@@ -18311,7 +18312,8 @@ function stageMatchingProgress(done, total, track){
   $('matchFill').style.width = Math.round((done/total)*100) + '%';
   $('matchCounter').textContent = done + ' / ' + total + queuedImportsLabel();
   if (track && track.title) $('matchNames').textContent = 'Matching: ' + track.title + (track.artist ? ' - ' + track.artist : '');
-  if (done >= total) matchStatusTimer = setTimeout(hideMatchStatus, 900);
+  // #797: clear when matching ends, and never let a stalled or failed import leave the bar up
+  matchStatusTimer = setTimeout(hideMatchStatus, done >= total ? 900 : 45000);
 }
 
 // Plain-language version of a load/import/search error for the screen;
@@ -18791,6 +18793,7 @@ async function beginImportNow(id, force, type, targetIndex, waited){
       saveToLibrary(id);
       renderLibrary();
     });
+    hideMatchStatus(); // #797: matching is over
     if (isSingleTrackType(pl.type)){
       closeFindingOverlay();
       // See the cache-hit branch above (discovery-radio-continuation): play
@@ -22938,6 +22941,10 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
+  { version: 530, date: '2026-11-12', items: [
+    'The desktop mini player no longer has the shape button next to the album color button.',
+    'The "Matching" bar at the bottom now shows the song being matched right now and goes away when matching is over.'
+  ]},
   { version: 529, date: '2026-11-12', items: [
     'The song title on the player is now centered.',
     'The music map now starts from the artist that is playing. If nothing is playing, it opens with a box where you type an artist.',
@@ -36880,14 +36887,7 @@ function wireMiniDesktop(win){
     menu.style.top = Math.max(4, Math.min(y, win.innerHeight - r.height - 4)) + 'px';
   };
   doc.addEventListener('contextmenu', (e) => { e.preventDefault(); openMenu(e.clientX, e.clientY); });
-  // #612: the shape picker is also a button in the header (right-click works on every shape)
-  const shapeBtn = doc.createElement('button');
-  shapeBtn.id = 'mpShape'; shapeBtn.className = 'mp-tool'; shapeBtn.title = 'Shape: LP, cassette, card...'; shapeBtn.setAttribute('aria-label', 'Change shape');
-  shapeBtn.innerHTML = '<svg viewBox="0 0 24 24">' + MP_ICO.shape + '</svg>';
-  shapeBtn.addEventListener('click', (e) => { e.stopPropagation(); const r = shapeBtn.getBoundingClientRect(); openMenu(r.left, r.bottom + 2); });
-  const styleBtn = doc.getElementById('mpStyle');
-  styleBtn.parentNode.insertBefore(shapeBtn, styleBtn);
-  doc.head.appendChild(Object.assign(doc.createElement('style'), { textContent: '#mpShape{opacity:0}body:hover #mpShape,#mpShape:focus-visible{opacity:1}' }));
+  // #796: no shape button in the header; the right-click menu above still picks the shape
   mpMagnetize(win, mpDesktopSize(mpDesktopShape()).w, mpDesktopSize(mpDesktopShape()).h);
   menu.addEventListener('click', (e) => {
     const b = e.target.closest('button');

@@ -12766,12 +12766,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #788.
 
 ### cinema-mode-the-video-button-disappears-789: Cinema mode, the video button disappears (Geethub #789)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Geethub issue #789. See the issue for the full text.
 - **Touches:** index.html (UI)
-- **Branch:**
-- **Notes:** Synced from Geethub #789.
+- **Branch:** agent/bugs-a
+- **Notes:** Synced from Geethub #789. Already shipped in v528 (#776): the Video button becomes the Cinema button while video is on. Not re-checked in a browser.
 
 ### in-flux-mode-1-2-3-4-5-should-switch-to-790: In flux mode, 1 2 3 4 5 should switch to the other art modes (Geethub #790)
 - **Status:** merged
@@ -12822,20 +12822,20 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #795.
 
 ### remove-the-shape-chooser-button-from-def-796: Remove the shape chooser button from default miniplayer - the one next to the paint tablet button above the ti (Geethub #796)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Geethub issue #796. See the issue for the full text.
 - **Touches:** index.html (UI)
-- **Branch:**
-- **Notes:** Synced from Geethub #796.
+- **Branch:** agent/bugs-a
+- **Notes:** Synced from Geethub #796. Shape button removed from the desktop mini player header (v530).
 
 ### matching-song-name-song-artist-notificat-797: "matching [song name] - [song artist]" notification freezes on first song and stays on screen long after songs (Geethub #797)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Geethub issue #797. See the issue for the full text.
 - **Touches:** index.html (UI)
-- **Branch:**
-- **Notes:** Synced from Geethub #797.
+- **Branch:** agent/bugs-a
+- **Notes:** Synced from Geethub #797. Footer matching bar names the song being matched, hides when matching ends, 45s idle failsafe (v530). Not reproduced live.
 
 ### when-queue-is-being-reloaded-it-should-s-798: When queue is being reloaded, it should show a progress bar (Geethub #798)
 - **Status:** merged
