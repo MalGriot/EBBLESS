@@ -12597,7 +12597,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #767. Fixed in withManualTracks: songs added mid-refresh, unmatched hand-adds, and hand-adds Spotify also lists now survive refreshes, no duplicates. Check: node scripts/test-manual-carry.js.
 
 ### the-light-show-should-be-inside-the-768: The light show should be inside the same player section at first. how it is currently is what fullscreen mode  (Geethub #768)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #768. See the issue for references.
 - **Touches:** index.html (UI)
@@ -12629,7 +12629,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #771.
 
 ### main-cymatics-should-be-ui-color-772: Main cymatics should be ui color (Geethub #772)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #772. See the issue for references.
 - **Touches:** index.html (UI)
@@ -12637,7 +12637,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #772.
 
 ### cymatics-rainbow-mode-773: Cymatics rainbow mode (Geethub #773)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #773. See the issue for references.
 - **Touches:** index.html (UI)
@@ -12677,7 +12677,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #777.
 
 ### cd-mode-fullscreen-the-lines-look-to-778: Cd mode fullscreen: the lines look too cartoonish. make them beautiful (Geethub #778)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** high
 - **Description:** Bug, Geethub issue #778. See the issue for references.
 - **Touches:** index.html (UI)
