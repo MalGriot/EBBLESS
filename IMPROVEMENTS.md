@@ -12758,7 +12758,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #787.
 
 ### flux-player-controls-are-underneath-and-788: FLUX player controls are underneath and blocked by the player controls (Geethub #788)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Geethub issue #788. See the issue for the full text.
 - **Touches:** index.html (UI)
@@ -12766,7 +12766,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #788.
 
 ### cinema-mode-the-video-button-disappears-789: Cinema mode, the video button disappears (Geethub #789)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Geethub issue #789. See the issue for the full text.
 - **Touches:** index.html (UI)
@@ -12774,7 +12774,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #789.
 
 ### in-flux-mode-1-2-3-4-5-should-switch-to-790: In flux mode, 1 2 3 4 5 should switch to the other art modes (Geethub #790)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Geethub issue #790. See the issue for the full text.
 - **Touches:** index.html (UI)
@@ -12798,7 +12798,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #792.
 
 ### title-on-desktop-is-not-centered-with-th-793: Title on desktop is not centered with the album art (Geethub #793)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Geethub issue #793. See the issue for the full text.
 - **Touches:** index.html (UI)
@@ -12822,7 +12822,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #795.
 
 ### remove-the-shape-chooser-button-from-def-796: Remove the shape chooser button from default miniplayer - the one next to the paint tablet button above the ti (Geethub #796)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Geethub issue #796. See the issue for the full text.
 - **Touches:** index.html (UI)
@@ -12830,7 +12830,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #796.
 
 ### matching-song-name-song-artist-notificat-797: "matching [song name] - [song artist]" notification freezes on first song and stays on screen long after songs (Geethub #797)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Geethub issue #797. See the issue for the full text.
 - **Touches:** index.html (UI)
@@ -12854,7 +12854,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #799.
 
 ### search-bar-in-home-screen-is-redundant-e-800: Search bar in home screen is redundant. either remove the bar from the top or remove it from search (Geethub #800)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Geethub issue #800. See the issue for the full text.
 - **Touches:** index.html (UI)
@@ -12862,7 +12862,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #800.
 
 ### progress-bar-wav-form-doesn-t-appear-on-801: Progress bar wav form doesn't appear on fullscreen mode (Geethub #801)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Geethub issue #801. See the issue for the full text.
 - **Touches:** index.html (UI)
@@ -12870,7 +12870,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #801.
 
 ### the-for-square-button-that-opens-the-fin-802: The for square button that opens the find music window should be removed and integrated into the home page (Geethub #802)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Geethub issue #802. See the issue for the full text.
 - **Touches:** index.html (UI)
@@ -12878,7 +12878,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #802.
 
 ### ui-color-should-fade-to-the-next-color-n-803: Ui color should fade to the next color - now it just switches harshly. it should fade along with the art and c (Geethub #803)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Geethub issue #803. See the issue for the full text.
 - **Touches:** index.html (UI)
@@ -12886,7 +12886,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #803.
 
 ### mid-fullscreen-mode-804: Mid-fullscreen mode (Geethub #804)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Geethub issue #804. See the issue for the full text.
 - **Touches:** index.html (UI)
