@@ -1414,6 +1414,10 @@ html.reduce-motion .lib-grid:not(.is-list) .lib-card .info .name{display:block;w
 .gm-e.is-in{stroke:#7cc6ff;marker-mid:url(#gmA1)}
 .gm-e.is-out{stroke:var(--accent);marker-mid:url(#gmA2)}
 .gm-dot{fill:none;stroke:hsl(var(--gm-h) var(--gm-s) 62%);stroke-width:5;stroke-linecap:round;vector-effect:non-scaling-stroke}
+.gm-dot.is-off{display:none}
+.gm-svg.mid .gm-e{opacity:.6}
+.gm-svg.lo .gm-e{opacity:.4}
+.gm-svg.no-ah .gm-e:not(.is-in):not(.is-out){marker-mid:none}
 .gm-ah{fill:rgba(255,255,255,.5)}
 .gm-ah1{fill:#7cc6ff}
 .gm-ah2{fill:var(--accent)}
@@ -10621,7 +10625,7 @@ function gmBuildSvg(g){
   });
   // every genre is a dot, so arrows always end somewhere even when its label is thinned out
   const dg = mk('g', {}, svg);
-  g.nodes.forEach((n) => { const f = D.fam[n.fam]; mk('path', { d: 'M' + n.x + ' ' + n.y + 'h0', class: 'gm-dot', style: '--gm-h:' + f[2] + ';--gm-s:' + f[3] + '%' }, dg); });
+  g.dots = g.nodes.map((n) => { const f = D.fam[n.fam]; return mk('path', { d: 'M' + n.x + ' ' + n.y + 'h0', class: 'gm-dot', style: '--gm-h:' + f[2] + ';--gm-s:' + f[3] + '%' }, dg); });
   g.eg = eg; g.svg = svg;
   g.stage.insertBefore(svg, g.stage.firstChild);
   const ax = document.createElement('div'); ax.className = 'gm-axis'; ax.setAttribute('aria-hidden', 'true');
@@ -10650,11 +10654,28 @@ function gmEl(g, i){
   return n.el;
 }
 function gmDecade(n){ return n.root ? '' : n.dec < 1900 ? 'before 1900' : n.dec + 's'; }
+// Zoomed out, only the important genres get a dot and only arrows between them are drawn, so the lanes stay readable;
+// the selected genre always keeps its own arrows and its neighbours' dots. Runs when the zoom tier or the selection changes.
+function gmVis(g){
+  const keep = g.floor - 1, sel = g.sel >= 0 ? g.nodes[g.sel] : null;
+  g.edges.forEach((e) => {
+    const off = !(sel && (e.a === g.sel || e.b === g.sel)) && (g.nodes[e.a].prom < keep || g.nodes[e.b].prom < keep);
+    if (off !== e.off){ e.off = off; e.el.classList.toggle('is-off', off); }
+  });
+  g.nodes.forEach((n, i) => {
+    const off = !(sel && (i === g.sel || sel.from.includes(i) || sel.to.includes(i))) && n.prom < keep;
+    if (off !== n.dotOff){ n.dotOff = off; g.dots[i].classList.toggle('is-off', off); }
+  });
+}
 function gmApply(){
   const g = gm; if (!g) return;
   g.raf = 0;
   const W = g.stage.clientWidth, H = g.stage.clientHeight, v = g.view;
   if (!W || !H) return;
+  const floor = gmMinProm(v.s);
+  if (floor !== g.floor || g.visDirty){ g.floor = floor; g.visDirty = false; gmVis(g); }
+  const lo = v.s < 0.3, mid = !lo && v.s < 0.5;   // zoomed out: arrows fade, then lose their heads
+  if (lo !== g.lo || mid !== g.mid){ g.lo = lo; g.mid = mid; g.svg.classList.toggle('lo', lo); g.svg.classList.toggle('mid', mid); g.svg.classList.toggle('no-ah', lo || mid); }
   g.svg.setAttribute('viewBox', (-v.tx / v.s).toFixed(2) + ' ' + (-v.ty / v.s).toFixed(2) + ' ' + (W / v.s).toFixed(2) + ' ' + (H / v.s).toFixed(2));
   const ms = 9 / v.s;   // arrowheads stay about 9 px whatever the zoom
   if (Math.abs(ms - g.mk) > g.mk * 0.04){ g.mk = ms; g.markers.forEach(m => { m.setAttribute('markerWidth', ms.toFixed(2)); m.setAttribute('markerHeight', ms.toFixed(2)); }); }
@@ -10773,7 +10794,7 @@ function gmSelect(i, o){
   o = o || {};
   g.sel = i; g.kbd = !!o.kbd; g.hint.classList.remove('is-on');
   gmHideSugg();
-  gmMarkEdges(g);
+  gmMarkEdges(g); g.visDirty = true;
   gmPanel();
   gmFlyTo(i);
   if (!g.statsSent){ g.statsSent = true; try { statsFeature('genre_map'); } catch(e){} }
@@ -10782,7 +10803,7 @@ function gmSelect(i, o){
 function gmDeselect(){
   const g = gm; if (!g) return;
   g.sel = -1; g.panel.hidden = true; g.panel.classList.remove('is-open');
-  gmMarkEdges(g);
+  gmMarkEdges(g); g.visDirty = true;
   gmDirty();
 }
 function gmPanel(){
