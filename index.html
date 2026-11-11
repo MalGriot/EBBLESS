@@ -2383,6 +2383,12 @@ body.queue-open #bottom-nav button[data-view].is-active{color:var(--faint-2)}
     transition:background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out)}
   #libpl-panel .queue-head .close-btn svg{width:20px;height:20px}
 }
+/* #794: queue scroll bar on the left; rows flip back to normal */
+#queue-panel .queue-scroll{direction:rtl}
+#queue-panel .queue-scroll>*{direction:ltr}
+/* #798: slim bar while the queue reloads (radio start, playlist still loading) */
+.q-reload-bar{flex:none;border-radius:0}
+.q-reload-bar[hidden]{display:none}
 .queue-scroll{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}   /* #752: a full-width button's hover grow (#395 scale) must not toggle a sideways scrollbar */
 .queue-body{padding:4px 0 24px}   /* #655: rows run edge to edge so the hover box does too */
 .libpl-addbar{padding:0 12px 8px;flex:none}
@@ -6044,6 +6050,7 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
       </div>
     </div>
     <div class="radio-steer" id="radioSteerRow" aria-label="Steer the radio" hidden></div>
+    <div class="flow-line indeterminate q-reload-bar" id="queueReloadBar" role="progressbar" aria-label="Reloading the queue" hidden><div class="fill"></div></div>
     <div class="queue-scroll">
       <div class="queue-body" id="queueBody">
       <div class="q-arrows" id="queueArrowsRow">
@@ -17720,7 +17727,7 @@ let relinkDragCtx = null; // { list, t } of the open matching-links window
 let radioBusy = false;
 async function startRadio(name, own, keepPlaying){
   if (radioBusy) return;
-  radioBusy = true;
+  radioBusy = true; syncQueueReloadBar();
   showToast('Starting ' + name + '...');
   try {
     const exclude = new Set(own.map(t => t.videoId));
@@ -17758,7 +17765,7 @@ async function startRadio(name, own, keepPlaying){
       loadIndex(state.queuePos, true);
     }
     showToast('Playing ' + name);
-  } finally { radioBusy = false; }
+  } finally { radioBusy = false; syncQueueReloadBar(); }
 }
 
 // #742: Liked Songs is always the first row (even before the first like), the
@@ -22903,6 +22910,10 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
+  { version: 528, date: '2026-11-12', items: [
+    'The queue scroll bar is now on the left side of the window.',
+    'A progress bar shows at the top of the queue while it is reloading.'
+  ]},
   { version: 526, date: '2026-11-11', items: [
     'Switching the chips above the queue (Discover, Popular, Deep cuts, Chill, Energy, Focus, decades) no longer changes the song that is playing, even if it is already fading into the next one. Only the upcoming songs change.',
     'New songs show up in the queue within seconds, one by one, instead of all at once after a long wait. This happens after you clear the queue, switch a chip, or the queue runs out at the end of a song, so playback keeps going.',
@@ -28048,7 +28059,13 @@ function fsTimelineSync(){
     box.appendChild(b);
   }
 }
+function syncQueueReloadBar(){
+  const bar = $('queueReloadBar'); if (!bar) return;
+  const cur = state.queue[state.queuePos];
+  try { bar.hidden = !(radioBusy || (cur && bgResolveProgress.has(cur.plId))); } catch(e){ bar.hidden = true; }   // radioBusy is declared later; at startup this just hides
+}
 function renderQueuePanel(){
+  syncQueueReloadBar();
   try { renderShuffleButtons(); } catch(e){}   // a restored or changed queue may be a vibe (sleep timer) or not (shuffle)
   fsTimelineSync();
   renderDiscoverToggle();
