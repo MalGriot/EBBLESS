@@ -1420,6 +1420,8 @@ html.reduce-motion .lib-grid:not(.is-list) .lib-card .info .name{display:block;w
 .gm-axis{position:absolute;left:0;right:0;top:0;height:26px;z-index:1;overflow:hidden;pointer-events:none;background:color-mix(in srgb,var(--panel-2) 92%,transparent);border-bottom:1px solid var(--border)}
 .gm-lane{position:absolute;left:8px;top:0;z-index:1;height:18px;padding:0 9px;display:flex;align-items:center;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap;pointer-events:none;color:hsl(var(--gm-h) var(--gm-s) 78%);background:hsl(var(--gm-h) var(--gm-s) 40% / .55)}
 .gm-dec{position:absolute;left:0;top:0;width:44px;height:26px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;letter-spacing:.02em;color:var(--faint)}
+.gm-hint{position:absolute;left:50%;bottom:12px;z-index:2;transform:translateX(-50%);padding:7px 14px;border-radius:999px;background:var(--panel-2);border:1px solid var(--border-2);color:var(--text);font-size:12.5px;font-weight:600;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .4s var(--ease-out)}
+.gm-hint.is-on{opacity:1}
 .gm-zoomctl{position:absolute;right:10px;top:34px;display:flex;gap:4px;z-index:2}
 .gm-zoomctl button{min-width:36px;height:36px;padding:0 6px;border-radius:999px;background:var(--panel-2);border:1px solid var(--border);color:var(--text);font:inherit;font-size:18px;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer}
 .gm-zoomctl button:hover{color:var(--accent)}
@@ -1449,7 +1451,7 @@ html.reduce-motion .lib-grid:not(.is-list) .lib-card .info .name{display:block;w
   .gm-panel{left:auto;top:10px;right:10px;bottom:10px;width:300px;max-height:none;transform:translateX(24px)}
   .gm-zoomctl{right:auto;top:auto;left:10px;bottom:10px}
 }
-@media (prefers-reduced-motion:reduce){.gm-lab,.gm-panel{transition:none}}
+@media (prefers-reduced-motion:reduce){.gm-lab,.gm-panel,.gm-hint{transition:none}}
 /* Music map (Geethub #597): same layer as Find music. Static by default; a recenter is one
    finite transform/opacity glide, nothing runs while it sits still or is hidden (#487). */
 #musicMap{position:fixed;inset:0;z-index:55;background:radial-gradient(circle at 50% 50%,var(--panel-2) 0,transparent 62%),var(--bg);display:flex;flex-direction:column}
@@ -10556,8 +10558,9 @@ function gmInit(){
     '<div class="gm-stage" tabindex="0" role="group" aria-label="Genre flow chart. Time runs left to right, each family has its own row, arrows point from a genre to the styles it led to. Plus and minus zoom, arrow keys move, zero fits the whole chart. The list view has every genre."><div class="gm-note" role="status">Drawing the chart&hellip;</div></div>' +
     '<div class="gm-zoomctl"><button type="button" data-z="in" aria-label="Zoom in">+</button><button type="button" data-z="out" aria-label="Zoom out">&minus;</button><button type="button" class="gm-zreset" data-z="reset" aria-label="Show the whole chart">Fit</button></div>' +
     '<div class="gm-sugg" role="listbox" aria-label="Matching genres" hidden></div>' +
-    '<div class="gm-panel" role="region" aria-label="Selected genre" hidden></div>';
-  const g = gm = { D, nodes, edges, sorted, el, stage: el.querySelector('.gm-stage'), panel: el.querySelector('.gm-panel'), sugg: el.querySelector('.gm-sugg'),
+    '<div class="gm-panel" role="region" aria-label="Selected genre" hidden></div>' +
+    '<div class="gm-hint" aria-hidden="true">Swipe to travel through time</div>';
+  const g = gm = { hint: el.querySelector('.gm-hint'), D, nodes, edges, sorted, el, stage: el.querySelector('.gm-stage'), panel: el.querySelector('.gm-panel'), sugg: el.querySelector('.gm-sugg'),
     view: { s: 1, tx: 0, ty: 0 }, sMin: 0.1, shown: new Set(), raf: 0, glide: 0, sel: -1, touched: false, ro: null, kbd: false, floor: -1, mk: 0, decs: [] };
   gmBuildSvg(g);
   g.stage.addEventListener('click', (e) => { const b = e.target.closest('[data-gm]'); if (b) gmSelect(+b.dataset.gm, { kbd: e.detail === 0 }); });
@@ -10693,6 +10696,7 @@ function gmClamp(){
 }
 function gmDirty(){
   const g = gm; if (!g) return;
+  if (g.touched && g.hint) g.hint.classList.remove('is-on');
   gmClamp();
   if (!g.raf) g.raf = requestAnimationFrame(gmApply);
 }
@@ -10735,7 +10739,13 @@ function gmFitView(animate){
   const f = gmFitTarget();
   g.sMin = Math.min(0.5, f.s * 0.8);
   g.touched = false;
-  if (!animate && W < 500 && f.s < 0.4){ f.s = 0.4; f.tx = 8; f.ty = GM_HEADER + 8; }
+  // phones: whole-chart width is too small to read, so open on the 1960s with the story visible on both sides, and say how to travel
+  const phone = !animate && W < 500 && f.s < 0.5;
+  if (phone){
+    const c = g.D.cols.find(x => x[0] === '1960s') || g.D.cols[Math.floor(g.D.cols.length / 2)];
+    f.s = 0.5; f.tx = W / 2 - c[1] * f.s; f.ty = GM_HEADER + 4 - 24 * f.s;
+  }
+  g.hint.classList.toggle('is-on', phone);
   if (animate) gmGlideTo(f.s, f.tx, f.ty);
   else { gmGlideStop(); g.view.s = f.s; g.view.tx = f.tx; g.view.ty = f.ty; gmApply(); }
 }
@@ -10761,7 +10771,7 @@ function gmMarkEdges(g){
 function gmSelect(i, o){
   const g = gm; if (!g || !g.nodes[i]) return;
   o = o || {};
-  g.sel = i; g.kbd = !!o.kbd;
+  g.sel = i; g.kbd = !!o.kbd; g.hint.classList.remove('is-on');
   gmHideSugg();
   gmMarkEdges(g);
   gmPanel();
