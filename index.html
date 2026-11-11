@@ -3100,6 +3100,10 @@ html.reduce-motion *,html.reduce-motion *::before,html.reduce-motion *::after{an
 .page-artist-ic svg{width:18px;height:18px}
 .page-artist-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-underline-offset:3px}
 .page-artist:hover .page-artist-name{text-decoration:underline}
+.song-info-btn{display:inline-flex;align-items:center;min-height:32px;max-width:100%;margin:2px 6px 2px 0;padding:4px 12px;border:1px solid var(--border);border-radius:999px;background:color-mix(in srgb,var(--accent) 10%,transparent);color:var(--accent);font:inherit;font-size:13px;font-weight:600;cursor:pointer;text-align:left}
+.song-info-btn:hover,.song-info-btn:focus-visible{background:color-mix(in srgb,var(--accent) 22%,transparent)}
+.song-info-btn:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.song-info-btn:active{transform:scale(.97)}
 .song-credits{padding:2px 14px 12px}
 .song-credits .section-label{margin:6px 0 6px}
 .song-credits-line{display:flex;flex-wrap:wrap;gap:2px 10px;padding:7px 0;font-size:13px;border-top:1px solid var(--border);line-height:1.45}
@@ -14134,7 +14138,21 @@ function fetchSongInfo(title, artist){
   job.then(v => { if (!v) songCreditsCache.delete(key); });
   return job;
 }
-function buildSongInfoEl(c){
+// #777: open an album named by the info lookup: library copy first, else find it in the artist's catalog
+async function openInfoAlbum(name, artist, backFn){
+  const akey = artistNameKey(name);
+  const inLib = getLibrary().find(id => { const p = getCachedPlaylist(id); return p && !isArtistEntry(p) && artistNameKey(p.name) === akey; });
+  if (inLib){ toggleLibraryPlaylistPanel(inLib); return; }
+  try{
+    const res = await itunesArtistAlbums({ type: 'artist', id: '', name: artist }, { sections: true });
+    const all = (res.albums || res).concat(res.singles || []);
+    const a = all.find(x => artistNameKey(x.name) === akey) || all.find(x => artistNameKey(x.name).startsWith(akey));
+    if (a){ openAlbumPreview(a, artist, backFn); return; }
+  } catch(e){}
+  showToast("Couldn't find that album.");
+}
+function buildSongInfoEl(c, ctx){
+  ctx = ctx || {};
   const box = document.createElement('div');
   box.className = 'song-credits';
   const lbl = document.createElement('div'); lbl.className = 'section-label'; lbl.textContent = 'Info';
@@ -14147,16 +14165,21 @@ function buildSongInfoEl(c){
     line.appendChild(r); line.appendChild(v); box.appendChild(line);
   };
   if (c.date) row('Released', c.date);
-  if (c.album) row('Album', c.album);
+  if (c.album){
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'song-info-btn';
+    b.setAttribute('aria-label', 'Open album ' + c.album); b.textContent = c.album;
+    b.addEventListener('click', () => openInfoAlbum(c.album, ctx.artist, ctx.backFn));
+    row('Album', b);
+  }
   if (c.label) row('Label', c.label);
   if (c.genres && c.genres.length) row('Genre', c.genres.join(', '));
   if (c.samples && c.samples.length) row('Samples', c.samples.join('; '));
   c.roles.forEach(role => {
     const names = document.createElement('span');
     role.names.forEach((n, i) => {
-      if (i) names.append(', ');
-      const a = document.createElement('span'); a.className = 'song-page-link'; a.textContent = n;
-      a.addEventListener('click', () => openArtistPage(n));
+      const a = document.createElement('button'); a.type = 'button'; a.className = 'song-info-btn'; a.textContent = n;
+      a.setAttribute('aria-label', 'Open artist ' + n);
+      a.addEventListener('click', () => openArtistPage(n, ctx.title));
       names.appendChild(a);
     });
     row(role.label, names);
@@ -14261,7 +14284,7 @@ function openSongPage(t, plId, trackIdx){
   infoPane.appendChild(infoStatus);
   fetchSongInfo(t.title, t.artist).then(c => {
     if (openLibraryPanelId !== id) return;
-    if (c) infoStatus.replaceWith(buildSongInfoEl(c)); else infoStatus.textContent = 'No extra info found.', infoStatus.style.animation = 'none';
+    if (c) infoStatus.replaceWith(buildSongInfoEl(c, { artist: t.artist, title: t.title, backFn: () => openSongPage(t, plId, trackIdx) })); else infoStatus.textContent = 'No extra info found.', infoStatus.style.animation = 'none';
   }).catch(() => { if (openLibraryPanelId === id){ infoStatus.textContent = 'No extra info found.'; infoStatus.style.animation = 'none'; } });
 }
 // Lyrics for a song page: plain lines, no timing (the player's own Lyrics view is the synced one). Same lookup as the player.
@@ -22917,7 +22940,8 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 const WHATS_NEW = [
   { version: 529, date: '2026-11-12', items: [
     'The song title on the player is now centered.',
-    'The music map now starts from the artist that is playing. If nothing is playing, it opens with a box where you type an artist.'
+    'The music map now starts from the artist that is playing. If nothing is playing, it opens with a box where you type an artist.',
+    'On a song\'s info page, the album and each credited person (producer, writer and so on) now look like buttons. Tap the album to open it, or a name to open that artist.'
   ]},
   { version: 528, date: '2026-11-12', items: [
     'The queue scroll bar is now on the left side of the window.',
