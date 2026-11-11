@@ -1385,6 +1385,54 @@ html.reduce-motion .lib-grid:not(.is-list) .lib-card .info .name{display:block;w
 .bp-empty{padding:36px 10px;text-align:center;color:var(--faint)}
 .bp-empty button{display:block;margin:12px auto 0;padding:10px 22px;border-radius:999px;border:1px solid var(--border-2);background:var(--panel-2);color:var(--text);font:inherit;font-weight:600}
 @media (min-width:860px){.bp-grid{grid-template-columns:repeat(auto-fill,minmax(180px,1fr))}.bp-card{min-height:112px}}
+/* Genre map (Browse by genre). Labels are positioned with transform only; panel slides with transform/opacity; no blur, nothing runs while idle or hidden (#487). */
+.bp-seg{display:inline-flex;gap:4px;padding:3px;margin:0 0 12px;border-radius:999px;background:var(--panel-2);border:1px solid var(--border)}
+.bp-seg button{min-height:36px;padding:0 20px;border-radius:999px;border:0;background:transparent;color:var(--faint);font:inherit;font-size:13.5px;font-weight:700;cursor:pointer}
+.bp-seg button[aria-pressed="true"]{background:var(--accent);color:var(--on-accent,#151107)}
+.bp-seg button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.gm-wrap{position:relative;height:clamp(420px,calc(100vh - 300px),860px);height:clamp(420px,calc(100dvh - 300px),860px);border-radius:20px;overflow:hidden;background:color-mix(in srgb,var(--panel-2) 55%,transparent);border:1px solid var(--border)}
+.gm-stage{position:absolute;inset:0;touch-action:none;user-select:none;-webkit-user-select:none;outline:none;cursor:grab}
+.gm-stage:focus-visible{box-shadow:inset 0 0 0 2px var(--accent)}
+.gm-note{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--faint);font-size:14px;pointer-events:none}
+.gm-lab{position:absolute;left:0;top:0;height:30px;box-sizing:border-box;display:flex;align-items:center;gap:6px;padding:0 8px;border-radius:999px;font:inherit;font-size:12.5px;font-weight:600;white-space:nowrap;cursor:pointer;touch-action:none;color:hsl(var(--gm-h) var(--gm-s) 76%);background:hsl(var(--gm-h) var(--gm-s) 50% / .16);border:1px solid hsl(var(--gm-h) var(--gm-s) 60% / .38);transition:opacity .25s var(--ease-out)}
+.gm-lab i,.gm-chip i,.gm-pfam i,.gm-sg i{flex:none;width:8px;height:8px;border-radius:50%;background:hsl(var(--gm-h) var(--gm-s) 62%)}
+.gm-lab span{min-width:0;overflow:hidden}
+.gm-lab.is-root{font-weight:700;background:hsl(var(--gm-h) var(--gm-s) 50% / .3);border-color:hsl(var(--gm-h) var(--gm-s) 62% / .6)}
+.gm-lab.is-nb{border-color:hsl(var(--gm-h) var(--gm-s) 70% / .95);background:hsl(var(--gm-h) var(--gm-s) 50% / .3)}
+.gm-lab.is-sel{background:hsl(var(--gm-h) var(--gm-s) 64%);border-color:transparent;color:#151107}
+.gm-lab.is-sel i{background:#151107}
+.gm-lab.is-out{opacity:0;pointer-events:none}
+.gm-lab:focus-visible,.gm-chip:focus-visible,.gm-sg:focus-visible,.gm-play:focus-visible,.gm-pclose:focus-visible,.gm-zoomctl button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.gm-zoomctl{position:absolute;right:10px;top:10px;display:flex;gap:4px;z-index:2}
+.gm-zoomctl button{min-width:36px;height:36px;padding:0 6px;border-radius:999px;background:var(--panel-2);border:1px solid var(--border);color:var(--text);font:inherit;font-size:18px;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.gm-zoomctl button:hover{color:var(--accent)}
+.gm-zoomctl .gm-zreset{font-size:12px;font-weight:700;padding:0 12px}
+.gm-sugg{position:absolute;left:10px;top:10px;right:150px;max-width:380px;z-index:4;display:flex;flex-direction:column;padding:6px;border-radius:14px;background:var(--panel-2);border:1px solid var(--border-2);box-shadow:0 10px 28px rgba(0,0,0,.4)}
+.gm-sugg[hidden],.gm-panel[hidden]{display:none}
+.gm-sg{display:flex;align-items:center;gap:8px;min-height:42px;padding:0 10px;border:0;border-radius:10px;background:none;color:var(--text);font:inherit;font-size:14px;font-weight:600;text-align:left;cursor:pointer}
+.gm-sg:hover{background:color-mix(in srgb,var(--text) 8%,transparent)}
+.gm-sg small{margin-left:auto;padding-left:8px;color:var(--faint);font-size:12px;font-weight:500}
+.gm-none{padding:12px;color:var(--faint);font-size:13.5px}
+.gm-panel{position:absolute;z-index:3;left:8px;right:8px;bottom:8px;max-height:48%;overflow-y:auto;overscroll-behavior:contain;padding:14px 16px 16px;border-radius:18px;background:var(--panel-2);border:1px solid var(--border-2);opacity:0;transform:translateY(24px);transition:transform .3s var(--ease-out),opacity .25s var(--ease-out)}
+.gm-panel.is-open{opacity:1;transform:none}
+.gm-phead{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.gm-ptitle{margin:0;font-size:20px;font-weight:800;letter-spacing:-.2px;color:var(--text);overflow-wrap:anywhere}
+.gm-ptitle:focus{outline:none}
+.gm-pfam{display:flex;align-items:center;gap:6px;margin-top:3px;font-size:12.5px;font-weight:700;color:hsl(var(--gm-h) var(--gm-s) 74%)}
+.gm-pclose{flex:none;width:40px;height:40px;margin:-6px -8px 0 0;border:0;border-radius:50%;background:none;color:var(--faint);font-size:26px;line-height:1;cursor:pointer}
+.gm-play{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:46px;margin:12px 0 2px;border:0;border-radius:999px;background:var(--accent);color:var(--on-accent,#151107);font:inherit;font-size:15px;font-weight:800;cursor:pointer}
+.gm-play svg{width:18px;height:18px}
+.gm-plab{margin:14px 0 8px;font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--faint)}
+.gm-chips{display:flex;flex-wrap:wrap;gap:8px}
+.gm-chip{display:inline-flex;align-items:center;gap:7px;min-height:40px;padding:0 13px;border-radius:999px;background:color-mix(in srgb,var(--text) 5%,transparent);border:1px solid hsl(var(--gm-h) var(--gm-s) 60% / .4);color:var(--text);font:inherit;font-size:13px;font-weight:600;cursor:pointer}
+.gm-foot{margin:14px 2px 0;font-size:13px}
+.gm-foot a{color:var(--faint);text-decoration:underline;text-underline-offset:3px}
+.gm-foot a:hover{color:var(--accent)}
+@media (min-width:640px){
+  .gm-panel{left:auto;top:10px;right:10px;bottom:10px;width:300px;max-height:none;transform:translateX(24px)}
+  .gm-zoomctl{right:auto;top:auto;left:10px;bottom:10px}
+}
+@media (prefers-reduced-motion:reduce){.gm-lab,.gm-panel{transition:none}}
 /* Music map (Geethub #597): same layer as Find music. Static by default; a recenter is one
    finite transform/opacity glide, nothing runs while it sits still or is hidden (#487). */
 #musicMap{position:fixed;inset:0;z-index:55;background:radial-gradient(circle at 50% 50%,var(--panel-2) 0,transparent 62%),var(--bg);display:flex;flex-direction:column}
@@ -10248,13 +10296,16 @@ function bpRenderTop(){
   input.setAttribute('aria-label', BP_KINDS[bpKind].filter); input.autocomplete = 'off'; input.spellcheck = false; input.setAttribute('enterkeyhint', 'search');
   input.addEventListener('input', () => { bpFilter = input.value; bpRender(); });
   f.appendChild(input); top.appendChild(f); bpFilterEl = input;
+  if (bpKind === 'genre') gmTopControls(top);
 }
 function bpRender(){
   const list = $('bpList');
   list.textContent = '';
   if (bpKind === 'genre'){
+    if (gmViewIsMap() && gmMount(list)) return;
+    if (gmFailed) list.appendChild(bpMk('p', 'bp-lead', 'The genre map could not load, so here is the list.'));
     const hits = bpFilterGenres(FM_GENRES, bpFilter);
-    if (!hits.length){ bpEmpty(list, 'genres or styles'); return; }
+    if (!hits.length){ bpEmpty(list, 'genres or styles'); gmFootLink(list); return; }
     const grid = bpMk('div', 'bp-grid');
     grid.setAttribute('role', 'group'); grid.setAttribute('aria-label', 'Genres');
     hits.forEach(({ g, subs, byStyle }, i) => {
@@ -10273,6 +10324,7 @@ function bpRender(){
       }
     });
     list.appendChild(grid);
+    gmFootLink(list);
     return;
   }
   if (bpKind === 'region'){
@@ -10333,6 +10385,382 @@ function closeBrowsePage(keepFocus){
   bpOpener = null;
 }
 
+
+/* =========================================================================
+   GENRE MAP (Browse by genre): our own map of ~200 genres and styles. Related
+   genres sit close, each family has one hue. Zoom and pan use the shared
+   gesture code below (zmGestures, also used by the music map). Only labels on
+   screen exist in the DOM, thinned by prominence so none ever overlap; the
+   map is idle (no rAF) unless a gesture or a fly-to is running. Layout is
+   precomputed by tools/genre-map-layout.js (positions never change at runtime).
+   Animates transform/opacity only; no filters or blur.
+   ========================================================================= */
+/* GENRE-MAP:BEGIN (pure helpers, tested by tools/genre-map.test.js) */
+const GM_LABEL_H = 30, GM_SMAX = 6, GM_CAP = 140;
+function gmLabelW(name){ return Math.round(String(name).length * 7.4 + 34); }
+// only the biggest genres show when zoomed out; every style by about 2x
+function gmMinProm(s){ return s < 0.7 ? 8 : s < 0.9 ? 7 : s < 1.2 ? 6 : s < 1.6 ? 5 : 4; }
+function gmFit(w, h, W, H, pad){
+  pad = pad == null ? 16 : pad;
+  const s = Math.max(0.05, Math.min((W - pad * 2) / w, (H - pad * 2) / h));
+  return { s, tx: (W - w * s) / 2, ty: (H - h * s) / 2 };
+}
+// nodes: [{ name, x, y, prom, w, h }]; order: indices, most important first; the first `o.forced` of them ignore the zoom floor.
+// Returns the labels to draw, each with its screen position; no two label boxes overlap.
+function gmDeclutter(nodes, order, v, W, H, o){
+  o = o || {};
+  const M = 40, floor = gmMinProm(v.s), cap = o.cap || GM_CAP, forced = o.forced || 0;
+  const grid = new Map(), keep = [];
+  for (let k = 0; k < order.length && keep.length < cap; k++){
+    const i = order[k], p = nodes[i];
+    if (k >= forced && p.prom < floor) continue;
+    const sx = p.x * v.s + v.tx, sy = p.y * v.s + v.ty;
+    if (sx < -M - p.w / 2 || sx > W + M + p.w / 2 || sy < -M - p.h / 2 || sy > H + M + p.h / 2) continue;
+    const l = sx - p.w / 2 - 3, r = sx + p.w / 2 + 3, t = sy - p.h / 2 - 2, b = sy + p.h / 2 + 2;
+    const x0 = Math.floor(l / 120), x1 = Math.floor(r / 120), y0 = Math.floor(t / 60), y1 = Math.floor(b / 60);
+    let hit = false;
+    for (let gx = x0; gx <= x1 && !hit; gx++) for (let gy = y0; gy <= y1 && !hit; gy++){
+      const c = grid.get(gx + ',' + gy);
+      if (c) for (const q of c) if (l < q.r && r > q.l && t < q.b && b > q.t){ hit = true; break; }
+    }
+    if (hit) continue;
+    const box = { l, r, t, b };
+    for (let gx = x0; gx <= x1; gx++) for (let gy = y0; gy <= y1; gy++){
+      const key = gx + ',' + gy; (grid.get(key) || grid.set(key, []).get(key)).push(box);
+    }
+    keep.push({ i, sx, sy });
+  }
+  return keep;
+}
+// indices of genres matching what was typed: exact, then starts-with, then a word starts with it, then contains
+function gmSearch(nodes, q, limit){
+  q = String(q || '').trim().toLowerCase();
+  if (!q) return [];
+  const out = [];
+  nodes.forEach((n, i) => {
+    const nm = n.name.toLowerCase();
+    const rank = nm === q ? 0 : nm.startsWith(q) ? 1 : nm.split(/[^a-z0-9]+/).some(w => w.startsWith(q)) ? 2 : nm.includes(q) ? 3 : -1;
+    if (rank >= 0) out.push({ i, rank });
+  });
+  out.sort((a, b) => a.rank - b.rank || nodes[b.i].prom - nodes[a.i].prom || nodes[a.i].name.localeCompare(nodes[b.i].name));
+  return out.slice(0, limit || 6).map(x => x.i);
+}
+/* GENRE-MAP:END */
+/* GENRE-MAP-DATA:BEGIN (generated by tools/genre-map-layout.js, do not edit by hand) */
+const GM_DATA = {"v":1,"w":1634,"h":1186,"fam":[["hiphop","Hip-Hop",27,88,"Hip-Hop"],["rnb","R&B / Soul",326,78,"R&B / Soul"],["funk","Funk",47,92,"Funk"],["jazz","Jazz",242,82,"Jazz"],["blues","Blues",272,62,null],["rock","Rock",356,80,"Rock"],["metal","Metal",222,14,null],["country","Country & Folk",74,62,"Country & Folk"],["classical","Classical",210,70,"Classical"],["world","World",30,22,null],["latin","Latin",164,72,"Latin"],["afro","Afro",96,70,"Afro"],["reggae","Reggae",136,66,"Reggae"],["electronic","Electronic",188,82,"Electronic"],["pop","Pop",292,70,"Pop"]],"n":[["Hip-Hop",0,568.3,466.6,10,1],["Boom bap",0,531.9,191.3,8,0],["Trap",0,399.5,386.5,9,0],["Conscious rap",0,540.5,41.3,7,0],["Drill",0,406,186.3,7,0],["Underground rap",0,474.2,311.4,6,0],["Southern rap",0,429.1,101.3,7,0],["Old school hip-hop",0,605.3,101.3,6,0],["Gangsta rap",0,521.9,271.4,6,0],["G-funk",0,636.2,231.2,5,0],["East Coast rap",0,498.2,131.3,5,0],["West Coast rap",0,523.8,161.3,5,0],["Jazz rap",0,661.1,261.2,5,0],["Cloud rap",0,445.2,208.8,4,0],["Melodic rap",0,513.7,396.6,5,0],["Grime",0,345.4,346.5,6,0],["UK rap",0,421.1,356.5,5,0],["Crunk",0,441.1,333.9,4,0],["Alternative hip-hop",0,492,71.3,5,0],["R&B / Soul",1,823.8,161.2,10,1],["Neo-soul",1,785.7,251.3,8,0],["Classic soul",1,910.3,81.1,8,0],["Contemporary R&B",1,667.9,391.4,9,0],["Quiet storm",1,892.6,396.7,6,0],["Gospel soul",1,877.5,317.6,5,0],["Motown",1,860.2,356.7,6,0],["Southern soul",1,984,363.1,5,0],["Philly soul",1,820.5,206.2,5,0],["Northern soul",1,845.5,183.7,4,0],["New jack swing",1,744,361.4,5,0],["Alternative R&B",1,673.1,291.3,6,0],["Disco",1,744.7,331.3,7,0],["Doo-wop",1,935.6,419.3,4,0],["Rhythm and blues",1,1022.2,408.2,4,0],["Slow jams",1,793.3,308.8,4,0],["Gospel",1,813.6,121.1,6,0],["Contemporary gospel",1,764.6,228.7,4,0],["Funk",2,905.5,441.9,10,1],["Classic funk",2,1046.1,280.6,8,0],["P-Funk",2,998.4,240.6,6,0],["Funk rock",2,1153.8,340.7,5,0],["Nu-funk",2,1129.6,174.1,5,0],["Jazz-funk",2,1108.1,310.6,5,0],["Boogie",2,971.6,385.6,4,0],["Acid jazz",2,1156.3,144.1,5,0],["Jazz",3,1330.6,204.2,10,1],["Bebop",3,1337.7,335.7,8,0],["Soul jazz",3,1197.3,204.2,6,0],["Modern jazz",3,1261.3,152.7,7,0],["Jazz fusion",3,1289,284.2,7,0],["Spiritual jazz",3,1427.7,164.1,6,0],["Swing",3,1476.8,339.7,7,0],["Big band",3,1517.9,309.6,5,0],["Dixieland",3,1446.5,392.2,4,0],["Cool jazz",3,1235.4,370.7,6,0],["Hard bop",3,1365.9,244.2,6,0],["Free jazz",3,1446.4,199.1,5,0],["Latin jazz",3,980.4,527.4,5,0],["Smooth jazz",3,1224.4,244.2,6,0],["Vocal jazz",3,1435.4,369.7,5,0],["Nu jazz",3,1101.6,258.1,4,0],["Post-bop",3,1413.8,221.7,4,0],["Blues",4,1287.8,410.7,10,1],["Delta blues",4,1454.6,556.4,5,0],["Chicago blues",4,1511.7,586.5,5,0],["Electric blues",4,1440.8,616.5,5,0],["Rock",5,1146.5,570.8,10,1],["Classic rock",5,1171.2,753.5,8,0],["Indie rock",5,1075.2,638.4,7,0],["Alternative",5,1144.9,470.8,7,0],["Punk",5,1185.4,805,7,0],["Blues rock",5,1263.8,577.5,6,0],["Hard rock",5,1253.2,678.5,7,0],["Progressive rock",5,1229.6,440.8,5,0],["Psychedelic rock",5,1209.6,510.8,6,0],["Garage rock",5,1165.3,593.3,4,0],["Grunge",5,1208.3,638.4,6,0],["Post-punk",5,1127.8,683.5,5,0],["Shoegaze",5,1161.8,661,4,0],["Britpop",5,1088.3,518.3,4,0],["Folk rock",5,1163.8,723.5,5,0],["Soft rock",5,1024,554.3,4,0],["Glam rock",5,1214.8,615.9,4,0],["Rockabilly",5,1117.7,615.9,4,0],["New wave",5,1051,599.4,5,0],["Emo",5,1187.8,561.4,4,0],["Pop punk",5,1111.3,540.8,5,0],["Hardcore punk",5,1315.6,711.6,4,0],["Southern rock",5,1203.8,701,4,0],["Post-rock",5,929.4,567.8,4,0],["Rock and roll",5,1087.6,430.7,6,0],["Dream pop",5,1079.4,576.8,4,0],["Metal",6,1463.9,1144,10,1],["Heavy metal",6,1447,769.7,8,0],["Thrash metal",6,1477.1,820.9,6,0],["Death metal",6,1525.7,879,5,0],["Black metal",6,1566.2,912.7,4,0],["Doom metal",6,1532.7,856.4,4,0],["Metalcore",6,1460.3,843.5,4,0],["Nu metal",6,1108.5,783.6,5,0],["Country & Folk",7,1192.7,1031.5,10,1],["Country",7,1054.3,956.5,9,0],["Americana",7,1183.1,916.5,6,0],["Bluegrass",7,1135.7,1061.5,5,0],["Folk",7,1113.7,856.4,7,0],["Outlaw country",7,1143.9,961.5,4,0],["Honky-tonk",7,1136.7,1084.1,4,0],["Country pop",7,991,926.5,5,0],["Alt-country",7,1141.2,939,4,0],["Country rock",7,1157.8,886.4,5,0],["Indie folk",7,1050.4,896.5,6,0],["Classical",8,846.9,813.5,10,1],["Piano",8,792.1,853.5,6,0],["Orchestral",8,787.6,1098.7,7,0],["Chamber",8,810.8,1038.6,5,0],["Opera",8,821.9,938.6,6,0],["Baroque",8,862.8,978.6,6,0],["Romantic era",8,832.8,1068.6,5,0],["Minimalism",8,698.2,744.4,4,0],["Contemporary classical",8,769.7,876,4,0],["Choral",8,807.7,961.1,4,0],["Film score",8,769.4,898.5,6,0],["Neoclassical",8,717.2,767,5,0],["Symphony",8,840,1008.6,5,0],["World",9,485.2,860.3,10,1],["Flamenco",9,346.5,963.9,4,0],["Bollywood",9,473.4,954.7,6,0],["Indian classical",9,426.9,909.5,4,0],["Bhangra",9,439.3,887,4,0],["Arabic pop",9,447.6,932.1,4,0],["Latin",10,239.2,992.8,10,1],["Reggaeton",10,195.7,838.4,9,0],["Salsa",10,348.1,762.7,7,0],["Bachata",10,204.4,889.8,7,0],["Latin pop",10,287.1,941.3,7,0],["Cumbia",10,114.8,957.5,6,0],["Merengue",10,176.5,957.5,4,0],["Bossa nova",10,573.6,729.6,6,0],["Samba",10,312.8,822.8,6,0],["MPB",10,306.7,792.7,5,0],["Tango",10,187.9,980,4,0],["Mariachi",10,88.3,884.4,4,0],["Norteño",10,74.1,980,4,0],["Corridos tumbados",10,123.3,860.9,4,0],["Bolero",10,151,935,4,0],["Sertanejo",10,525.6,882.9,4,0],["Baile funk",10,281.8,722.6,4,0],["Son cubano",10,194.7,912.4,4,0],["Latin trap",10,204.4,785.9,4,0],["Afro",11,521.6,689.6,10,1],["Afrobeats",11,456.9,613.7,9,0],["Amapiano",11,356,463.2,8,0],["Highlife",11,575.9,649.5,6,0],["Afro-fusion",11,534.2,553,5,0],["Afrobeat",11,777.8,472.8,6,0],["Afroswing",11,395,541,4,0],["Gqom",11,383.6,518.4,4,0],["Soukous",11,484.6,636.2,4,0],["Bongo flava",11,488.3,575.5,4,0],["Afro-soul",11,595.6,501.2,4,0],["Reggae",12,168.3,763.3,10,1],["Roots reggae",12,163.1,613.3,8,0],["Dancehall",12,233.9,688.3,8,0],["Dub",12,193.1,449.6,6,0],["Reggae fusion",12,292,583.8,5,0],["Ska",12,68.8,688.5,5,0],["Rocksteady",12,95.4,666,4,0],["Lovers rock",12,304.5,561.2,4,0],["Soca",12,130.8,643.4,5,0],["Electronic",13,235.1,81.3,10,1],["Afro-house",13,256,538.3,8,0],["Deep house",13,243.7,156.3,8,0],["Techno",13,111.9,449.4,8,0],["Drum and bass",13,90.6,231.4,8,0],["Ambient",13,500.4,522.9,7,0],["Downtempo",13,471.8,426.6,6,0],["House",13,280.8,306.4,9,0],["Tech house",13,138,163.8,5,0],["Progressive house",13,161,307.9,5,0],["Trance",13,156.9,337.9,7,0],["Dubstep",13,158.9,389.4,7,0],["Electro",13,92.4,186.3,4,0],["Synthwave",13,382.5,495.9,5,0],["IDM",13,212.8,371.9,4,0],["Breakbeat",13,130.9,285.3,4,0],["Jungle",13,135,419.4,5,0],["UK garage",13,200.7,277.9,5,0],["Minimal techno",13,75,208.8,4,0],["Acid house",13,156.9,208.8,4,0],["Hardstyle",13,177,255.3,4,0],["Future bass",13,303.3,407.4,5,0],["Lo-fi beats",13,461.7,231.4,6,0],["EDM",13,286,266.4,6,0],["Trip hop",13,354.2,316.5,5,0],["Pop",14,728,701,10,1],["Indie pop",14,898.2,701,7,0],["Synth-pop",14,762.1,649.5,7,0],["Dance pop",14,663.3,518,7,0],["Singer-songwriter",14,960.4,752.4,7,0],["Electropop",14,654.6,609.5,6,0],["Teen pop",14,812.7,672,4,0],["K-pop",14,717.5,569.5,7,0],["J-pop",14,802.8,536.7,5,0],["Art pop",14,789.3,694.6,4,0],["Bedroom pop",14,728.1,592,4,0],["Pop rock",14,947.2,590.4,6,0],["Adult contemporary",14,890.6,534.1,4,0],["City pop",14,869.3,502.4,4,0],["Afropop",14,662.8,639.6,5,0]],"e":[[1,3],[1,5],[1,7],[1,10],[2,6],[2,4],[2,14],[3,5],[3,12],[4,15],[4,16],[5,18],[6,17],[7,10],[7,37],[8,11],[8,9],[8,10],[9,11],[9,39],[12,1],[12,20],[12,48],[13,2],[14,22],[15,186],[15,162],[15,16],[16,155],[17,2],[18,193],[18,12],[20,22],[20,47],[20,30],[20,159],[21,25],[21,26],[21,27],[22,30],[22,29],[22,23],[22,197],[23,34],[23,58],[24,35],[24,21],[24,26],[25,28],[25,32],[26,62],[27,31],[28,21],[29,0],[29,37],[30,193],[31,37],[31,176],[31,197],[31,43],[32,33],[32,90],[33,62],[33,90],[34,22],[35,36],[36,22],[38,39],[38,40],[38,47],[38,21],[39,40],[40,41],[40,72],[41,38],[41,44],[42,47],[42,49],[42,38],[42,44],[43,38],[44,47],[44,60],[46,55],[46,54],[46,51],[46,61],[47,55],[48,61],[48,49],[48,56],[49,40],[49,73],[50,56],[50,48],[51,52],[51,59],[51,53],[52,59],[53,62],[54,137],[54,55],[54,58],[55,61],[57,132],[57,137],[57,46],[58,42],[59,54],[60,175],[60,48],[63,62],[64,65],[64,63],[65,71],[67,72],[67,71],[67,90],[67,74],[68,69],[68,77],[68,75],[68,195],[69,76],[69,79],[69,85],[70,87],[70,86],[70,75],[70,77],[71,88],[72,93],[72,82],[73,74],[74,75],[76,72],[76,70],[77,84],[77,78],[78,91],[78,69],[79,68],[79,205],[80,104],[80,67],[80,109],[81,205],[81,67],[81,198],[82,67],[83,90],[83,101],[84,196],[84,70],[85,86],[86,205],[87,98],[88,109],[89,174],[89,68],[91,195],[93,94],[94,87],[94,95],[95,96],[96,97],[97,93],[98,95],[99,0],[101,102],[101,106],[101,107],[101,109],[101,103],[102,108],[102,104],[102,62],[104,110],[105,101],[105,106],[105,109],[107,194],[108,68],[108,109],[109,67],[110,198],[110,195],[112,122],[112,117],[112,114],[113,123],[113,121],[114,116],[115,120],[115,117],[115,113],[116,120],[117,113],[118,174],[118,119],[118,122],[121,122],[122,174],[125,140],[126,127],[126,128],[131,162],[131,148],[131,134],[132,147],[132,133],[133,136],[133,134],[134,194],[134,144],[135,142],[135,136],[136,132],[137,138],[137,139],[138,139],[140,144],[141,143],[143,148],[144,147],[145,101],[146,0],[146,131],[148,2],[150,153],[150,208],[150,162],[150,155],[151,170],[151,156],[152,154],[153,159],[153,22],[154,38],[154,42],[155,162],[156,170],[157,152],[158,150],[158,0],[161,163],[161,166],[161,167],[162,164],[162,163],[163,180],[163,193],[164,0],[165,166],[167,22],[168,162],[170,176],[170,171],[171,176],[171,175],[172,187],[172,188],[173,185],[173,184],[173,180],[174,175],[175,193],[175,191],[176,177],[176,178],[176,188],[177,172],[177,187],[178,179],[180,190],[180,186],[181,172],[181,184],[182,196],[183,174],[183,184],[183,172],[184,185],[185,162],[186,176],[189,179],[189,192],[190,192],[190,199],[191,1],[191,12],[192,176],[192,179],[192,197],[195,204],[195,196],[196,199],[197,199],[198,104],[200,197],[200,205],[201,197],[201,22],[201,0],[202,201],[202,207],[203,195],[203,199],[204,191],[206,81],[206,23],[207,31],[207,43],[207,81],[208,197],[0,19],[19,37],[37,45],[45,62],[62,66],[66,92],[66,194],[194,169],[194,19],[169,0],[160,0],[160,149],[149,37],[149,130],[130,194],[45,111],[111,124],[124,130],[100,62],[100,66],[149,45],[124,149],[169,160],[169,149]]};
+/* GENRE-MAP-DATA:END */
+
+// Shared zoom/pan gestures: wheel and pinch zoom around the pointer, drag to pan, double tap/click to zoom in.
+// The music map and the genre map both use it. o = { active(), blocked(), zoomAt(f, x, y), panBy(dx, dy), start(), skip }
+function zmGestures(st, o){
+  let sup = false;
+  st.addEventListener('wheel', (e) => {
+    if (!o.active() || (o.blocked && o.blocked())) return;
+    e.preventDefault();
+    const r = st.getBoundingClientRect();
+    const dy = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1);
+    o.zoomAt(Math.exp(-dy * (e.ctrlKey ? 0.01 : 0.0018)), e.clientX - r.left, e.clientY - r.top);
+  }, { passive: false });
+  const ptrs = new Map();
+  let moved = false, lastTap = { t: 0, x: 0, y: 0 }, pinch = null;
+  const rel = (e) => { const r = st.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
+  const pinchState = () => {
+    const [a, b] = Array.from(ptrs.values());
+    return { d: Math.max(1, Math.hypot(a.x - b.x, a.y - b.y)), x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+  };
+  st.addEventListener('pointerdown', (e) => {
+    if (!o.active() || (e.pointerType === 'mouse' && e.button !== 0)) return;
+    ptrs.set(e.pointerId, Object.assign(rel(e), { sx: 0, sy: 0 }));
+    const p = ptrs.get(e.pointerId); p.sx = p.x; p.sy = p.y;
+    if (ptrs.size === 1) moved = false;
+    if (ptrs.size === 2){ moved = true; pinch = pinchState(); if (o.start) o.start(); try { ptrs.forEach((_, id) => st.setPointerCapture(id)); } catch (_) {} }
+  });
+  st.addEventListener('pointermove', (e) => {
+    const p = ptrs.get(e.pointerId);
+    if (!p || !o.active()) return;
+    const n = rel(e), dx = n.x - p.x, dy = n.y - p.y;
+    p.x = n.x; p.y = n.y;
+    if (ptrs.size >= 2 && pinch){
+      const q = pinchState();
+      o.panBy(q.x - pinch.x, q.y - pinch.y);
+      o.zoomAt(q.d / pinch.d, q.x, q.y);
+      pinch = q;
+      return;
+    }
+    if (!moved){
+      if (Math.hypot(n.x - p.sx, n.y - p.sy) < (e.pointerType === 'mouse' ? 5 : 9)) return;   // still a tap
+      moved = true; if (o.start) o.start();
+      try { st.setPointerCapture(e.pointerId); } catch (_) {}
+      return;
+    }
+    o.panBy(dx, dy);
+  });
+  const up = (e) => {
+    const p = ptrs.get(e.pointerId);
+    if (!p) return;
+    ptrs.delete(e.pointerId);
+    pinch = null;
+    if (ptrs.size === 1){ const q = Array.from(ptrs.values())[0]; q.sx = q.x; q.sy = q.y; }
+    if (ptrs.size) return;
+    if (moved){ sup = true; setTimeout(() => { sup = false; }, 60); return; }
+    if (e.type !== 'pointerup' || (o.skip && e.target.closest(o.skip))) return;
+    const now = Date.now();   // double tap / double click on empty space zooms in there
+    if (now - lastTap.t < 320 && Math.hypot(p.x - lastTap.x, p.y - lastTap.y) < 30){ o.zoomAt(2.5, p.x, p.y); lastTap.t = 0; }
+    else lastTap = { t: now, x: p.x, y: p.y };
+  };
+  st.addEventListener('pointerup', up);
+  st.addEventListener('pointercancel', up);
+  // a drag must not count as a tap on whatever name it ended over
+  (o.root || st).addEventListener('click', (e) => { if (sup){ e.stopPropagation(); e.preventDefault(); } }, true);
+}
+
+const LS_GENRE_VIEW = 'ebbless:genreView';
+const GM_EVERYNOISE = 'https://everynoise.com/engenremap.html';
+let gm = null, gmFailed = false;
+function gmViewIsMap(){ return !gmFailed && lsGet(LS_GENRE_VIEW, 'map') !== 'list'; }
+function gmReduced(){ try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch(e){ return false; } }
+
+function gmInit(){
+  const D = GM_DATA;
+  if (!D || !Array.isArray(D.n) || !D.n.length || !Array.isArray(D.fam)) throw new Error('no genre map data');
+  const nodes = D.n.map((r) => ({ name: r[0], fam: r[1], x: r[2], y: r[3], prom: r[4], root: !!r[5], w: gmLabelW(r[0]), h: GM_LABEL_H, nb: [], el: null }));
+  D.e.forEach(([a, b]) => { if (nodes[a] && nodes[b]){ nodes[a].nb.push(b); nodes[b].nb.push(a); } });
+  const byName = new Map(nodes.map((n, i) => [n.name.toLowerCase(), i]));
+  const sorted = nodes.map((_, i) => i).sort((a, b) => nodes[b].prom - nodes[a].prom || nodes[b].nb.length - nodes[a].nb.length || a - b);
+  const el = document.createElement('div');
+  el.className = 'gm-wrap';
+  el.innerHTML =
+    '<div class="gm-stage" tabindex="0" role="group" aria-label="Genre map. Related genres sit close together. Plus and minus zoom, arrow keys move, zero fits the whole map. The list view has every genre."><div class="gm-note" role="status">Drawing the map&hellip;</div></div>' +
+    '<div class="gm-zoomctl"><button type="button" data-z="in" aria-label="Zoom in">+</button><button type="button" data-z="out" aria-label="Zoom out">&minus;</button><button type="button" class="gm-zreset" data-z="reset" aria-label="Show the whole map">Fit</button></div>' +
+    '<div class="gm-sugg" role="listbox" aria-label="Matching genres" hidden></div>' +
+    '<div class="gm-panel" role="region" aria-label="Selected genre" hidden></div>';
+  const g = gm = { D, nodes, byName, sorted, el, stage: el.querySelector('.gm-stage'), panel: el.querySelector('.gm-panel'), sugg: el.querySelector('.gm-sugg'),
+    view: { s: 1, tx: 0, ty: 0 }, sMin: 0.2, shown: new Set(), raf: 0, glide: 0, sel: -1, touched: false, ro: null, zmT: 0, kbd: false };
+  g.stage.addEventListener('click', (e) => { const b = e.target.closest('[data-gm]'); if (b) gmSelect(+b.dataset.gm, { kbd: e.detail === 0 }); });
+  el.querySelector('.gm-zoomctl').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-z]'); if (!b) return;
+    if (b.dataset.z === 'reset'){ gmFitView(true); return; }
+    gmZoomAt(b.dataset.z === 'in' ? 1.5 : 1 / 1.5, g.stage.clientWidth / 2, g.stage.clientHeight / 2);
+  });
+  zmGestures(g.stage, {
+    root: el, skip: '[data-gm]', active: () => !!gm && g.stage.isConnected, zoomAt: gmZoomAt,
+    panBy: (dx, dy) => { g.touched = true; g.view.tx += dx; g.view.ty += dy; gmDirty(); }, start: gmGlideStop
+  });
+  g.stage.addEventListener('keydown', (e) => {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    const k = e.key, cx = g.stage.clientWidth / 2, cy = g.stage.clientHeight / 2;
+    if (k === '+' || k === '=') gmZoomAt(1.4, cx, cy);
+    else if (k === '-' || k === '_') gmZoomAt(1 / 1.4, cx, cy);
+    else if (k === '0') gmFitView(true);
+    else if (k.startsWith('Arrow')){
+      g.touched = true; g.view.tx += k === 'ArrowLeft' ? 60 : k === 'ArrowRight' ? -60 : 0; g.view.ty += k === 'ArrowUp' ? 60 : k === 'ArrowDown' ? -60 : 0; gmDirty();
+    } else return;
+    e.preventDefault();
+  });
+  el.addEventListener('keydown', (e) => {   // Escape closes the genre sheet first, the page second
+    if (e.key === 'Escape' && g.sel >= 0){ e.preventDefault(); e.stopPropagation(); const back = g.nodes[g.sel].el; gmDeselect(); if (back && back.isConnected && g.kbd) try { back.focus({ preventScroll: true }); } catch(_){} }
+  });
+  g.panel.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-gp]'); if (!b) return;
+    if (b.dataset.gp === 'close'){ gmDeselect(); return; }
+    if (b.dataset.gp === 'play') gmPlay(g.sel, b);
+    else if (b.dataset.gp === 'go') gmSelect(+b.dataset.i, { kbd: e.detail === 0, fromPanel: true });
+  });
+  g.sugg.addEventListener('click', (e) => { const b = e.target.closest('[data-gs]'); if (b) gmPickSuggestion(+b.dataset.gs); });
+  if (typeof ResizeObserver === 'function'){
+    g.ro = new ResizeObserver(() => { if (!g.stage.clientWidth) return; g.sMin = Math.min(0.5, gmFit(D.w, D.h, g.stage.clientWidth, g.stage.clientHeight).s * 0.8); if (!g.touched && g.sel < 0) gmFitView(false); else gmDirty(); });
+    g.ro.observe(g.stage);
+  }
+  return g;
+}
+function gmEl(g, i){
+  const n = g.nodes[i];
+  if (!n.el){
+    const f = g.D.fam[n.fam];
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'gm-lab' + (n.root ? ' is-root' : '');
+    b.dataset.gm = String(i); b.style.setProperty('--gm-h', f[2]); b.style.setProperty('--gm-s', f[3] + '%');
+    b.setAttribute('aria-label', n.name + (n.root ? ', genre family' : ', ' + f[1])); b.setAttribute('aria-pressed', 'false');
+    const dot = document.createElement('i'); dot.setAttribute('aria-hidden', 'true');
+    const t = document.createElement('span'); t.textContent = n.name;
+    b.appendChild(dot); b.appendChild(t);
+    b.style.width = n.w + 'px';
+    n.el = b;
+  }
+  return n.el;
+}
+function gmApply(){
+  const g = gm; if (!g) return;
+  g.raf = 0;
+  const W = g.stage.clientWidth, H = g.stage.clientHeight;
+  if (!W || !H) return;
+  const sel = g.sel >= 0 ? g.nodes[g.sel] : null;
+  let order = g.sorted, forced = 0;
+  if (sel){ const pins = [g.sel].concat(sel.nb.slice().sort((a, b) => g.nodes[b].prom - g.nodes[a].prom)); forced = pins.length; const ps = new Set(pins); order = pins.concat(g.sorted.filter(i => !ps.has(i))); }
+  const keep = gmDeclutter(g.nodes, order, g.view, W, H, { forced });
+  const want = new Set(keep.map(k => k.i));
+  g.shown.forEach(i => { if (!want.has(i)){ const e = g.nodes[i].el; if (e && e.parentNode) e.remove(); g.shown.delete(i); } });
+  const fresh = [], st = g.stage;
+  const nbSet = sel ? new Set(sel.nb) : null;
+  keep.forEach((k) => {
+    const n = g.nodes[k.i], e = gmEl(g, k.i);
+    if (!g.shown.has(k.i)){ g.shown.add(k.i); e.classList.add('is-out'); st.appendChild(e); fresh.push(e); }
+    e.style.transform = 'translate(' + Math.round(k.sx - n.w / 2) + 'px,' + Math.round(k.sy - n.h / 2) + 'px)';
+    const on = k.i === g.sel, nb = !!(nbSet && nbSet.has(k.i));
+    if (e.classList.contains('is-sel') !== on){ e.classList.toggle('is-sel', on); e.setAttribute('aria-pressed', String(on)); }
+    if (e.classList.contains('is-nb') !== nb) e.classList.toggle('is-nb', nb);
+  });
+  const note = st.querySelector('.gm-note');
+  if (note && keep.length) note.remove();
+  if (fresh.length){ st.offsetWidth; fresh.forEach(e => e.classList.remove('is-out')); }
+  g.vis = keep.length;
+  st.setAttribute('data-shown', String(keep.length));
+}
+function gmClamp(){
+  const g = gm, v = g.view, W = g.stage.clientWidth, H = g.stage.clientHeight, w = g.D.w * v.s, h = g.D.h * v.s, m = 90;
+  v.tx = Math.min(W - m, Math.max(m - w, v.tx)); v.ty = Math.min(H - m, Math.max(m - h, v.ty));
+}
+function gmDirty(){
+  const g = gm; if (!g) return;
+  gmClamp();
+  if (!g.raf) g.raf = requestAnimationFrame(gmApply);
+}
+function gmGlideStop(){ if (gm && gm.glide){ cancelAnimationFrame(gm.glide); gm.glide = 0; } }
+function gmZoomAt(f, px, py){
+  const g = gm; if (!g) return;
+  const v = g.view, s2 = Math.max(g.sMin, Math.min(GM_SMAX, v.s * f));
+  if (!isFinite(s2)) return;
+  gmGlideStop(); g.touched = true;
+  const k = s2 / v.s;
+  v.tx = px - (px - v.tx) * k; v.ty = py - (py - v.ty) * k; v.s = s2;
+  gmDirty();
+}
+// finite ease of the view to (s, tx, ty); instant when the visitor asked for less motion
+function gmGlideTo(s1, tx1, ty1){
+  const g = gm, v = g.view; gmGlideStop();
+  if (gmReduced()){ v.s = s1; v.tx = tx1; v.ty = ty1; gmClamp(); gmApply(); return; }
+  const s0 = v.s, tx0 = v.tx, ty0 = v.ty, t0 = performance.now();
+  // zoom out and back in around the way when travelling far, so the move reads as a flight
+  const step = (now) => {
+    g.glide = 0;
+    if (gm !== g || !g.stage.isConnected) return;
+    const k = Math.min(1, (now - t0) / 420), e = 1 - Math.pow(1 - k, 3);
+    v.s = s0 + (s1 - s0) * e; v.tx = tx0 + (tx1 - tx0) * e; v.ty = ty0 + (ty1 - ty0) * e;
+    gmApply();
+    if (k < 1) g.glide = requestAnimationFrame(step);
+  };
+  g.glide = requestAnimationFrame(step);
+}
+function gmFitView(animate){
+  const g = gm, W = g.stage.clientWidth, H = g.stage.clientHeight;
+  if (!W || !H) return;
+  const f = gmFit(g.D.w, g.D.h, W, H);
+  g.sMin = Math.min(0.5, f.s * 0.8);
+  g.touched = false;
+  if (!animate && W < 500 && f.s < 0.34){ f.s = 0.34; f.tx = W / 2 - g.D.w * f.s / 2; f.ty = H / 2 - g.D.h * f.s / 2; }   // phones: start a little closer so names stay readable; Fit on a phone shows everything below
+  if (animate) gmGlideTo(f.s, f.tx, f.ty);
+  else { gmGlideStop(); g.view.s = f.s; g.view.tx = f.tx; g.view.ty = f.ty; gmApply(); }
+}
+// where on the stage a selected genre should sit: left of the side panel on desktop, above the sheet on phones
+function gmFocusPoint(){
+  const g = gm, W = g.stage.clientWidth, H = g.stage.clientHeight;
+  return W >= 640 ? { x: (W - 330) / 2, y: H / 2 } : { x: W / 2, y: H * 0.3 };
+}
+function gmFlyTo(i){
+  const g = gm, n = g.nodes[i], p = gmFocusPoint();
+  const s1 = Math.max(Math.min(g.view.s, GM_SMAX), g.stage.clientWidth >= 640 ? 1.7 : 1.9);
+  g.touched = true;
+  gmGlideTo(s1, p.x - n.x * s1, p.y - n.y * s1);
+}
+function gmSelect(i, o){
+  const g = gm; if (!g || !g.nodes[i]) return;
+  o = o || {};
+  g.sel = i; g.kbd = !!o.kbd;
+  gmHideSugg();
+  gmPanel();
+  gmFlyTo(i);
+  if (!g.statsSent){ g.statsSent = true; try { statsFeature('genre_map'); } catch(e){} }
+  if (o.kbd){ const t = g.panel.querySelector('.gm-ptitle'); if (t) try { t.focus({ preventScroll: true }); } catch(_){} }
+}
+function gmDeselect(){
+  const g = gm; if (!g) return;
+  g.sel = -1; g.panel.hidden = true; g.panel.classList.remove('is-open');
+  gmDirty();
+}
+function gmFamLabel(n){ return gm.D.fam[n.fam][1]; }
+function gmPanel(){
+  const g = gm, n = g.nodes[g.sel], f = g.D.fam[n.fam], p = g.panel;
+  const chip = (i) => '<button type="button" class="gm-chip" style="--gm-h:' + g.D.fam[g.nodes[i].fam][2] + ';--gm-s:' + g.D.fam[g.nodes[i].fam][3] + '%" data-gp="go" data-i="' + i + '"><i aria-hidden="true"></i>' + escapeHtml(g.nodes[i].name) + '</button>';
+  const rel = n.nb.slice().sort((a, b) => g.nodes[b].prom - g.nodes[a].prom || a - b);
+  let styles = [];
+  if (n.root) styles = g.nodes.map((m, i) => i).filter(i => g.nodes[i].fam === n.fam && !g.nodes[i].root && !n.nb.includes(i)).sort((a, b) => g.nodes[b].prom - g.nodes[a].prom || a - b).slice(0, 14);
+  p.innerHTML =
+    '<div class="gm-phead"><div><h2 class="gm-ptitle" tabindex="-1">' + escapeHtml(n.name) + '</h2>' +
+    '<div class="gm-pfam" style="--gm-h:' + f[2] + ';--gm-s:' + f[3] + '%"><i aria-hidden="true"></i>' + (n.root ? 'Genre family' : escapeHtml(f[1])) + '</div></div>' +
+    '<button type="button" class="gm-pclose" data-gp="close" aria-label="Close">&times;</button></div>' +
+    '<button type="button" class="gm-play" data-gp="play"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>Play</button>' +
+    (rel.length ? '<div class="gm-plab">Sounds close to</div><div class="gm-chips">' + rel.map(chip).join('') + '</div>' : '') +
+    (styles.length ? '<div class="gm-plab">Styles</div><div class="gm-chips">' + styles.map(chip).join('') + '</div>' : '');
+  p.hidden = false; p.offsetWidth; p.classList.add('is-open');
+}
+// the same call a style button on the list view makes (see bpRender); styles the list does not have get a plain search
+function gmPlay(i, from){
+  const g = gm, n = g.nodes[i], fm = g.D.fam[n.fam][4];
+  if (fm && FM_GENRES[fm] && FM_GENRES[fm].includes(n.name)) bpPick(n.name + ' ' + fm.split(/[ /&]+/)[0], n.name, fm, null, from);
+  else if (n.root) bpPick(n.name, n.name, fm && FM_GENRE_RE[fm] ? fm : null, null, from);
+  else bpPick(n.name + (g.D.fam[n.fam][0] === 'world' ? ' world music' : ''), n.name, null, null, from);
+}
+function gmHideSugg(){ if (gm){ gm.sugg.hidden = true; gm.sugg.textContent = ''; } }
+function gmSuggest(q){
+  const g = gm; if (!g) return;
+  q = String(q || '').trim();
+  if (!q){ gmHideSugg(); return; }
+  const hits = gmSearch(g.nodes, q, 6);
+  g.sugg.hidden = false;
+  if (!hits.length){ g.sugg.innerHTML = '<div class="gm-none" role="status">No genre matches &ldquo;' + escapeHtml(q.slice(0, 40)) + '&rdquo;.</div>'; return; }
+  g.sugg.innerHTML = hits.map(i => '<button type="button" role="option" class="gm-sg" data-gs="' + i + '" style="--gm-h:' + g.D.fam[g.nodes[i].fam][2] + ';--gm-s:' + g.D.fam[g.nodes[i].fam][3] + '%"><i aria-hidden="true"></i>' + escapeHtml(g.nodes[i].name) + '<small>' + escapeHtml(g.nodes[i].root ? 'Genre family' : g.D.fam[g.nodes[i].fam][1]) + '</small></button>').join('');
+}
+function gmPickSuggestion(i){
+  gmSelect(i, {});
+  if (bpFilterEl){ bpFilterEl.value = ''; bpFilter = ''; try { bpFilterEl.blur(); } catch(_){} }
+}
+// the Map / List switch and the Enter key on the page's filter field (only on the genre page)
+function gmTopControls(top){
+  const seg = bpMk('div', 'bp-seg'); seg.setAttribute('role', 'group'); seg.setAttribute('aria-label', 'Genre view');
+  const mk = (v, label) => {
+    const b = bpMk('button', '', label); b.type = 'button'; b.dataset.v = v;
+    b.setAttribute('aria-pressed', String((v === 'map') === gmViewIsMap()));
+    b.addEventListener('click', () => { gmFailed = false; lsSet(LS_GENRE_VIEW, v); bpFilter = ''; if (bpFilterEl) bpFilterEl.value = ''; seg.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); bpRender(); });
+    return b;
+  };
+  seg.appendChild(mk('map', 'Map')); seg.appendChild(mk('list', 'List'));
+  top.insertBefore(seg, top.firstChild);
+  if (bpFilterEl) bpFilterEl.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' || !gm || !gmViewIsMap()) return;
+    const hits = gmSearch(gm.nodes, bpFilterEl.value, 1);
+    if (hits.length){ e.preventDefault(); gmPickSuggestion(hits[0]); }
+  });
+}
+function gmFootLink(list){
+  const p = bpMk('p', 'gm-foot');
+  const a = bpMk('a', '', 'More genres on EveryNoise'); a.href = GM_EVERYNOISE; a.target = '_blank'; a.rel = 'noopener noreferrer';
+  p.appendChild(a); list.appendChild(p);
+}
+// puts the map on the page; false means it could not be built, and the caller shows the list instead
+function gmMount(list){
+  try {
+    if (!gm) gmInit();
+    const g = gm;
+    list.appendChild(g.el);
+    gmFootLink(list);
+    if (bpFilterEl) gmSuggest(bpFilter); else gmHideSugg();
+    if (g.stage.clientWidth){ if (!g.touched && g.sel < 0 && !g.fitted){ g.fitted = true; gmFitView(false); } else gmDirty(); }
+    else requestAnimationFrame(() => { if (gm === g && g.stage.clientWidth){ g.fitted = true; if (!g.touched) gmFitView(false); else gmDirty(); } });
+    return true;
+  } catch(e){
+    gm = null; gmFailed = true;
+    return false;
+  }
+}
 
 /* =========================================================================
    BRING YOUR MUSIC: its own page (not Find music's genre/region/vibe page).
@@ -14993,7 +15421,7 @@ const MM_MORE_ICON = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5
 const MM_ICON_PERSON = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 12a4 4 0 100-8 4 4 0 000 8zm0 2c-3.3 0-8 1.7-8 5v1h16v-1c0-3.3-4.7-5-8-5z"/></svg>';
 const MM_ICON_FOLLOW = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 12a4 4 0 100-8 4 4 0 000 8zm0 2c-3.3 0-8 1.7-8 5v1h12.5a6 6 0 01-.5-2.4c0-1.3.4-2.5 1.1-3.5-1.8-.7-3.7-1.1-5.1-1.1zm9 0v3h3v2h-3v3h-2v-3h-3v-2h3v-3h2z"/></svg>';
 const mmMemo = new Map(), mmSongsMemo = new Map();
-let mmView = { s: 1, tx: 0, ty: 0 }, mmRaf = 0, mmZmT = 0, mmSuppressClick = false;
+let mmView = { s: 1, tx: 0, ty: 0 }, mmRaf = 0, mmZmT = 0;
 let mmEl = null, mmTrail = [], mmLastTrail = [], mmToken = 0, mmResizeT = 0, mmMenu = null;
 
 function musicMapOpen(){ return !!(mmEl && !mmEl.hidden); }
@@ -15229,64 +15657,8 @@ function mmBindZoom(){
     if (b.dataset.z === 'reset') mmResetView();
     else mmZoomAt(b.dataset.z === 'in' ? 1.5 : 1 / 1.5, r.width / 2, r.height / 2);
   });
-  st.addEventListener('wheel', (e) => {
-    if (!musicMapOpen() || mmMenu) return;
-    e.preventDefault();
-    const r = st.getBoundingClientRect();
-    const dy = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1);
-    mmZoomAt(Math.exp(-dy * (e.ctrlKey ? 0.01 : 0.0018)), e.clientX - r.left, e.clientY - r.top);
-  }, { passive: false });
-  const ptrs = new Map();
-  let moved = false, lastTap = { t: 0, x: 0, y: 0 }, pinch = null;
-  const rel = (e) => { const r = st.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
-  const pinchState = () => {
-    const [a, b] = Array.from(ptrs.values());
-    return { d: Math.max(1, Math.hypot(a.x - b.x, a.y - b.y)), x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
-  };
-  st.addEventListener('pointerdown', (e) => {
-    if (!musicMapOpen() || (e.pointerType === 'mouse' && e.button !== 0)) return;
-    ptrs.set(e.pointerId, Object.assign(rel(e), { sx: 0, sy: 0 }));
-    const p = ptrs.get(e.pointerId); p.sx = p.x; p.sy = p.y;
-    if (ptrs.size === 1) moved = false;
-    if (ptrs.size === 2){ moved = true; pinch = pinchState(); mmCloseMenu(); try { ptrs.forEach((_, id) => st.setPointerCapture(id)); } catch (_) {} }
-  });
-  st.addEventListener('pointermove', (e) => {
-    const p = ptrs.get(e.pointerId);
-    if (!p || !musicMapOpen()) return;
-    const n = rel(e), dx = n.x - p.x, dy = n.y - p.y;
-    p.x = n.x; p.y = n.y;
-    if (ptrs.size >= 2 && pinch){
-      const q = pinchState();
-      mmView.tx += q.x - pinch.x; mmView.ty += q.y - pinch.y;
-      mmZoomAt(q.d / pinch.d, q.x, q.y);
-      pinch = q;
-      return;
-    }
-    if (!moved){
-      if (Math.hypot(n.x - p.sx, n.y - p.sy) < (e.pointerType === 'mouse' ? 5 : 9)) return;   // still a tap
-      moved = true; mmCloseMenu();
-      try { st.setPointerCapture(e.pointerId); } catch (_) {}
-      return;
-    }
-    mmView.tx += dx; mmView.ty += dy; mmDirty();
-  });
-  const up = (e) => {
-    const p = ptrs.get(e.pointerId);
-    if (!p) return;
-    ptrs.delete(e.pointerId);
-    pinch = null;
-    if (ptrs.size === 1){ const o = Array.from(ptrs.values())[0]; o.sx = o.x; o.sy = o.y; }
-    if (ptrs.size) return;
-    if (moved){ mmSuppressClick = true; setTimeout(() => { mmSuppressClick = false; }, 60); return; }
-    if (e.type !== 'pointerup' || e.target.closest('[data-mm],.mm-zoomctl')) return;
-    const now = Date.now();   // double tap / double click on empty space zooms in there
-    if (now - lastTap.t < 320 && Math.hypot(p.x - lastTap.x, p.y - lastTap.y) < 30){ mmZoomAt(2.5, p.x, p.y); lastTap.t = 0; }
-    else lastTap = { t: now, x: p.x, y: p.y };
-  };
-  st.addEventListener('pointerup', up);
-  st.addEventListener('pointercancel', up);
-  // a drag must not count as a tap on whatever name it ended over
-  mmEl.addEventListener('click', (e) => { if (mmSuppressClick){ e.stopPropagation(); e.preventDefault(); } }, true);
+  zmGestures(st, { root: mmEl, skip: '[data-mm],.mm-zoomctl', active: musicMapOpen, blocked: () => !!mmMenu,
+    zoomAt: mmZoomAt, panBy: (dx, dy) => { mmView.tx += dx; mmView.ty += dy; mmDirty(); }, start: mmCloseMenu });
 }
 function mmZoomKey(e){
   const st = $('mmStage'), r = st.getBoundingClientRect(), cx = r.width / 2, cy = r.height / 2, k = e.key;
@@ -23600,6 +23972,10 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
+  { version: 540, date: '2026-11-12', items: [
+    'Browse by genre now opens a genre map: related genres sit close together, each family has its own color, and you can zoom in to find smaller styles. Tap a genre to hear it, or jump to the ones that sound close.',
+    'The old genre cards are still there under List, and there is a link to more genres on EveryNoise.',
+  ]},
   { version: 539, date: '2026-11-12', items: [
     'Browse by genre, region and vibe on Home each open their own page now, with a filter for genres and regions, and the same colorful cards as Search.',
     'If artists fail to load, you now see a Try again button instead of an empty screen.',
