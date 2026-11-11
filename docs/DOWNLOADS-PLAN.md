@@ -159,6 +159,36 @@ worker: POST /dl/grant (reads ent:<sub>, signs), GET /flags (+downloads)
 The page decides *what* to keep (it knows the queue); native decides *whether* (grant,
 flag, caps) and *how*. A forged call from devtools still needs a valid signed grant.
 
+## 2b. Light until signup (owner, 2026-11-11)
+
+Free and flowwww installs carry nothing for the offline queue beyond what they already
+have. The offline pieces arrive only after a deeeep or horizonnn signup, the first time
+the app holds a valid grant (section 5) and the listener turns the offline queue on.
+
+| Piece | Free / flowwww install | After deeeep / horizonnn signup |
+|---|---|---|
+| Desktop yt-dlp | Already shipped and kept current, for the waveform bars only (owner kept it) | Same copy, also used for the offline queue |
+| Android NewPipe | Already in the APK, for the waveform bars only (owner kept it) | Same library, also used for the offline queue |
+| Android yt-dlp fallback (youtubedl-android, 25 to 40 MB) | Not present | Fetched as the offline pack |
+| Deno, if yt-dlp needs it (about 40 MB) | Not present | Fetched (section 7) |
+| Offline code (desktop `offline*.js`, Android `Offline*.java`, the page's OFFLINE block) | Ships dormant: a few tens of KB, never run, no folder, no key, no Settings row, no network call | Wakes up |
+| `offline/` folder, encryption key | Not created | Created on first keep |
+
+- The offline code itself ships dormant rather than being fetched, because it weighs
+  almost nothing and fetching code adds a code-loading path (a bigger security surface)
+  for no size saving. If the owner wants the code fetched too, the Android pack can carry
+  it as a dex loaded with `DexClassLoader` (read-only file, Android 14 rule) and desktop
+  as a pinned-hash JS bundle; noted, not planned.
+- Offline pack fetch: built with each release and attached to the same GitHub release.
+  Its SHA-256 is compiled into the app, so a phone or computer accepts only the exact pack
+  built for that version, over HTTPS from the project's own release (SECURITY-REVIEW.md
+  self-update rule). Background, Wi-Fi only on Android, into `getFilesDir()` /
+  `userData`. Until it lands, Settings shows "Getting ready" and streaming is unaffected.
+  Deleted together with the kept files when a plan lapses (14 days, section 3), so a
+  lapsed account goes back to light.
+- Idempotent: an interrupted fetch resumes or restarts; a pack already present with the
+  right hash is never fetched again.
+
 ## 3. Storage layout and eviction
 
 ```
@@ -296,15 +326,16 @@ flag, caps) and *how*. A forged call from devtools still needs a valid signed gr
   reliable option: NewPipe covers the normal case quickly, yt-dlp usually has a fix for a
   YouTube change days before a NewPipe release can reach phones as an APK. Every hour
   the app tries NewPipe again and switches back when it works.
-  - Cost: about 25 to 40 MB more APK (estimate, unverified), built for arm64-v8a and
-    armeabi-v7a only (covers the TECNO POP 9 and nearly all phones).
-  - Owner direction (2026-11-11): fetching the fallback on plan activation can come
-    later; the fallback itself is built now. So phase 2 ships it inside the APK, and
-    phase 4 moves it to an on-activation fetch to win the APK size back. Phase 4 has a
-    real blocker to check first: apps targeting Android 10+ (this one targets 35) may not
-    `exec()` files in their own writable folders, only load them as libraries. If
-    youtubedl-android runs Python as a program, a fetched copy cannot run, and phase 4
-    needs a library-loading route or stays in the APK. Unverified until phase 4 starts.
+  - Never in the APK (owner, 2026-11-11). It is fetched only after deeeep or horizonnn
+    signup, as the "offline pack" (section 2b). About 25 to 40 MB (estimate, unverified),
+    built for arm64-v8a and armeabi-v7a only (covers the TECNO POP 9 and nearly all
+    phones).
+  - Real blocker, checked first in phase 2: apps targeting Android 10+ (this one targets
+    35) may not `exec()` files in their own writable folders, only load them as
+    libraries. If youtubedl-android runs Python as a program, a fetched copy cannot run.
+    Then the fallback needs a library-loading route (custom work), and until that exists
+    deeeep and horizonnn on Android run on NewPipe alone. It does not go back into the
+    APK. Unverified.
   - The fallback also may need a JavaScript runtime for some formats; check in phase 2.
   - Bot checks and 429s pause both extractors together (same IP), never fail over.
 - **NewPipe details.** Already a dependency, pure Java, small
@@ -427,7 +458,10 @@ vibe" is confirmed; the offline queue is off until the listener turns it on in S
 Also decided 2026-11-11:
 - horizonnn storage limit: a GB slider, default 2 GB (section 3).
 - Android extractor: NewPipe first, yt-dlp (youtubedl-android) as automatic fallback
-  (section 7).
+  (section 7), fetched only after signup.
+- Light until signup: free and flowwww installs carry no offline extras; the yt-dlp
+  fallback, Deno and the offline folder arrive with a deeeep or horizonnn signup. yt-dlp
+  on desktop and NewPipe on Android stay in every install for the waveform bars (section 2b).
 - Android: Wi-Fi only by default, switchable in Settings (section 6).
 - Grace: 7 days offline play, 14 days before deletion, and the grant refreshes at
   launch, daily, and on every reconnect (section 5).
@@ -483,15 +517,22 @@ phase 1 waits for or coordinates with `platform-release`.
 ### Phase 2: deeeep on Android
 - Files: `OfflineStore.java`, `OfflineFetch.java`, `OfflineCrypto.java` (new),
   `MainActivity.java` (bridge methods, `/__dl/` in `shouldInterceptRequest` with 206
-  range answers), `OfflineFallback.java` (youtubedl-android switch-over and hourly retry of NewPipe), `app/build.gradle` (youtubedl-android pinned exact, abiFilters arm64-v8a and armeabi-v7a), JVM unit tests
-  under `app/src/test/` for crypto and eviction (new folder), page detection of the Android
-  bridge in the OFFLINE block.
-- First step: get `WavePeaks.java` and NewPipe compiling on a real JDK, since nothing
-  using NewPipe has been built yet.
+  range answers), `OfflineFallback.java` (fetch, verify and load the offline pack;
+  switch-over to yt-dlp and hourly retry of NewPipe), `app/build.gradle` (the
+  youtubedl-android Java side only if it can work without its bundled native libraries;
+  version pinned exact), the release script that builds the pack, JVM unit tests under
+  `app/src/test/` for crypto, eviction and pack verification (new folder), page
+  detection of the Android bridge in the OFFLINE block.
+- First steps: get `WavePeaks.java` and NewPipe compiling on a real JDK, since nothing
+  using NewPipe has been built yet; then check the exec rule (section 7). If the pack
+  cannot run, ship phase 2 on NewPipe alone and keep the fallback as its own follow-up.
 - Done: same as phase 1 on the TECNO POP 9 test phone, including airplane mode mid-queue,
-  screen off with `PlaybackService` playing kept songs, and Wi-Fi-only respected.
-- Verify: unit tests, `soak.sh` style run with airplane toggles, logcat for decrypt and
-  range errors, APK size before/after.
+  screen off with `PlaybackService` playing kept songs, and Wi-Fi-only respected. A free
+  install is the same size as before this work; a deeeep phone gets the pack within a
+  few minutes on Wi-Fi; a tampered pack is refused.
+- Verify: unit tests (one changed byte in the pack is refused), `soak.sh` style run with
+  airplane toggles, logcat for decrypt and range errors, APK size before/after (must not
+  grow beyond the dormant code), fallback switch-over.
 
 ### Phase 3: horizonnn on desktop, then Android
 - Files: the offline modules (video and meta kinds, pins, GB limit), `index.html`
@@ -504,24 +545,6 @@ phase 1 waits for or coordinates with `platform-release`.
 - Verify: eviction tests with mixed sizes and pins, video sync drift under 150 ms over a
   full song, GPU watchdog clean with the video layer open, under the light show and
   hidden, legal copy reviewed by the owner.
-
-### Phase 4: Android fallback fetched on plan activation (later)
-- First: check whether youtubedl-android's Python can run from the app's data folder
-  under targetSdk 35 (the exec rule in section 7). If not, stop here and keep it in the
-  APK.
-- Files: `OfflineFallback.java` (fetch, verify, unpack, load), `app/build.gradle` (drop
-  the bundled native libraries, keep the Java side), the release script that builds the
-  fallback pack.
-- How: the pack is built with each APK release and attached to the same GitHub release.
-  Its SHA-256 is compiled into the APK, so the phone accepts only the exact pack built
-  for it, fetched over HTTPS from the project's own GitHub release (SECURITY-REVIEW.md
-  self-update rule). Fetched in the background on the first valid deeeep or horizonnn
-  grant once the offline queue is on, Wi-Fi only, into `getFilesDir()`, deleted with
-  the kept files when a plan lapses. NewPipe works on its own until the pack lands.
-- Done: the APK is back to its size before phase 2; a deeeep phone gets the fallback within a
-  minute on Wi-Fi; a tampered pack is refused.
-- Verify: tamper test (one changed byte is refused), clean install on the TECNO POP 9,
-  APK size before and after, fallback switch-over still works.
 
 ## 13. Checks that apply to every phase
 
