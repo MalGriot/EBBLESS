@@ -2884,12 +2884,17 @@ body:has(#flow-layer.is-open:not(.is-leaving)) :is(#ambient,#topbar,#view-librar
 .fs-timeline{display:none}
 /* #723 desktop fullscreen: an up-next timeline down the right edge (ref: the Dribbble player with the vertical track dots).
    The playing song is labeled and ringed, the next ones are dots that name themselves on hover; a click jumps to it. */
-body.split-desktop.desktop-fs:not(.view-settings-active) .fs-timeline{display:flex;flex-direction:column;gap:22px;position:absolute;right:44px;top:50%;transform:translateY(-50%);z-index:3;align-items:flex-end}
-.fs-timeline::before{content:'';position:absolute;right:7px;top:8px;bottom:8px;width:1px;background:rgba(255,255,255,.35)}
-.fst-item{position:relative;display:flex;align-items:center;gap:12px;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.6);cursor:pointer;background:none;border:0;padding:2px 0}
-.fst-label{max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;opacity:0;transition:opacity var(--dur-ui) var(--ease-out)}
+body.split-desktop.desktop-fs:not(.view-settings-active) .fs-timeline{display:flex;flex-direction:column;position:absolute;right:36px;top:calc(var(--topbar-h) + 12px);bottom:24px;z-index:3;align-items:flex-end}
+/* #804: the line zig-zags through the dots (the svg is drawn by fsTimelineSync) and every other dot steps in, so more songs fit from the top nav to the bottom */
+.fst-line{position:absolute;right:0;top:0;width:32px;height:100%;pointer-events:none;overflow:visible}
+.fst-line path{fill:none;stroke:rgba(255,255,255,.35);stroke-width:1.5;stroke-linejoin:round}
+.fst-item{position:relative;flex:none;height:44px;display:flex;align-items:center;gap:12px;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.6);cursor:pointer;background:none;border:0;padding:2px 0}
+.fst-item:nth-child(even){padding-right:16px}
+.fst-label{display:flex;flex-direction:column;align-items:flex-end;max-width:200px;font-size:13px;line-height:1.25;opacity:.72;transition:opacity var(--dur-ui) var(--ease-out)}
+.fst-label > span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fst-artist{font-size:11px;opacity:.8}
 .fst-item:hover .fst-label,.fst-item:focus-visible .fst-label,.fst-item.is-now .fst-label{opacity:1}
-.fst-item.is-now .fst-label{font-size:16px;font-weight:600}
+.fst-item.is-now .fst-label .fst-title{font-size:16px;font-weight:600}
 .fst-dot{flex:none;width:14px;height:14px;display:flex;align-items:center;justify-content:center}
 .fst-dot::before{content:'';width:6px;height:6px;border-radius:50%;background:#fff}
 .fst-item.is-now .fst-dot::before{width:12px;height:12px;background:transparent;box-shadow:0 0 0 2px #fff,inset 0 0 0 3px var(--accent);border-radius:50%}
@@ -11662,6 +11667,7 @@ function toggleDesktopFs(){
   if (state.deskFsOpen){ closeDesktopFs(); return; }
   state.deskFsOpen = true;
   document.body.classList.add('desktop-fs');
+  fsTimelineSync();   // #804: size the up-next strip to this window
   // Defensive reset: don't rely on these already being false - always start
   // a fresh fullscreen entry with the library/queue drawers closed.
   state.deskFsLibOpen = false;
@@ -22963,7 +22969,8 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 const WHATS_NEW = [
   { version: 530, date: '2026-11-12', items: [
     'In fullscreen, the close, 3 dots, heart, thumbs-down and fullscreen buttons now sit on either side of the player controls, and they fade out with the rest of the screen.',
-    'In fullscreen, the progress bar, the player buttons and the top menu buttons now turn the app color when you point at them.'
+    'In fullscreen, the progress bar, the player buttons and the top menu buttons now turn the app color when you point at them.',
+    'In fullscreen, the up-next line on the right now zig-zags, shows as many songs as fit from the top menu to the bottom, and lists the artist under each song.'
   ]},
   { version: 529, date: '2026-11-12', items: [
     'The song title on the player is now centered.',
@@ -28108,18 +28115,34 @@ function fsTimelineSync(){
   if (!box) return;
   box.textContent = '';
   if (state.queuePos < 0) return;
-  for (let pos = state.queuePos; pos < Math.min(state.queue.length, state.queuePos + 6); pos++){
+  // #804: as many songs as fit from just under the top nav to the bottom (44px per song)
+  const room = window.innerHeight - ($('topbar') ? $('topbar').offsetHeight : 60) - 36;
+  const n = Math.max(6, Math.min(24, Math.floor(room / 44)));
+  const H = 44, NS = 'http://www.w3.org/2000/svg';
+  const pts = [];
+  for (let pos = state.queuePos; pos < Math.min(state.queue.length, state.queuePos + n); pos++){
     const t = trackAt(pos);
     if (!t) continue;
+    const i = pts.length;
+    pts.push([i % 2 ? 23 : 7, i * H + H / 2]);   // dot centre, measured from the right edge
     const b = document.createElement('button'); b.type = 'button'; b.className = 'fst-item' + (pos === state.queuePos ? ' is-now' : ''); b.setAttribute('role', 'listitem');
-    b.setAttribute('aria-label', (pos === state.queuePos ? 'Now playing: ' : 'Play ') + t.title);
-    const l = document.createElement('span'); l.className = 'fst-label'; l.textContent = t.title;
+    b.setAttribute('aria-label', (pos === state.queuePos ? 'Now playing: ' : 'Play ') + t.title + (t.artist ? ', ' + t.artist : ''));
+    const l = document.createElement('span'); l.className = 'fst-label';
+    const lt = document.createElement('span'); lt.className = 'fst-title'; lt.textContent = t.title; l.appendChild(lt);
+    if (t.artist){ const la = document.createElement('span'); la.className = 'fst-artist'; la.textContent = t.artist; l.appendChild(la); }
     const d = document.createElement('span'); d.className = 'fst-dot'; d.setAttribute('aria-hidden', 'true');
     b.appendChild(l); b.appendChild(d);
     if (pos !== state.queuePos) b.addEventListener('click', () => queueJumpTo(pos));
     box.appendChild(b);
   }
+  if (pts.length > 1){
+    const svg = document.createElementNS(NS, 'svg'); svg.setAttribute('class', 'fst-line'); svg.setAttribute('aria-hidden', 'true');
+    const path = document.createElementNS(NS, 'path');
+    path.setAttribute('d', pts.map((p, k) => (k ? 'L' : 'M') + (32 - p[0]) + ' ' + p[1]).join(' '));
+    svg.appendChild(path); box.insertBefore(svg, box.firstChild);
+  }
 }
+window.addEventListener('resize', () => { if (document.body.classList.contains('desktop-fs')) fsTimelineSync(); });
 function syncQueueReloadBar(){
   const bar = $('queueReloadBar'); if (!bar) return;
   const cur = state.queue[state.queuePos];
