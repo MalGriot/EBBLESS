@@ -12669,12 +12669,13 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #776.
 
 ### i-wish-song-info-showed-more-info-li-777: I wish song info showed more info like the producer and trivia and had more interactivity like opening the alb (Geethub #777)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #777. See the issue for references.
 - **Touches:** index.html (UI)
-- **Branch:**
+- **Branch:** agent/song-info-777
 - **Notes:** Synced from Geethub #777.
+- **Built:** Song info already showed producer/writer credits (MusicBrainz) and trivia (Wikipedia, only when a real match exists). Added: album row opens the album (library copy, else artist catalog preview), credited names are buttons opening the artist page. No new data source; richer producer/trivia would need Genius (key plus proxy).
 
 ### cd-mode-fullscreen-the-lines-look-to-778: Cd mode fullscreen: the lines look too cartoonish. make them beautiful (Geethub #778)
 - **Status:** merged
