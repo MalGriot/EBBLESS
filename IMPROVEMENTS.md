@@ -12846,19 +12846,19 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #798.
 
 ### searching-you-should-be-able-to-tell-ebb-799: Searching: you should be able to tell ebbless if it's a song, artist, album, playlist, etc (Geethub #799)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Geethub issue #799. See the issue for the full text.
 - **Touches:** index.html (UI)
-- **Branch:**
+- **Branch:** agent/search-home
 - **Notes:** Synced from Geethub #799.
 
 ### search-bar-in-home-screen-is-redundant-e-800: Search bar in home screen is redundant. either remove the bar from the top or remove it from search (Geethub #800)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Geethub issue #800. See the issue for the full text.
 - **Touches:** index.html (UI)
-- **Branch:**
+- **Branch:** agent/search-home
 - **Notes:** Synced from Geethub #800.
 
 ### progress-bar-wav-form-doesn-t-appear-on-801: Progress bar wav form doesn't appear on fullscreen mode (Geethub #801)
@@ -12870,11 +12870,11 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #801.
 
 ### the-for-square-button-that-opens-the-fin-802: The for square button that opens the find music window should be removed and integrated into the home page (Geethub #802)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Geethub issue #802. See the issue for the full text.
 - **Touches:** index.html (UI)
-- **Branch:**
+- **Branch:** agent/search-home
 - **Notes:** Synced from Geethub #802.
 
 ### ui-color-should-fade-to-the-next-color-n-803: Ui color should fade to the next color - now it just switches harshly. it should fade along with the art and c (Geethub #803)
