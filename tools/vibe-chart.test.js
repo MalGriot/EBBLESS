@@ -10,15 +10,31 @@ const m = /\/\* VIBE-CHART:BEGIN[^*]*\*\/([\s\S]*?)\/\* VIBE-CHART:END \*\//.exe
 assert.ok(m, 'VIBE-CHART block not found in index.html');
 const ctx = {};
 vm.createContext(ctx);
-vm.runInContext(m[1] + '\nthis.api = { VC_MAX, VC_NODES, VC_EDGES, VC_BY_ID, vcClean, vcToggle, vcFill, vcCompose, vcEdgePath, vcNeighbor, vcPos };', ctx);
+vm.runInContext(m[1] + '\nthis.api = { VC_MAX, VC_NODES, VC_GRID, VC_BY_ID, vcClean, vcToggle, vcFill, vcCompose, vcNeighbor, vcHeat, vcPathPoints, vcNear };', ctx);
 const A = ctx.api;
 const arr = (x) => [...x];
 
-test('chart data: unique ids and cells, every edge joins known feelings', () => {
-  assert.strictEqual(new Set(arr(A.VC_NODES).map(n => n.id)).size, A.VC_NODES.length);
-  assert.strictEqual(new Set(arr(A.VC_NODES).map(n => n.c + ',' + n.r)).size, A.VC_NODES.length);
-  const seen = new Set();
-  A.VC_EDGES.forEach(([a, b]) => { assert.ok(A.VC_BY_ID[a] && A.VC_BY_ID[b], a + '>' + b); assert.notStrictEqual(a, b); const k = a + '>' + b; assert.ok(!seen.has(k)); seen.add(k); });
+test('grid: 7 x 7, unique plain words, each cell placed where its row and column say', () => {
+  assert.strictEqual(A.VC_NODES.length, 49);
+  assert.strictEqual(new Set(arr(A.VC_NODES).map(n => n.id)).size, 49);
+  assert.ok(arr(A.VC_NODES).every(n => /^[a-z]{3,11}$/.test(n.label)));
+  assert.strictEqual(A.VC_BY_ID.furious.c, 0); assert.strictEqual(A.VC_BY_ID.furious.r, 0);
+  assert.strictEqual(A.VC_BY_ID.euphoric.c, 6); assert.strictEqual(A.VC_BY_ID.euphoric.r, 0);
+  assert.strictEqual(A.VC_BY_ID.numb.c, 0); assert.strictEqual(A.VC_BY_ID.numb.r, 6);
+  assert.ok(A.VC_BY_ID.calm.r > A.VC_BY_ID.anxious.r && A.VC_BY_ID.joyful.c > A.VC_BY_ID.sad.c);
+});
+
+test('heat goes from cool (heavy, calm) to warm (bright, intense)', () => {
+  const hue = (c, r) => Number(/hsl\((\d+)/.exec(A.vcHeat(c, r))[1]);
+  assert.ok(hue(0, 6) > 200); assert.ok(hue(6, 0) < 30); assert.ok(hue(3, 3) > hue(6, 0) && hue(3, 3) < hue(0, 6));
+});
+
+test('path points follow pick order; near cells exclude picks', () => {
+  assert.strictEqual(A.vcPathPoints(['calm', 'furious']), '4.5,6.5 0.5,0.5');
+  assert.strictEqual(A.vcPathPoints([]), '');
+  const near = A.vcNear(['calm']);
+  assert.ok(near.has('serene') && near.has('relaxed') && !near.has('calm') && !near.has('furious'));
+  assert.strictEqual(near.size, 5);
 });
 
 test('toggle adds in order, removes, and stops at 7', () => {
@@ -56,11 +72,10 @@ test('fill goes from 0 to 1 over 7', () => {
   assert.ok(Math.abs(A.vcFill(3) - 3 / 7) < 1e-9);
 });
 
-test('edge paths exist for most edges and neighbour keys move the right way', () => {
-  const ok = A.VC_EDGES.filter(([a, b]) => /^M[\d. -]+ Q[\d. -]+$/.test(A.vcEdgePath(A.VC_BY_ID[a], A.VC_BY_ID[b])));
-  assert.ok(ok.length >= A.VC_EDGES.length - 2);
-  assert.strictEqual(A.vcNeighbor('calm', 'right'), 'content');
-  assert.strictEqual(A.vcNeighbor('calm', 'left'), 'peaceful');
-  assert.strictEqual(A.vcNeighbor('calm', 'up'), 'healing');
-  assert.strictEqual(A.vcNeighbor('numb', 'left'), null);
+test('arrow keys move one cell and stop at the edge', () => {
+  assert.strictEqual(A.vcNeighbor('calm', 'right'), 'serene');
+  assert.strictEqual(A.vcNeighbor('calm', 'left'), 'quiet');
+  assert.strictEqual(A.vcNeighbor('calm', 'up'), 'relaxed');
+  assert.strictEqual(A.vcNeighbor('calm', 'down'), null);
+  assert.strictEqual(A.vcNeighbor('furious', 'left'), null);
 });

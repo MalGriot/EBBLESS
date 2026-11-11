@@ -1390,27 +1390,23 @@ html.reduce-motion .lib-grid:not(.is-list) .lib-card .info .name{display:block;w
 .vc-cap{margin:10px 2px 0;font-size:12.5px}
 .vc-layout{display:block}
 .vc-col{min-width:0}
-.vc-chart{position:relative;overflow:auto;max-height:min(70vh,560px);overscroll-behavior:contain;border-radius:20px;background:linear-gradient(135deg,rgba(190,70,120,.12),rgba(60,90,170,.12)),var(--panel);border:1px solid rgba(255,255,255,.08)}
+.vc-chart{position:relative;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;border-radius:20px;background:var(--panel);border:1px solid rgba(255,255,255,.08);padding:6px}
 .vc-chart:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.vc-canvas{position:relative;margin:0 auto}
-.vc-canvas svg{position:absolute;left:0;top:0;pointer-events:none}
-.vc-edge{fill:none;stroke:var(--faint-2);stroke-width:1.6;opacity:.75}
-.vc-edge.is-on{stroke:var(--accent);stroke-width:3;opacity:1}
-.vc-ah{fill:var(--faint-2)}
-.vc-ah.is-on{fill:var(--accent)}
-.vc-node{--c1:#7b4fd1;--c2:#2a1d5c;position:absolute;transform:translate(-50%,-50%);display:flex;align-items:center;justify-content:center;gap:6px;min-width:44px;min-height:44px;padding:0 15px;border-radius:999px;border:2px solid transparent;background:linear-gradient(120deg,var(--c1),var(--c2));color:#fff;font:inherit;font-size:14px;font-weight:800;letter-spacing:-.1px;white-space:nowrap;cursor:pointer}
-.vc-node.g-gloom{--c1:#7b4fd1;--c2:#2a1d5c}
-.vc-node.g-edge{--c1:#d9622b;--c2:#7a1f3d}
-.vc-node.g-still{--c1:#2e8f8a;--c2:#12365a}
-.vc-node.g-bright{--c1:#c9a227;--c2:#7a4a12}
-.vc-node.g-love{--c1:#c2417a;--c2:#4e1536}
-.vc-node.g-drive{--c1:#3a8f4f;--c2:#15432c}
-.vc-node:focus-visible{outline:3px solid #fff;outline-offset:2px}
-.vc-node[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent),0 4px 14px rgba(0,0,0,.5);z-index:2}
-.vc-nn{display:none;min-width:20px;height:20px;padding:0 4px;border-radius:999px;background:var(--accent);color:var(--on-accent,#151107);font-size:12px;font-weight:800;line-height:20px;text-align:center}
-.vc-node[aria-pressed="true"] .vc-nn{display:inline-block}
-.vc-max{display:none;position:absolute;left:50%;top:100%;transform:translateX(-50%);margin-top:2px;padding:1px 8px;border-radius:999px;background:var(--panel-3);color:var(--faint);font-size:11px;font-weight:700;line-height:16px;pointer-events:none;white-space:nowrap}
-.vc-node.is-max[aria-pressed="false"]{opacity:.55}
+.vc-canvas{position:relative;min-width:600px}
+.vc-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));grid-auto-rows:62px;gap:3px}
+.vc-path{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:3}
+.vc-line{fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke;opacity:.8}
+.vc-halo{fill:none;stroke:rgba(0,0,0,.45);stroke-width:5;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke}
+.vc-node{position:relative;display:flex;align-items:center;justify-content:center;gap:4px;min-width:0;padding:0 2px;border-radius:10px;border:2px solid transparent;background:linear-gradient(180deg,color-mix(in srgb,var(--h) 100%,#fff 10%),var(--h));color:#fff;font:inherit;font-size:12.5px;font-weight:700;letter-spacing:-.2px;text-align:center;line-height:1.1;cursor:pointer}
+.vc-node.is-near::after{content:'';position:absolute;inset:0;border-radius:8px;background:rgba(255,255,255,.14);pointer-events:none}
+.vc-node.is-far{opacity:.85}
+.vc-node:focus-visible{outline:3px solid #fff;outline-offset:1px;z-index:4}
+.vc-node[aria-pressed="true"]{border-color:#fff;box-shadow:inset 0 0 0 2px var(--accent);z-index:2}
+.vc-nl{min-width:0}
+.vc-nn{display:none;position:absolute;left:2px;top:2px;min-width:18px;height:18px;padding:0 3px;border-radius:999px;background:var(--accent);color:var(--on-accent,#151107);font-size:11px;font-weight:800;line-height:18px;text-align:center;box-sizing:border-box}
+.vc-node[aria-pressed="true"] .vc-nn{display:block}
+.vc-node[aria-pressed="true"] .vc-nn::after{content:'\2713';margin-left:1px}
+.vc-max{display:none;position:absolute;left:50%;bottom:2px;transform:translateX(-50%);padding:0 6px;border-radius:999px;background:rgba(0,0,0,.55);color:#fff;font-size:10px;font-weight:700;line-height:14px;pointer-events:none;white-space:nowrap}
 .vc-node.is-max[aria-pressed="false"] .vc-max{display:block}
 .vc-panel{display:none}
 .vc-ph{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 10px}
@@ -10409,7 +10405,7 @@ function closeBrowsePage(keepFocus){
 }
 
 /* =========================================================================
-   VIBE CHART: Browse by vibe, a flow chart of feelings. Tap up to 7 in the
+   VIBE CHART: Browse by vibe, a heat map of feelings (the mood plane). Tap up to 7 in the
    order you want the mix to move; Play this mix hands them to the same
    function the "What's the vibe?" box uses (bpStartVibe), as one sentence.
    Desktop: a side panel lists the picks. Phone: a heart that fills as you
@@ -10417,26 +10413,24 @@ function closeBrowsePage(keepFocus){
    and everything sits inside #browsePage, which is display:none when closed.
    ========================================================================= */
 /* VIBE-CHART:BEGIN (pure helpers, tested by tools/vibe-chart.test.js) */
-const VC_MAX = 7, VC_W = 910, VC_H = 510;
-// [label, column (low to high energy), row (heavy to light), colour group]
-const VC_NODES = [
-  ['numb',0,0,'gloom'], ['sad',1,0,'gloom'], ['anxious',3,0,'edge'], ['angry',5,0,'edge'],
-  ['lonely',0,1,'gloom'], ['wistful',1,1,'gloom'], ['tense',3,1,'edge'], ['restless',4,1,'edge'],
-  ['tired',0,2,'gloom'], ['nostalgic',1,2,'gloom'], ['reflective',2,2,'still'], ['focused',3,2,'drive'], ['determined',4,2,'drive'], ['euphoric',5,2,'drive'],
-  ['healing',1,3,'still'], ['hopeful',2,3,'bright'], ['romantic',3,3,'love'], ['playful',4,3,'bright'], ['energized',5,3,'drive'],
-  ['peaceful',0,4,'still'], ['calm',1,4,'still'], ['content',2,4,'still'], ['grateful',3,4,'still'], ['confident',4,4,'drive'], ['joyful',5,4,'bright'],
-].map(([label, c, r, g]) => ({ id: label, label, c, r, g }));
-const VC_BY_ID = {}; VC_NODES.forEach(n => { VC_BY_ID[n.id] = n; });
-// natural ways one feeling turns into another (from, to)
-const VC_EDGES = [
-  ['numb','sad'], ['lonely','wistful'], ['wistful','nostalgic'], ['nostalgic','reflective'], ['sad','healing'],
-  ['healing','hopeful'], ['healing','content'], ['hopeful','playful'], ['playful','joyful'], ['tired','calm'],
-  ['peaceful','calm'], ['calm','content'], ['content','grateful'], ['grateful','romantic'], ['reflective','hopeful'],
-  ['reflective','focused'], ['calm','focused'], ['focused','determined'], ['determined','confident'], ['confident','joyful'],
-  ['anxious','tense'], ['tense','restless'], ['tense','calm'], ['restless','energized'], ['energized','euphoric'],
-  ['energized','joyful'], ['angry','determined'],
+const VC_MAX = 7, VC_N = 7;
+// The mood plane, 7 x 7. Columns run heavy to light (left to right), rows run intense to calm (top to bottom).
+const VC_GRID = [
+  ['furious', 'angry', 'stressed', 'wired', 'thrilled', 'ecstatic', 'euphoric'],
+  ['bitter', 'frustrated', 'anxious', 'restless', 'energized', 'excited', 'joyful'],
+  ['resentful', 'tense', 'nervous', 'driven', 'determined', 'playful', 'confident'],
+  ['lonely', 'sad', 'uneasy', 'focused', 'hopeful', 'romantic', 'proud'],
+  ['hurting', 'wistful', 'nostalgic', 'reflective', 'content', 'grateful', 'warm'],
+  ['blank', 'tired', 'weary', 'thoughtful', 'relaxed', 'peaceful', 'healing'],
+  ['numb', 'drained', 'sleepy', 'quiet', 'calm', 'serene', 'comforted'],
 ];
-function vcPos(n){ return { x: 80 + n.c * 150, y: 60 + n.r * 96 }; }
+const VC_NODES = [], VC_BY_ID = {};
+VC_GRID.forEach((row, r) => row.forEach((label, c) => { const n = { id: label, label, c, r }; VC_NODES.push(n); VC_BY_ID[label] = n; }));
+// heat colour of a cell: cool violet/blue (heavy and calm) through teal and green to amber and red (bright and intense)
+function vcHeat(c, r){
+  const heat = 0.55 * (1 - r / (VC_N - 1)) + 0.45 * (c / (VC_N - 1));
+  return 'hsl(' + Math.round(255 - 245 * heat) + ' 72% 33%)';
+}
 // only known feelings, no repeats, at most 7: whatever came from storage is cleaned here
 function vcClean(list){
   const out = [];
@@ -10453,7 +10447,7 @@ function vcToggle(sel, id){
 }
 function vcFill(n){ return Math.max(0, Math.min(1, n / VC_MAX)); }
 function vcJoin(a){ return a.length < 2 ? a.join('') : a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1]; }
-// the picks, in order, as one sentence for the vibe feature (labels come from the fixed list, never typed text)
+// the picks, in order, as one sentence for the vibe feature (labels come from the fixed grid, never typed text)
 function vcCompose(sel){
   const w = vcClean(sel).map(id => VC_BY_ID[id].label);
   if (!w.length) return '';
@@ -10463,36 +10457,27 @@ function vcCompose(sel){
   else t = 'starting out ' + w[0] + ', moving through ' + vcJoin(w.slice(1, -1)) + ', ending up ' + w[w.length - 1];
   return t.slice(0, 300);
 }
-// arrow between two nodes: a gentle curve that starts and ends at the pill edges ('' when they touch)
-function vcEdgePath(a, b){
-  const pa = vcPos(a), pb = vcPos(b), dx = pb.x - pa.x, dy = pb.y - pa.y, len = Math.hypot(dx, dy) || 1;
-  const clip = (n) => Math.min(((n.label.length * 8.5 + 34) / 2) / (Math.abs(dx) || 1e-9), 22 / (Math.abs(dy) || 1e-9)) + 7 / len;
-  const ta = clip(a), tb = clip(b);
-  if (ta + tb >= 0.96) return '';
-  const sx = pa.x + dx * ta, sy = pa.y + dy * ta, ex = pb.x - dx * tb, ey = pb.y - dy * tb;
-  const q = (v) => Math.round(v * 10) / 10;
-  return 'M' + q(sx) + ' ' + q(sy) + ' Q' + q((sx + ex) / 2 - dy * 0.1) + ' ' + q((sy + ey) / 2 + dx * 0.1) + ' ' + q(ex) + ' ' + q(ey);
+// the path through the picks, as SVG points in grid units (cell centres), in pick order
+function vcPathPoints(sel){
+  return vcClean(sel).map(id => (VC_BY_ID[id].c + 0.5) + ',' + (VC_BY_ID[id].r + 0.5)).join(' ');
 }
-// arrow keys: the nearest feeling in that direction, or null
+// cells touching a pick (including diagonals), not the picks themselves
+function vcNear(sel){
+  const out = new Set(), cur = vcClean(sel);
+  cur.forEach(id => { const a = VC_BY_ID[id]; VC_NODES.forEach(n => { if (n !== a && Math.abs(n.c - a.c) <= 1 && Math.abs(n.r - a.r) <= 1 && !cur.includes(n.id)) out.add(n.id); }); });
+  return out;
+}
+// arrow keys: the next cell in that direction, or null at the edge
 function vcNeighbor(id, dir){
   const a = VC_BY_ID[id]; if (!a) return null;
-  let best = null, bs = Infinity;
-  VC_NODES.forEach(n => {
-    if (n === a) return;
-    const dc = n.c - a.c, dr = n.r - a.r;
-    const along = dir === 'right' ? dc : dir === 'left' ? -dc : dir === 'down' ? dr : -dr;
-    if (along <= 0) return;
-    const across = (dir === 'left' || dir === 'right') ? Math.abs(dr) : Math.abs(dc);
-    const s = along + 1.6 * across;
-    if (s < bs){ bs = s; best = n.id; }
-  });
-  return best;
+  const c = a.c + (dir === 'right' ? 1 : dir === 'left' ? -1 : 0), r = a.r + (dir === 'down' ? 1 : dir === 'up' ? -1 : 0);
+  return (c < 0 || r < 0 || c >= VC_N || r >= VC_N) ? null : VC_GRID[r][c];
 }
 /* VIBE-CHART:END */
 const VC_KEY = 'ebbless_vibe_chart_v1';
 let vcSel = [];
 try { vcSel = vcClean(JSON.parse(sessionStorage.getItem(VC_KEY) || '[]')); } catch(e){}
-let vcNodeEls = {}, vcEdgeEls = [], vcPanel = null, vcHeart = null, vcSheet = null, vcSheetOpen = false, vcLive = null;
+let vcNodeEls = {}, vcPathEl = null, vcHaloEl = null, vcPanel = null, vcHeart = null, vcSheet = null, vcSheetOpen = false, vcLive = null;
 function vcSave(){ try { sessionStorage.setItem(VC_KEY, JSON.stringify(vcSel)); } catch(e){} }
 function vcSay(msg){ if (vcLive){ vcLive.textContent = ''; setTimeout(() => { if (vcLive) vcLive.textContent = msg; }, 30); } }
 function vcSvg(tag, attrs){ const e = document.createElementNS('http://www.w3.org/2000/svg', tag); Object.keys(attrs || {}).forEach(k => e.setAttribute(k, attrs[k])); return e; }
@@ -10521,17 +10506,16 @@ function vcSyncHeart(pop){
   if (pop){ const w = vcHeart.querySelector('.vc-hwrap'); w.classList.remove('is-pop'); void w.offsetWidth; w.classList.add('is-pop'); }
 }
 function vcSync(pop){
-  const n = vcSel.length, full = n >= VC_MAX;
+  const n = vcSel.length, full = n >= VC_MAX, near = vcNear(vcSel);
   Object.keys(vcNodeEls).forEach(id => {
     const b = vcNodeEls[id], i = vcSel.indexOf(id), on = i >= 0;
     b.setAttribute('aria-pressed', String(on));
     b.classList.toggle('is-max', full && !on);
     b.querySelector('.vc-nn').textContent = on ? String(i + 1) : '';
+    b.classList.toggle('is-near', near.has(id));
+    b.classList.toggle('is-far', n > 0 && !on && !near.has(id));
   });
-  vcEdgeEls.forEach(([p, a, b]) => {
-    const on = vcSel.includes(a) && vcSel.includes(b);
-    p.classList.toggle('is-on', on); p.setAttribute('marker-end', on ? 'url(#vcArrOn)' : 'url(#vcArr)');
-  });
+  if (vcPathEl){ const pts = vcPathPoints(vcSel); vcPathEl.setAttribute('points', pts); vcHaloEl.setAttribute('points', pts); }
   document.querySelectorAll('.vc-count').forEach(e => { e.textContent = n + ' / ' + VC_MAX; });
   document.querySelectorAll('.vc-list').forEach(vcPickList);
   document.querySelectorAll('.vc-play').forEach(b => { b.disabled = !n; });
@@ -10600,33 +10584,20 @@ function vcCloseSheet(noFocus){
 function vcMount(list){
   if (!vcSheet) vcCartBuild();
   vcHeart.hidden = false;
-  vcNodeEls = {}; vcEdgeEls = [];
+  vcNodeEls = {};
   const sec = bpMk('section', 'bp-sec vc-sec');
   sec.appendChild(bpMk('h2', '', 'How do you want to feel?'));
-  sec.appendChild(bpMk('p', 'vc-lead', 'Tap feelings in the order you want the mix to move, up to ' + VC_MAX + '. Arrows show how one feeling can turn into another.'));
+  sec.appendChild(bpMk('p', 'vc-lead', 'Tap feelings in the order you want the mix to move, up to ' + VC_MAX + '. The line shows your path across the map.'));
   const lay = bpMk('div', 'vc-layout');
   const col = bpMk('div', 'vc-col');
-  const box = bpMk('div', 'vc-chart'); box.tabIndex = 0; box.setAttribute('role', 'group'); box.setAttribute('aria-label', 'Chart of feelings. Scroll to explore.');
-  const cv = bpMk('div', 'vc-canvas'); cv.style.width = VC_W + 'px'; cv.style.height = VC_H + 'px';
-  const svg = vcSvg('svg', { viewBox: '0 0 ' + VC_W + ' ' + VC_H, width: VC_W, height: VC_H, 'aria-hidden': 'true', focusable: 'false' });
-  const defs = vcSvg('defs');
-  [['vcArr', 'vc-ah'], ['vcArrOn', 'vc-ah is-on']].forEach(([id, cls]) => {
-    const m = vcSvg('marker', { id, viewBox: '0 0 10 10', refX: '8', refY: '5', markerWidth: '7', markerHeight: '7', orient: 'auto' });
-    m.appendChild(vcSvg('path', { d: 'M1 1L9 5L1 9z', class: cls })); defs.appendChild(m);
-  });
-  svg.appendChild(defs);
-  VC_EDGES.forEach(([a, b]) => {
-    const d = vcEdgePath(VC_BY_ID[a], VC_BY_ID[b]); if (!d) return;
-    const p = vcSvg('path', { d, class: 'vc-edge', 'marker-end': 'url(#vcArr)' });
-    svg.appendChild(p); vcEdgeEls.push([p, a, b]);
-  });
-  cv.appendChild(svg);
+  const box = bpMk('div', 'vc-chart'); box.tabIndex = 0; box.setAttribute('role', 'group'); box.setAttribute('aria-label', 'Map of feelings. Scroll sideways to see all of it.');
+  const cv = bpMk('div', 'vc-canvas');
+  const grid = bpMk('div', 'vc-grid');
   VC_NODES.forEach(n => {
-    const pos = vcPos(n);
-    const b = bpMk('button', 'vc-node g-' + n.g); b.type = 'button'; b.dataset.id = n.id;
-    b.style.left = pos.x + 'px'; b.style.top = pos.y + 'px';
+    const b = bpMk('button', 'vc-node'); b.type = 'button'; b.dataset.id = n.id;
+    b.style.setProperty('--h', vcHeat(n.c, n.r));
     b.setAttribute('aria-pressed', 'false');
-    b.appendChild(bpMk('span', 'vc-nn')); b.lastChild.setAttribute('aria-hidden', 'true');
+    const nn = bpMk('span', 'vc-nn'); nn.setAttribute('aria-hidden', 'true'); b.appendChild(nn);
     b.appendChild(bpMk('span', 'vc-nl', n.label));
     const mx = bpMk('span', 'vc-max', 'Max ' + VC_MAX); mx.setAttribute('aria-hidden', 'true'); b.appendChild(mx);
     b.addEventListener('click', () => vcSet(n.id));
@@ -10636,10 +10607,15 @@ function vcMount(list){
       const to = vcNeighbor(n.id, dir);
       if (to && vcNodeEls[to]){ e.preventDefault(); vcNodeEls[to].focus(); }
     });
-    cv.appendChild(b); vcNodeEls[n.id] = b;
+    grid.appendChild(b); vcNodeEls[n.id] = b;
   });
+  cv.appendChild(grid);
+  const svg = vcSvg('svg', { viewBox: '0 0 ' + VC_N + ' ' + VC_N, preserveAspectRatio: 'none', 'aria-hidden': 'true', focusable: 'false', class: 'vc-path' });
+  vcPathEl = vcSvg('polyline', { points: '', class: 'vc-line' });
+  vcHaloEl = vcSvg('polyline', { points: '', class: 'vc-halo' });
+  svg.appendChild(vcHaloEl); svg.appendChild(vcPathEl); cv.appendChild(svg);
   box.appendChild(cv); col.appendChild(box);
-  col.appendChild(bpMk('p', 'vc-cap', 'Left to right: calmer to more energy. Top to bottom: heavier to lighter. Drag the chart to see all of it.'));
+  col.appendChild(bpMk('p', 'vc-cap', 'Left to right: heavier to lighter. Top to bottom: intense to calm. Warm colors are bright and intense, cool colors are heavy and calm.'));
   const panel = bpMk('aside', 'vc-panel'); panel.setAttribute('aria-label', 'Your picks');
   const ph = bpMk('div', 'vc-ph'); ph.appendChild(bpMk('h3', '', 'Your picks')); ph.appendChild(bpMk('span', 'vc-count', '0 / ' + VC_MAX));
   panel.appendChild(ph); panel.appendChild(bpMk('ol', 'vc-list')); panel.appendChild(vcActions());
@@ -23915,8 +23891,8 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
-  { version: 540, date: '2026-11-12', items: [
-    'Browse by vibe now has a map of feelings. Tap up to 7, in the order you want the mix to move, then Play this mix. On a computer your picks are listed beside the map; on a phone they fill a heart you can open.',
+  { version: 541, date: '2026-11-12', items: [
+    'Browse by vibe now has a heat map of 49 feelings, cool and calm to warm and intense. Tap up to 7 in the order you want the mix to move, watch the line trace your path, then Play this mix. On a computer your picks are listed beside the map; on a phone they fill a heart you can open.',
   ]},
   { version: 539, date: '2026-11-12', items: [
     'Browse by genre, region and vibe on Home each open their own page now, with a filter for genres and regions, and the same colorful cards as Search.',
