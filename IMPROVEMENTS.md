@@ -12588,12 +12588,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #766.
 
 ### even-if-a-playlist-is-updated-via-sp-767: Even if a playlist is updated via spotify, songs added on ebbless shouldn't be affected (Geethub #767)
-- **Status:** ready
+- **Status:** review
 - **Priority:** high
 - **Description:** Bug, Geethub issue #767. See the issue for references.
 - **Touches:** index.html (UI)
-- **Branch:**
-- **Notes:** Synced from Geethub #767.
+- **Branch:** agent/spotify-sync-767
+- **Notes:** Synced from Geethub #767. Fixed in withManualTracks: songs added mid-refresh, unmatched hand-adds, and hand-adds Spotify also lists now survive refreshes, no duplicates. Check: node scripts/test-manual-carry.js.
 
 ### the-light-show-should-be-inside-the-768: The light show should be inside the same player section at first. how it is currently is what fullscreen mode  (Geethub #768)
 - **Status:** ready
