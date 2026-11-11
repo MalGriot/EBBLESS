@@ -21397,7 +21397,7 @@ function setArcSummary(meta){
 /* SET-ARC:END */
 
 const VOICE_STEP = 10;           // in-app volume step, percent
-function voiceSetAppVolume(p){ voiceVolPct = Math.max(0, Math.min(100, p)); reapplyLevel(); }
+function voiceSetAppVolume(p){ voiceVolPct = Math.max(0, Math.min(100, p)); reapplyLevel(); volZeroCheck(); }
 // Android: the phone's media volume (AudioManager STREAM_MUSIC) by one step, through the native
 // shell. Returns "level/max", or "" when the shell has no such method (older build) or it failed.
 function voiceNativeVolume(dir){
@@ -22903,6 +22903,9 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
+  { version: 528, date: '2026-11-12', items: [
+    'On your phone, if the volume stays at 0 (or muted) for more than 7 seconds while a song plays, the music pauses by itself. Turn the volume up before then and it keeps playing. The Android app needs the next update for this to work with the volume buttons.'
+  ]},
   { version: 526, date: '2026-11-11', items: [
     'Switching the chips above the queue (Discover, Popular, Deep cuts, Chill, Energy, Focus, decades) no longer changes the song that is playing, even if it is already fading into the next one. Only the upcoming songs change.',
     'New songs show up in the queue within seconds, one by one, instead of all at once after a long wait. This happens after you clear the queue, switch a chip, or the queue runs out at the end of a song, so playback keeps going.',
@@ -30329,7 +30332,27 @@ function startLoadIconTicker(){
   }, 250);
 }
 
+/* #787 mobile: volume (phone media volume, in-app volume or muted player) held at 0 for more than 7s
+   while playing pauses the music. One timer, armed/cleared on play-state and volume changes, no polling.
+   The Android app calls __ebbVolChanged after volume-key presses. */
+let volZeroTimer = 0;
+function volIsZero(){
+  try { if (window.EbbNative && typeof EbbNative.adjustVolume === 'function'){ const r = String(EbbNative.adjustVolume(0) || ''); if (r && parseInt(r, 10) === 0) return true; } } catch(e){}
+  if (voiceVolPct <= 0) return true;
+  try { const ad = activeDeck(); if (ad && ad.player && ad.player.isMuted && ad.player.isMuted()) return true; } catch(e){}
+  return false;
+}
+function volZeroCheck(){
+  clearTimeout(volZeroTimer); volZeroTimer = 0;
+  if (!isMobileUA || !artworkWrap.classList.contains('is-playing') || !volIsZero()) return;
+  volZeroTimer = setTimeout(() => {
+    volZeroTimer = 0;
+    if (artworkWrap.classList.contains('is-playing') && volIsZero()) { try { pausePlayback(); } catch(e){} }
+  }, 7000);
+}
+window.__ebbVolChanged = volZeroCheck;
 function setPlayingUI(isPlaying){
+  volZeroCheck();
   if (resumeBootDone) lsSet(LS_RESUME_PLAY, !!isPlaying);
   ytPanelBtnSync();
   if (isPlaying && activeLoadProgress() !== null) startLoadIconTicker();
