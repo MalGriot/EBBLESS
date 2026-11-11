@@ -12557,7 +12557,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #762.
 
 ### music-map-should-start-from-current-763: Music map should start from current artist or have an artist input box - not just starting from meltt automati (Geethub #763)
-- **Status:** review
+- **Status:** merged
 - **Priority:** high
 - **Description:** Bug, Geethub issue #763. See the issue for references.
 - **Touches:** index.html (UI)
@@ -12669,7 +12669,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #776.
 
 ### i-wish-song-info-showed-more-info-li-777: I wish song info showed more info like the producer and trivia and had more interactivity like opening the alb (Geethub #777)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #777. See the issue for references.
 - **Touches:** index.html (UI)
