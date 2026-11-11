@@ -12822,7 +12822,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #795.
 
 ### remove-the-shape-chooser-button-from-def-796: Remove the shape chooser button from default miniplayer - the one next to the paint tablet button above the ti (Geethub #796)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Geethub issue #796. See the issue for the full text.
 - **Touches:** index.html (UI)
@@ -12830,7 +12830,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #796. Shape button removed from the desktop mini player header (v530).
 
 ### matching-song-name-song-artist-notificat-797: "matching [song name] - [song artist]" notification freezes on first song and stays on screen long after songs (Geethub #797)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Geethub issue #797. See the issue for the full text.
 - **Touches:** index.html (UI)
@@ -12862,7 +12862,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #800.
 
 ### progress-bar-wav-form-doesn-t-appear-on-801: Progress bar wav form doesn't appear on fullscreen mode (Geethub #801)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Geethub issue #801. See the issue for the full text.
 - **Touches:** index.html (UI)
@@ -12878,7 +12878,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #802.
 
 ### ui-color-should-fade-to-the-next-color-n-803: Ui color should fade to the next color - now it just switches harshly. it should fade along with the art and c (Geethub #803)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Geethub issue #803. See the issue for the full text.
 - **Touches:** index.html (UI)
@@ -12886,7 +12886,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #803.
 
 ### mid-fullscreen-mode-804: Mid-fullscreen mode (Geethub #804)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Geethub issue #804. See the issue for the full text.
 - **Touches:** index.html (UI)
