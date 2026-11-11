@@ -21090,8 +21090,8 @@ async function playVibePlaylist(interp, list, startIdx, save, text, opts){
     pl.tracks.push(row);
     pl.ts = Date.now();
     persistPlaylistObj(pl);
-    if (!started) stageMatchingProgress(i + 1, order.length, row);
-    else if (state.playlist && state.playlist.id === id){
+    stageMatchingProgress(i + 1, order.length, row);   // #797: the footer follows every song, not just until playback starts
+    if (started && state.playlist && state.playlist.id === id){
       if (i + 1 < order.length) bgResolveProgress.set(id, { done: i + 1, total: order.length }); else bgResolveProgress.delete(id);
       renderQueuePanel();
     }
@@ -21107,8 +21107,8 @@ async function playVibePlaylist(interp, list, startIdx, save, text, opts){
     if (i < order.length - 1 && !own) await sleep(350);
   }
   bgResolveProgress.delete(id);
+  if (gen === null || gen === vibeSessionGen) hideMatchStatus();   // #797: last song resolved, matching is over
   if (!started){
-    hideMatchStatus();
     if (opts && opts.onFail){ opts.onFail(); return; }
     stageError("Couldn't find playable versions of those songs right now.", () => playVibePlaylist(interp, list, startIdx, save, text), 'Couldn’t build that playlist.');
     return;
@@ -22993,6 +22993,9 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
+  { version: 535, date: '2026-11-12', items: [
+    'The matching bar at the bottom now counts every song as it is found (the music map too) and goes away when the last one is done.'
+  ]},
   { version: 534, date: '2026-11-12', items: [
     'fLUX has more keys: N next look, E favorite, X never show a look, G moods, C song title. Up and Down (and the mouse wheel or a vertical swipe) change the look, also in desktop fullscreen.'
   ]},

@@ -12830,12 +12830,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #796. Shape button removed from the desktop mini player header (v530).
 
 ### matching-song-name-song-artist-notificat-797: "matching [song name] - [song artist]" notification freezes on first song and stays on screen long after songs (Geethub #797)
-- **Status:** merged
+- **Status:** review
 - **Priority:** medium
 - **Description:** Geethub issue #797. See the issue for the full text.
 - **Touches:** index.html (UI)
-- **Branch:** agent/bugs-a
-- **Notes:** Synced from Geethub #797. Footer matching bar names the song being matched, hides when matching ends, 45s idle failsafe (v530). Not reproduced live.
+- **Branch:** agent/match-bar-797
+- **Notes:** Synced from Geethub #797. Footer matching bar names the song being matched, hides when matching ends, 45s idle failsafe (v530). v535: music map and vibe plays now report every song to the footer (was frozen at 1 / N once playback started) and hide it at the last song.
 
 ### when-queue-is-being-reloaded-it-should-s-798: When queue is being reloaded, it should show a progress bar (Geethub #798)
 - **Status:** merged
