@@ -11,7 +11,7 @@ const m = /\/\* GENRE-MAP:BEGIN[^*]*\*\/([\s\S]*?)\/\* GENRE-MAP:END \*\//.exec(
 assert.ok(m, 'GENRE-MAP block not found in index.html');
 const ctx = {};
 vm.createContext(ctx);
-vm.runInContext(m[1] + '\nthis.api = { gmLabelW, gmMinProm, gmFit, gmDeclutter, gmSearch, GM_LABEL_H, GM_SMAX };', ctx);
+vm.runInContext(m[1] + '\nthis.api = { gmLabelW, gmMinProm, gmFit, gmDeclutter, gmSearch, gmTicks, GM_LABEL_H, GM_SMAX };', ctx);
 const A = ctx.api;
 const D = JSON.parse(fs.readFileSync(path.join(__dirname, 'genre-map.json'), 'utf8'));
 const nodes = D.n.map(r => ({ name: r[0], fam: r[1], x: r[2], y: r[3], prom: r[4], root: !!r[5], dec: r[6], w: A.gmLabelW(r[0]), h: A.GM_LABEL_H }));
@@ -124,4 +124,16 @@ test('fit centers the chart and keeps it inside the stage', () => {
   const f = A.gmFit(1000, 800, 500, 400, 10);
   assert.ok(Math.abs(f.s - 0.475) < 1e-9);
   assert.ok(f.tx >= 0 && f.ty >= 0);
+});
+
+test('decade axis: ticks never crowd, prefer round decades when thin, show every decade when zoomed in, always keep some', () => {
+  const fit = 0.12;
+  for (let s = 0.06; s <= 2.6; s *= 1.15) {
+    const t = Array.from(A.gmTicks(D.cols, s, 52));
+    assert.ok(t.length >= 1);
+    for (let i = 0; i < t.length; i++) for (let j = i + 1; j < t.length; j++) assert.ok(Math.abs(D.cols[t[i]][1] - D.cols[t[j]][1]) * s >= 52 - 1e-6, 'ticks too close at s=' + s);
+  }
+  const thin = Array.from(A.gmTicks(D.cols, fit, 52)).map(i => D.cols[i][0]);
+  assert.ok(thin.length <= 8 && thin.some(l => /^(1920|1960|2000)s$/.test(l)), 'thin ticks keep round decades: ' + thin);
+  assert.strictEqual(A.gmTicks(D.cols, 2.5, 52).length, D.cols.length - 1);
 });
