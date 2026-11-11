@@ -12798,7 +12798,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #792.
 
 ### title-on-desktop-is-not-centered-with-th-793: Title on desktop is not centered with the album art (Geethub #793)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Geethub issue #793. See the issue for the full text.
 - **Touches:** index.html (UI)
