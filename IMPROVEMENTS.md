@@ -12908,3 +12908,11 @@ Add entries in this shape:
 - **Touches:** index.html (UI)
 - **Branch:** agent/flux-flow
 - **Notes:** Synced from Geethub #806.
+
+### music-map-zoom: Music map: infinite zoom in and out, pan, no squeezed artists
+- **Status:** review
+- **Priority:** medium
+- **Description:** QA at phone width found music map names overlapping (D'Angelo / Minnie Riperton, Mary J. Blige / Lauryn Hill, Jill Scott / Maxwell). The map now zooms (wheel, trackpad pinch, two-finger pinch, double-tap, +/- keys and buttons, 0 or 1:1 to reset) between 0.05x and 200x around the pointer, drags to pan with a small movement threshold so taps still work, and keeps labels one size at every zoom. Collision passes raised from 140 to 400.
+- **Touches:** index.html (music map)
+- **Branch:** agent/music-map-zoom
+- **Notes:** Verified at phone width: no overlaps at start, wheel zoom in/out 20-60 steps, drag and pinch pan, tap still recenters, no console errors or gpu-watchdog warnings. Cache v535.

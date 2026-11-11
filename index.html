@@ -1353,6 +1353,12 @@ html.reduce-motion .lib-grid:not(.is-list) .lib-card .info .name{display:block;w
 .mm-node,.mm-center{position:absolute;left:0;top:0;display:flex;align-items:center;transition:transform .55s var(--ease-out),opacity .35s var(--ease-out)}
 .mm-node{gap:2px;border-radius:999px;opacity:var(--o,1)}
 .mm-node.is-out,.mm-center.is-out{opacity:0;pointer-events:none}
+.mm-stage{touch-action:none;user-select:none;-webkit-user-select:none}
+.mm-stage.is-zm .mm-node,.mm-stage.is-zm .mm-center{transition:opacity .35s var(--ease-out)}
+.mm-zoomctl{position:absolute;right:12px;top:calc(66px + env(safe-area-inset-top,0px));display:flex;gap:4px;z-index:2}
+.mm-zoomctl button{width:34px;height:34px;border-radius:50%;background:var(--panel-2);border:1px solid var(--border);color:var(--text);font:inherit;font-size:18px;line-height:1;display:flex;align-items:center;justify-content:center}
+.mm-zoomctl button:hover{color:var(--accent)}
+.mm-zoomctl .mm-zreset{font-size:11px;font-weight:700}
 .mm-name{max-width:52vw;padding:8px 4px 8px 10px;color:var(--text);font:inherit;font-weight:600;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left}
 .mm-play{flex:none;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--accent);opacity:.75}
 .mm-play svg{width:15px;height:15px}
@@ -14770,6 +14776,7 @@ const MM_MORE_ICON = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5
 const MM_ICON_PERSON = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 12a4 4 0 100-8 4 4 0 000 8zm0 2c-3.3 0-8 1.7-8 5v1h16v-1c0-3.3-4.7-5-8-5z"/></svg>';
 const MM_ICON_FOLLOW = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 12a4 4 0 100-8 4 4 0 000 8zm0 2c-3.3 0-8 1.7-8 5v1h12.5a6 6 0 01-.5-2.4c0-1.3.4-2.5 1.1-3.5-1.8-.7-3.7-1.1-5.1-1.1zm9 0v3h3v2h-3v3h-2v-3h-3v-2h3v-3h2z"/></svg>';
 const mmMemo = new Map(), mmSongsMemo = new Map();
+let mmNodes = [], mmView = { s: 1, tx: 0, ty: 0 }, mmRaf = 0, mmZmT = 0, mmSuppressClick = false;
 let mmEl = null, mmTrail = [], mmLastTrail = [], mmToken = 0, mmData = null, mmResizeT = 0, mmMenu = null;
 
 function musicMapOpen(){ return !!(mmEl && !mmEl.hidden); }
@@ -14859,6 +14866,7 @@ function mmBuild(){
     '<div class="mm-foot"><div class="mm-trail" id="mmTrail"></div><div class="mm-credit">Data from <a href="https://www.last.fm" target="_blank" rel="noopener">Last.fm</a></div></div>';
   document.body.appendChild(mmEl);
   $('mmBack').addEventListener('click', () => closeMusicMap());
+  mmBindZoom();
   $('mmSearch').addEventListener('keydown', (e) => {
     if (e.key !== 'Enter') return;
     e.preventDefault();
@@ -14896,6 +14904,119 @@ function mmBuild(){
   });
 }
 
+// Zoom and pan: the nodes live in world space; each one is placed by
+// world position * scale + offset, while its label stays one size so names
+// never squeeze together or blow up. Only transforms change, one rAF per
+// gesture step, nothing runs while the map is closed.
+const MM_SMIN = 0.05, MM_SMAX = 200;
+function mmApply(){
+  mmRaf = 0;
+  const v = mmView;
+  mmNodes.forEach(p => { p.el.style.transform = 'translate(' + Math.round(p.x * v.s + v.tx - p.w / 2) + 'px,' + Math.round(p.y * v.s + v.ty - p.h / 2) + 'px)'; });
+}
+function mmDirty(){
+  const st = $('mmStage');
+  st.classList.add('is-zm');
+  clearTimeout(mmZmT); mmZmT = setTimeout(() => st.classList.remove('is-zm'), 250);
+  if (!mmRaf) mmRaf = requestAnimationFrame(mmApply);
+}
+function mmZoomAt(f, px, py){
+  const v = mmView, s2 = Math.max(MM_SMIN, Math.min(MM_SMAX, v.s * f));
+  if (!isFinite(s2)) return;
+  const k = s2 / v.s;
+  v.tx = px - (px - v.tx) * k; v.ty = py - (py - v.ty) * k; v.s = s2;
+  mmCloseMenu(); mmDirty();
+}
+function mmResetView(){
+  mmView.s = 1; mmView.tx = 0; mmView.ty = 0;
+  const st = $('mmStage'); st.classList.remove('is-zm');
+  if (mmRaf){ cancelAnimationFrame(mmRaf); mmRaf = 0; }
+  mmApply();
+}
+function mmBindZoom(){
+  const st = $('mmStage');
+  const ctl = document.createElement('div');
+  ctl.className = 'mm-zoomctl';
+  ctl.innerHTML = '<button type="button" data-z="in" aria-label="Zoom in">+</button><button type="button" data-z="out" aria-label="Zoom out">&minus;</button><button type="button" class="mm-zreset" data-z="reset" aria-label="Reset view">1:1</button>';
+  mmEl.appendChild(ctl);
+  ctl.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-z]'); if (!b) return;
+    const r = st.getBoundingClientRect();
+    if (b.dataset.z === 'reset') mmResetView();
+    else mmZoomAt(b.dataset.z === 'in' ? 1.5 : 1 / 1.5, r.width / 2, r.height / 2);
+  });
+  st.addEventListener('wheel', (e) => {
+    if (!musicMapOpen() || mmMenu) return;
+    e.preventDefault();
+    const r = st.getBoundingClientRect();
+    const dy = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1);
+    mmZoomAt(Math.exp(-dy * (e.ctrlKey ? 0.01 : 0.0018)), e.clientX - r.left, e.clientY - r.top);
+  }, { passive: false });
+  const ptrs = new Map();
+  let moved = false, lastTap = { t: 0, x: 0, y: 0 }, pinch = null;
+  const rel = (e) => { const r = st.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
+  const pinchState = () => {
+    const [a, b] = Array.from(ptrs.values());
+    return { d: Math.max(1, Math.hypot(a.x - b.x, a.y - b.y)), x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+  };
+  st.addEventListener('pointerdown', (e) => {
+    if (!musicMapOpen() || (e.pointerType === 'mouse' && e.button !== 0)) return;
+    ptrs.set(e.pointerId, Object.assign(rel(e), { sx: 0, sy: 0 }));
+    const p = ptrs.get(e.pointerId); p.sx = p.x; p.sy = p.y;
+    if (ptrs.size === 1) moved = false;
+    if (ptrs.size === 2){ moved = true; pinch = pinchState(); mmCloseMenu(); try { ptrs.forEach((_, id) => st.setPointerCapture(id)); } catch (_) {} }
+  });
+  st.addEventListener('pointermove', (e) => {
+    const p = ptrs.get(e.pointerId);
+    if (!p || !musicMapOpen()) return;
+    const n = rel(e), dx = n.x - p.x, dy = n.y - p.y;
+    p.x = n.x; p.y = n.y;
+    if (ptrs.size >= 2 && pinch){
+      const q = pinchState();
+      mmView.tx += q.x - pinch.x; mmView.ty += q.y - pinch.y;
+      mmZoomAt(q.d / pinch.d, q.x, q.y);
+      pinch = q;
+      return;
+    }
+    if (!moved){
+      if (Math.hypot(n.x - p.sx, n.y - p.sy) < (e.pointerType === 'mouse' ? 5 : 9)) return;   // still a tap
+      moved = true; mmCloseMenu();
+      try { st.setPointerCapture(e.pointerId); } catch (_) {}
+      return;
+    }
+    mmView.tx += dx; mmView.ty += dy; mmDirty();
+  });
+  const up = (e) => {
+    const p = ptrs.get(e.pointerId);
+    if (!p) return;
+    ptrs.delete(e.pointerId);
+    pinch = null;
+    if (ptrs.size === 1){ const o = Array.from(ptrs.values())[0]; o.sx = o.x; o.sy = o.y; }
+    if (ptrs.size) return;
+    if (moved){ mmSuppressClick = true; setTimeout(() => { mmSuppressClick = false; }, 60); return; }
+    if (e.type !== 'pointerup' || e.target.closest('[data-mm],.mm-zoomctl')) return;
+    const now = Date.now();   // double tap / double click on empty space zooms in there
+    if (now - lastTap.t < 320 && Math.hypot(p.x - lastTap.x, p.y - lastTap.y) < 30){ mmZoomAt(2.5, p.x, p.y); lastTap.t = 0; }
+    else lastTap = { t: now, x: p.x, y: p.y };
+  };
+  st.addEventListener('pointerup', up);
+  st.addEventListener('pointercancel', up);
+  // a drag must not count as a tap on whatever name it ended over
+  mmEl.addEventListener('click', (e) => { if (mmSuppressClick){ e.stopPropagation(); e.preventDefault(); } }, true);
+}
+function mmZoomKey(e){
+  const st = $('mmStage'), r = st.getBoundingClientRect(), cx = r.width / 2, cy = r.height / 2, k = e.key;
+  if (k === '+' || k === '='){ mmZoomAt(1.4, cx, cy); }
+  else if (k === '-' || k === '_'){ mmZoomAt(1 / 1.4, cx, cy); }
+  else if (k === '0'){ mmResetView(); }
+  else if (k.startsWith('Arrow')){
+    mmView.tx += k === 'ArrowLeft' ? 60 : k === 'ArrowRight' ? -60 : 0;
+    mmView.ty += k === 'ArrowUp' ? 60 : k === 'ArrowDown' ? -60 : 0;
+    mmDirty();
+  } else return false;
+  e.preventDefault(); return true;
+}
+
 function openMusicMap(rawName){
   if (!rawName){ const ct = currentTrack(); rawName = ct && ct.artist; }   // #763: no artist given = the playing one
   const name = splitArtistNames(rawName || '')[0];
@@ -14924,6 +15045,8 @@ function closeMusicMap(){
   if (!musicMapOpen()) return;
   mmCloseMenu();
   mmToken++;
+  if (mmRaf){ cancelAnimationFrame(mmRaf); mmRaf = 0; }
+  clearTimeout(mmZmT); mmNodes = [];
   mmLastTrail = mmTrail.slice();
   mmEl.hidden = true;
   $('mmStage').innerHTML = '';
@@ -14934,7 +15057,10 @@ function closeMusicMap(){
   syncHistoryBuffer();
 }
 function mmOnKey(e){
-  if (e.key !== 'Escape') return;
+  if (e.key !== 'Escape'){
+    if (musicMapOpen() && !mmMenu && !e.ctrlKey && !e.metaKey && !e.altKey && !(e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName))) mmZoomKey(e);
+    return;
+  }
   if (mmMenu){ e.preventDefault(); mmCloseMenu(); return; }
   if (e.target && e.target.id === 'mmSearch' && e.target.value){ e.target.value = ''; return; }
   if (document.querySelector('.lib-ctx-menu.is-open:not(.mm-menu)') || importOverlay.classList.contains('is-open')) return;
@@ -14979,6 +15105,7 @@ async function mmGo(name, fromNode, keepTrail){
   const token = ++mmToken, st = $('mmStage');
   mmCloseMenu();
   mmData = null;   // a resize mid-load must not redraw the previous map
+  mmView.s = 1; mmView.tx = 0; mmView.ty = 0; mmNodes = [];
   if (!keepTrail && mmTrail[mmTrail.length - 1] !== name) mmTrail.push(name);
   mmRenderTrail();
   st.querySelectorAll('.mm-node,.mm-center').forEach(el => { if (el !== fromNode) el.classList.add('is-out'); });
@@ -15032,6 +15159,7 @@ function mmLayout(animate){
     return { el, rel, i, w: el.offsetWidth, h: el.offsetHeight, x: 0, y: 0 };
   });
   const cw = c.offsetWidth, ch = c.offsetHeight, cx = W / 2, cy = H / 2;
+  mmView.s = 1; mmView.tx = 0; mmView.ty = 0;
   // nearer = closer to the middle: half match score, half rank, so a flat
   // run of similar scores still spreads out. Golden-angle spin, seeded by
   // the name so the same artist always draws the same map.
@@ -15050,7 +15178,7 @@ function mmLayout(animate){
     p.y = Math.max(p.h / 2 + 4, Math.min(H - p.h / 2 - 4, p.y));
   };
   const cBox = { x: cx, y: cy, w: cw + 16, h: ch + 12, fixed: true };
-  for (let it = 0; it < 140; it++){
+  for (let it = 0; it < 400; it++){
     let moved = false;
     for (let a = 0; a < n; a++){
       const p = nodes[a];
@@ -15069,6 +15197,7 @@ function mmLayout(animate){
     if (!moved) break;
   }
   const at = (p, scale) => 'translate(' + Math.round(p.x - p.w / 2) + 'px,' + Math.round(p.y - p.h / 2) + 'px)' + (scale ? ' scale(' + scale + ')' : '');
+  mmNodes = nodes.map(p => ({ el: p.el, x: p.x, y: p.y, w: p.w, h: p.h })).concat([{ el: c, x: cx, y: cy, w: cw, h: ch }]);
   mmPlaceCenter(c);
   if (!animate){ nodes.forEach(p => { p.el.style.transform = at(p); }); return; }
   // start every name at the center, invisible, then let them glide out
@@ -22993,6 +23122,9 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
+  { version: 535, date: '2026-11-12', items: [
+    'The music map now zooms without limit: pinch, scroll wheel, double-tap, or the + and - buttons, and drag to move around. Names stay readable at every zoom, so artists no longer squeeze together.'
+  ]},
   { version: 534, date: '2026-11-12', items: [
     'fLUX has more keys: N next look, E favorite, X never show a look, G moods, C song title. Up and Down (and the mouse wheel or a vertical swipe) change the look, also in desktop fullscreen.'
   ]},
