@@ -230,7 +230,7 @@ ipcMain.handle('ebbless:adblock-refresh', async (e) => {
 ipcMain.handle('ebbless:update-check', async (e) => {
   if (!fromMain(e)) return { error: 'Not allowed' };
   try {
-    const r = upd.evaluateRelease(await upd.fetchJson(RELEASE_URL), myVersion(), process.arch);
+    const r = upd.evaluateRelease(await upd.fetchJson(RELEASE_URL), myVersion(), process.arch, process.platform);
     updateDmg = null; updateAsset = r.asset;
     return r;
   } catch(err){ return { error: String(err.message || err) }; }
@@ -239,7 +239,8 @@ ipcMain.handle('ebbless:update-download', async (e) => {
   if (!fromMain(e)) return { error: 'Not allowed' };
   if (updateBusy) return { error: 'Already updating' };
   const asset = updateAsset;
-  if (!asset || !/^[\w.-]+\.dmg$/.test(asset.name)) return { error: 'Check for an update first' };
+  const okName = process.platform === 'win32' ? /^EBBLESS-Setup-[\d.]+\.exe$/ : /^[\w.-]+\.dmg$/;
+  if (!asset || !okName.test(asset.name)) return { error: 'Check for an update first' };
   updateBusy = true; updateDmg = null;
   try {
     fs.rmSync(UPDATE_DIR, { recursive: true, force: true });
@@ -250,6 +251,12 @@ ipcMain.handle('ebbless:update-download', async (e) => {
       const pct = Math.floor(f * 100);
       if (pct !== last && mainWin){ last = pct; mainWin.webContents.send('ebbless:update-progress', pct); }
     });
+    // The Windows installer is unsigned: check it against the SHA-256 GitHub lists for the asset
+    if (process.platform === 'win32'){
+      const m = /^sha256:([a-f0-9]{64})$/i.exec(asset.digest || '');
+      if (!m) throw new Error('No checksum to verify the download');
+      if (require('crypto').createHash('sha256').update(fs.readFileSync(dest)).digest('hex') !== m[1].toLowerCase()) throw new Error('The download did not match its checksum');
+    }
     updateDmg = dest;
     return { ok: true };
   } catch(err){
@@ -261,6 +268,12 @@ ipcMain.handle('ebbless:update-install', (e) => {
   if (!fromMain(e)) return { error: 'Not allowed' };
   if (!updateDmg || !fs.existsSync(updateDmg)) return { error: 'Download first' };
   try {
+    if (process.platform === 'win32'){
+      // oneClick NSIS installer: /S installs silently over this copy, --force-run reopens EBBLESS when it is done
+      spawn(updateDmg, ['/S', '--force-run'], { detached: true, stdio: 'ignore' }).unref();
+      setTimeout(() => { quitting = true; app.quit(); }, 150);
+      return { ok: true };
+    }
     const script = path.join(UPDATE_DIR, 'install.sh');
     fs.writeFileSync(script, upd.SCRIPT, { mode: 0o700 });
     spawn('/bin/sh', [script, String(process.pid), updateDmg, appBundle()], { detached: true, stdio: 'ignore' }).unref();

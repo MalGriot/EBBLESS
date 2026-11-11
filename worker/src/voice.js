@@ -50,8 +50,8 @@ export async function voiceTierFor(env, sub) {
     const raw = await env.PROFILES.get('ent:' + sub);
     if (!raw) return 'free';
     const rec = JSON.parse(raw);
-    const t = String((rec && rec.tier) || '').toLowerCase();
-    return t === 'flow' || t === 'horizon' || t === 'paid' ? 'paid' : 'free';
+    const t = (rec && rec.until && Number(rec.until) <= Date.now()) ? 'free' : String((rec && rec.tier) || '').toLowerCase();
+    return t === 'flow' || t === 'deep' || t === 'horizon' || t === 'paid' ? 'paid' : 'free';
   } catch (e) { return 'free'; }
 }
 

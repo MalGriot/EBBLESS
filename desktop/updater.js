@@ -1,7 +1,8 @@
-// Mac self-update helpers (no Electron imports, so they can be tested in Node).
+// Mac and Windows self-update helpers (no Electron imports, so they can be tested in Node).
 // The app is unsigned, so Squirrel's autoUpdater cannot be used: main.js finds
-// the newest GitHub release, downloads the dmg for this CPU, and (after the
-// person confirms) hands the swap to a detached shell script.
+// the newest GitHub release, downloads the dmg for this CPU (Windows: the
+// installer exe), and (after the person confirms) hands the swap to a detached
+// shell script (Windows: runs the installer silently).
 const http = require('http');
 const https = require('https');
 const fs = require('fs');
@@ -21,58 +22,75 @@ function isNewer(a, b){
   }
   return false;
 }
-// arm64 dmg has "-arm64" in its name, the Intel dmg does not
-function pickAsset(assets, arch){
+const WIN_ASSET_PREFIX = 'https://github.com/MalGriot/EBBLESS/releases/download/';
+// Mac: the arm64 dmg has "-arm64" in its name, the Intel dmg does not.
+// Windows: the one NSIS installer, EBBLESS-Setup-<version>.exe, and only from this repo's release path.
+function pickAsset(assets, arch, platform){
+  if (platform === 'win32'){
+    return (assets || []).find(a => a && /^EBBLESS-Setup-\d+(\.\d+)*\.exe$/.test(a.name || '') && String(a.browser_download_url || '').startsWith(WIN_ASSET_PREFIX)) || null;
+  }
   const dmgs = (assets || []).filter(a => a && /\.dmg$/i.test(a.name || '') && a.browser_download_url);
   const arm = dmgs.filter(a => /arm64/i.test(a.name));
   const intel = dmgs.filter(a => !/arm64/i.test(a.name));
   return (arch === 'arm64' ? arm : intel)[0] || null;
 }
 // release JSON + this app's version/arch -> what the page shows
-function evaluateRelease(release, current, arch){
+function evaluateRelease(release, current, arch, platform){
   const latest = String((release && release.tag_name) || '').replace(/^v/, '');
   if (!parseVersion(latest)) throw new Error('Could not read the latest version');
   const available = isNewer(latest, current);
-  const asset = available ? pickAsset(release.assets, arch) : null;
-  if (available && !asset) throw new Error('No Mac download for ' + latest + ' (' + arch + ')');
-  return { current, latest, available, asset: asset && { name: asset.name, url: asset.browser_download_url, size: asset.size || 0 } };
+  const asset = available ? pickAsset(release.assets, arch, platform) : null;
+  if (available && !asset) throw new Error(platform === 'win32' ? 'The Windows download for ' + latest + ' is not ready yet' : 'No Mac download for ' + latest + ' (' + arch + ')');
+  return { current, latest, available, asset: asset && { name: asset.name, url: asset.browser_download_url, size: asset.size || 0, digest: asset.digest || '' } };
 }
 
-function get(url, cb, hops){
+// opts (optional): hosts = only these hosts, https only, checked on every redirect too; maxBytes = stop past this size.
+function get(url, cb, hops, opts){
+  if (opts && opts.hosts){
+    let u; try { u = new URL(url); } catch(e){ return cb(new Error('Bad address')); }
+    if (u.protocol !== 'https:' || !opts.hosts.includes(u.hostname)) return cb(new Error('Refused host ' + u.hostname));
+  }
   const lib = url.startsWith('https:') ? https : http;
   const req = lib.get(url, { headers: { 'User-Agent': 'EBBLESS-desktop', Accept: 'application/vnd.github+json' } }, res => {
     if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location){
       res.resume();
       if ((hops || 0) > 5) return cb(new Error('Too many redirects'));
-      return get(new URL(res.headers.location, url).href, cb, (hops || 0) + 1);
+      return get(new URL(res.headers.location, url).href, cb, (hops || 0) + 1, opts);
     }
     if (res.statusCode !== 200){ res.resume(); return cb(new Error('http ' + res.statusCode)); }
+    const max = opts && opts.maxBytes;
+    if (max && Number(res.headers['content-length'] || 0) > max){ res.destroy(); return cb(new Error('Too large')); }
     cb(null, res);
   });
   req.setTimeout(30000, () => req.destroy(new Error('Timed out')));
   req.on('error', cb);
 }
-function fetchJson(url){
+function fetchJson(url, opts){
   return new Promise((resolve, reject) => get(url, (err, res) => {
     if (err) return reject(err);
-    let s = ''; res.setEncoding('utf8');
-    res.on('data', d => { s += d; });
+    let s = '', n = 0; res.setEncoding('utf8');
+    res.on('data', d => { n += d.length; if (opts && opts.maxBytes && n > opts.maxBytes){ res.destroy(); return reject(new Error('Too large')); } s += d; });
     res.on('end', () => { try { resolve(JSON.parse(s)); } catch(e){ reject(new Error('Bad release data')); } });
     res.on('error', reject);
-  }));
+  }, 0, opts));
 }
-function download(url, dest, onProgress){
+function download(url, dest, onProgress, opts){
   return new Promise((resolve, reject) => get(url, (err, res) => {
     if (err) return reject(err);
     const total = Number(res.headers['content-length'] || 0);
+    const max = opts && opts.maxBytes;
     let got = 0;
     const out = fs.createWriteStream(dest);
-    res.on('data', d => { got += d.length; if (total && onProgress) onProgress(Math.min(1, got / total)); });
+    res.on('data', d => {
+      got += d.length;
+      if (max && got > max){ res.unpipe(out); res.destroy(); out.destroy(); return reject(new Error('Too large')); }
+      if (total && onProgress) onProgress(Math.min(1, got / total));
+    });
     res.on('error', e => { out.destroy(); reject(e); });
     out.on('error', reject);
     out.on('finish', () => (total && got !== total) ? reject(new Error('Download was cut short')) : resolve(got));
     res.pipe(out);
-  }));
+  }, 0, opts));
 }
 
 // Runs after the app quits. Args: $1 pid, $2 dmg, $3 app bundle to replace.

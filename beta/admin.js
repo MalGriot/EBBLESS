@@ -65,7 +65,7 @@
 
   const state = {
     data: null, editable: {}, cap: 50,
-    tab: TABS[ls.get(K_TAB)] ? ls.get(K_TAB) : 'Testers',
+    tab: TABS[ls.get(K_TAB)] || ls.get(K_TAB) === 'Grants' ? ls.get(K_TAB) : 'Testers',
     search: '', filter: '', sortCol: '', sortDir: 1,
     rows: [], cols: [], detailId: null,
   };
@@ -194,11 +194,11 @@
   function renderTabs(){
     const box = $('tabs');
     box.textContent = '';
-    Object.keys(TABS).forEach(name => {
+    Object.keys(TABS).concat([GRANTS]).forEach(name => {
       const b = el('button', 'adm-tab', name);
       b.type = 'button'; b.setAttribute('role', 'tab');
       b.setAttribute('aria-selected', String(name === state.tab));
-      b.appendChild(el('span', 'n tnum', String(tabRows(name).length)));
+      if (name !== GRANTS) b.appendChild(el('span', 'n tnum', String(tabRows(name).length)));
       b.addEventListener('click', () => { if (name !== state.tab) switchTab(name); });
       box.appendChild(b);
     });
@@ -298,7 +298,53 @@
     state.sortDir = s && s.dir < 0 ? -1 : 1;
   }
 
-  function renderAll(){ build(); loadSort(); renderStats(); renderTabs(); renderToolbar(); renderTable(); if (!$('colsPanel').hidden) renderCols(); }
+  // ---------- grants (flow / horizon entitlements, GET /admin/grants) ----------
+  const GRANTS = 'Grants';
+  const grants = { rows: [], loaded: false, search: '' };
+  async function loadGrants(){
+    status($('grantStatus'), 'Loading...');
+    try {
+      const out = await api('/admin/grants');
+      grants.rows = out.grants || []; grants.loaded = true;
+      status($('grantStatus'), out.truncated ? 'Showing the first 200 only.' : '');
+      renderGrants();
+    } catch(e){ if (e.status !== 401) status($('grantStatus'), e.message, 'err'); }
+  }
+  function renderGrants(){
+    const term = grants.search.trim().toLowerCase();
+    const rows = grants.rows.filter(g => !term || String(g.email || '').toLowerCase().includes(term) || g.sub.toLowerCase().includes(term));
+    const thead = $('grantTable').tHead, tbody = $('grantTable').tBodies[0];
+    thead.textContent = ''; tbody.textContent = '';
+    const hr = thead.insertRow();
+    ['email', 'tier', 'how', 'ends', ''].forEach(h => { const th = el('th', null, h); th.scope = 'col'; hr.appendChild(th); });
+    rows.forEach(g => {
+      const tr = tbody.insertRow();
+      const off = g.src === 'revoked';
+      [[g.email || g.sub, 'email'], [off ? 'switched off' : g.tier, 'tier'], [g.src, 'how'], [g.until ? fmt(new Date(g.until).toISOString()) : (off ? '' : 'no end'), 'ends']].forEach(([t, l]) => {
+        const td = tr.insertCell(); td.dataset.label = l; td.appendChild(el('span', t ? null : 'muted', t || '-'));
+      });
+      const td = tr.insertCell();
+      const b = el('button', 'btn sm', off ? 'Undo' : 'Revoke'); b.type = 'button';
+      let armed = false;
+      b.addEventListener('click', async () => {
+        if (!off && !armed) { armed = true; b.textContent = 'Sure?'; setTimeout(() => { armed = false; if (b.isConnected) b.textContent = 'Revoke'; }, 4000); return; }
+        b.disabled = true;
+        try { await api('/admin/revoke', off ? { sub: g.sub, undo: true } : { sub: g.sub }); await loadGrants(); }
+        catch(e){ b.disabled = false; status($('grantStatus'), e.message, 'err'); }
+      });
+      td.appendChild(b);
+    });
+    $('grantCount').textContent = rows.length + ' of ' + grants.rows.length + ' accounts';
+  }
+  function showGrantsView(on){
+    $('grantsPanel').hidden = !on; $('sheetView').hidden = on;
+    if (on) { $('colsPanel').hidden = true; if (!grants.loaded) loadGrants(); else renderGrants(); }
+  }
+
+  function renderAll(){
+    if (state.tab === GRANTS) { renderStats(); renderTabs(); showGrantsView(true); return; }
+    showGrantsView(false);
+    build(); loadSort(); renderStats(); renderTabs(); renderToolbar(); renderTable(); if (!$('colsPanel').hidden) renderCols(); }
   function switchTab(name){ state.tab = name; state.filter = ''; ls.set(K_TAB, name); renderAll(); }
 
   // ---------- detail ----------
@@ -573,6 +619,9 @@
     if (!p.hidden) renderCols();
   });
   $('colsReset').addEventListener('click', () => { ls.set(K_COLS + state.tab, null); renderCols(); renderTable(); });
+  $('grantRefresh').addEventListener('click', loadGrants);
+  let grantT = 0;
+  $('grantSearch').addEventListener('input', e => { clearTimeout(grantT); grantT = setTimeout(() => { grants.search = e.target.value; renderGrants(); }, 120); });
   $('detailClose').addEventListener('click', closeDetail);
   $('scrim').addEventListener('click', closeDetail);
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('detail').hidden) closeDetail(); });

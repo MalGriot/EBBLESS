@@ -226,8 +226,8 @@ html.ebb-android #splash .splash-tint, html.ebb-android .lib-bg-tint{mix-blend-m
 html.ebb-android #splash .splash-poster{display:none}
 html.ebb-android #splash .splash-tint{opacity:0}
 html.ebb-android #splash.is-active:not(:has(.splash-video.ebb-ready)) .splash-black{animation:none;opacity:1}
-html.ebb-android #splash:not(:has(.splash-video.ebb-ready)) img{animation:none!important;opacity:0}
-html.ebb-android #splash:not(:has(.splash-video.ebb-ready)) .splash-choice{opacity:0!important;pointer-events:none!important;transition:none!important}
+html.ebb-android #splash:not(.is-return):not(:has(.splash-video.ebb-ready)) img{animation:none!important;opacity:0}
+html.ebb-android #splash:not(.is-return):not(:has(.splash-video.ebb-ready)) .splash-choice{opacity:0!important;pointer-events:none!important;transition:none!important}
 /* the app's startup cover (grey ground + mark) sits above the splash: skip it so black goes straight to the splash */
 html.ebb-android body:not(.onb-active) #onbBackdrop, html.ebb-android body:not(.onb-active) #onbMark, html.ebb-android body:not(.onb-active) #onbSkip, html.ebb-android body:not(.onb-active) #onbCapture{display:none!important}
 html.ebb-android{background:#000}
@@ -285,7 +285,7 @@ html.ebb-android.ebb-covered body > *:not(#splash):not(script):not(style){visibi
   --r-sm:6px; --r-md:8px; --r-lg:14px;
   --ease-out:cubic-bezier(.16,1,.3,1); --ease-in-out:cubic-bezier(.65,0,.35,1);
   --dur-ui:180ms; --dur-surface:500ms;
-  --nav-h:64px; --topbar-h:60px;
+  --nav-h:64px; --topbar-h:calc(60px + var(--safe-t));   /* #782: the bar sits below the phone's status bar, so everything keyed to its height moves down with it */
   --native-t:0px; --native-b:0px;
   --safe-b:max(env(safe-area-inset-bottom,0px),var(--native-b)); --safe-t:max(env(safe-area-inset-top,0px),var(--native-t));
 }
@@ -296,7 +296,12 @@ html{-webkit-tap-highlight-color:transparent}
    into the new album-art color instead of snapping. */
 @property --clock-accent{syntax:'<color>';inherits:true;initial-value:#e0b26a}
 @property --player-accent{syntax:'<color>';inherits:true;initial-value:#e0b26a}
-html{transition:--clock-accent var(--dur-surface) var(--ease-in-out),--player-accent var(--dur-surface) var(--ease-in-out)}
+/* #803: the text/knob color on accent fills and the tints must fade with the accent, or they snap while the accent fades */
+@property --on-accent{syntax:'<color>';inherits:true;initial-value:#151107}
+@property --on-player-accent{syntax:'<color>';inherits:true;initial-value:#151107}
+@property --clock-tint{syntax:'<color>';inherits:true;initial-value:transparent}
+@property --clock-tint-splash{syntax:'<color>';inherits:true;initial-value:transparent}
+html{transition:--clock-accent var(--dur-surface) var(--ease-in-out),--player-accent var(--dur-surface) var(--ease-in-out),--on-accent var(--dur-surface) var(--ease-in-out),--on-player-accent var(--dur-surface) var(--ease-in-out),--clock-tint var(--dur-surface) var(--ease-in-out),--clock-tint-splash var(--dur-surface) var(--ease-in-out)}
 html.clock-color-init,
 html.reduce-motion{transition:none}
 @media (prefers-reduced-motion:reduce){html{transition:none}}
@@ -377,6 +382,9 @@ body:has(#milkLayer.is-open) #ambient .ambient-veil,body:has(#flow-layer.is-open
 .wordmark{display:flex;align-items:center;background:none;border:none;padding:0;cursor:pointer}
 .wordmark img{height:22px;width:auto;display:block}
 #topbar .wordmark{margin-right:12px}
+/* plan name under the E logo (set from state.tier, see renderPlanBadge); static, no animation */
+.plan-badge{position:absolute;left:50%;top:calc(100% + 1px);transform:translateX(-50%);font-size:9px;line-height:1;letter-spacing:.06em;text-transform:lowercase;color:var(--accent);white-space:nowrap;pointer-events:none;opacity:.9}
+.plan-badge[hidden]{display:none}
 /* Hold-to-splash (Geethub #277): holding the wordmark ~1s returns to the
    splash; this ring fills in the accent color while the hold is in progress.
    A plain click still opens the player (see wordmarkHold in the script). */
@@ -439,24 +447,24 @@ body:has(#milkLayer.is-open) #ambient .ambient-veil,body:has(#flow-layer.is-open
    (the clock --accent, or the album-art --player-accent in the queue).
    scrollbar-color is applied only where ::-webkit-scrollbar is unsupported
    (Firefox), because Chrome 121+ drops the webkit styling once it is set. */
-.view,.queue-scroll,.paste-recents-list{--sb-accent:var(--accent)}
+.view,.queue-scroll,.paste-recents-list,.lib-body{--sb-accent:var(--accent)}
 #queue-panel .queue-scroll{--sb-accent:var(--player-accent)}
 @media (hover:hover) and (pointer:fine){
-  .view::-webkit-scrollbar,.queue-scroll::-webkit-scrollbar,.paste-recents-list::-webkit-scrollbar{width:12px;height:12px}
-  .view::-webkit-scrollbar-track,.queue-scroll::-webkit-scrollbar-track,
-  .view::-webkit-scrollbar-corner,.queue-scroll::-webkit-scrollbar-corner,
+  .view::-webkit-scrollbar,.queue-scroll::-webkit-scrollbar,.paste-recents-list::-webkit-scrollbar,.lib-body::-webkit-scrollbar{width:12px;height:12px}
+  .view::-webkit-scrollbar-track,.queue-scroll::-webkit-scrollbar-track,.lib-body::-webkit-scrollbar-track,
+  .view::-webkit-scrollbar-corner,.queue-scroll::-webkit-scrollbar-corner,.lib-body::-webkit-scrollbar-corner,
   .paste-recents-list::-webkit-scrollbar-track,.paste-recents-list::-webkit-scrollbar-corner{background:transparent}
-  .view::-webkit-scrollbar-thumb,.queue-scroll::-webkit-scrollbar-thumb,.paste-recents-list::-webkit-scrollbar-thumb{
+  .view::-webkit-scrollbar-thumb,.queue-scroll::-webkit-scrollbar-thumb,.paste-recents-list::-webkit-scrollbar-thumb,.lib-body::-webkit-scrollbar-thumb{
     min-height:48px;border-radius:12px;border:3px solid transparent;background-clip:padding-box;
     background-color:rgba(255,255,255,.18);background-color:color-mix(in srgb,var(--sb-accent) 38%,transparent)}
-  .view:hover::-webkit-scrollbar-thumb,.queue-scroll:hover::-webkit-scrollbar-thumb,.paste-recents-list:hover::-webkit-scrollbar-thumb{
+  .view:hover::-webkit-scrollbar-thumb,.queue-scroll:hover::-webkit-scrollbar-thumb,.paste-recents-list:hover::-webkit-scrollbar-thumb,.lib-body:hover::-webkit-scrollbar-thumb{
     background-color:rgba(255,255,255,.26);background-color:color-mix(in srgb,var(--sb-accent) 55%,transparent)}
-  .view::-webkit-scrollbar-thumb:hover,.queue-scroll::-webkit-scrollbar-thumb:hover,.paste-recents-list::-webkit-scrollbar-thumb:hover{
+  .view::-webkit-scrollbar-thumb:hover,.queue-scroll::-webkit-scrollbar-thumb:hover,.paste-recents-list::-webkit-scrollbar-thumb:hover,.lib-body::-webkit-scrollbar-thumb:hover{
     border-width:2px;background-color:rgba(255,255,255,.4);background-color:color-mix(in srgb,var(--sb-accent) 80%,transparent)}
-  .view::-webkit-scrollbar-thumb:active,.queue-scroll::-webkit-scrollbar-thumb:active,.paste-recents-list::-webkit-scrollbar-thumb:active{
+  .view::-webkit-scrollbar-thumb:active,.queue-scroll::-webkit-scrollbar-thumb:active,.paste-recents-list::-webkit-scrollbar-thumb:active,.lib-body::-webkit-scrollbar-thumb:active{
     border-width:2px;background-color:var(--sb-accent)}
   @supports not selector(::-webkit-scrollbar){
-    .view,.queue-scroll,.paste-recents-list{scrollbar-color:color-mix(in srgb,var(--sb-accent) 55%,transparent) transparent}
+    .view,.queue-scroll,.paste-recents-list,.lib-body{scrollbar-color:color-mix(in srgb,var(--sb-accent) 55%,transparent) transparent}
   }
 }
 
@@ -582,6 +590,15 @@ video.lib-bg-video.is-playing{opacity:1}
 #view-home .hm-vibe-pic:hover,#view-home .hm-vibe-pic:focus-visible{background:rgba(255,255,255,.18)}
 #view-home .hm-vibe-pic svg{width:22px;height:22px}
 #view-home .hm-vibe-note{margin:8px 4px 0;font-size:12px;line-height:1.4;color:var(--faint)}
+/* #761: Home's add-music block: two big taps plus a few genre chips (static, no motion) */
+#view-home .hm-add-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+#view-home .hm-add-btn{display:flex;flex-direction:column;gap:3px;text-align:left;padding:14px 16px;border-radius:16px;background:var(--panel-2);border:1px solid var(--border);color:var(--text);cursor:pointer;font:inherit}
+#view-home .hm-add-btn:hover,#view-home .hm-add-btn:focus-visible{background:var(--panel-3)}
+#view-home .hm-add-btn b{font-size:15.5px}
+#view-home .hm-add-btn span{font-size:12.5px;color:var(--faint)}
+#view-home .hm-add-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+#view-home .hm-add-chip{font:inherit;font-size:13.5px;font-weight:600;padding:8px 14px;border-radius:999px;background:var(--panel-2);border:1px solid var(--border);color:var(--text);cursor:pointer}
+#view-home .hm-add-chip:hover,#view-home .hm-add-chip:focus-visible{background:var(--panel-3)}
 #view-home .hm-vibe-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
 #view-home .hm-vibe-chip{display:inline-flex;align-items:baseline;gap:6px;font:inherit;font-size:13.5px;font-weight:600;padding:8px 14px;border-radius:999px;background:rgba(255,255,255,.10);color:var(--text);cursor:pointer;text-align:left}
 #view-home .hm-vibe-chip:hover{background:rgba(255,255,255,.18)}
@@ -846,6 +863,7 @@ body.onb-active .paste-guide{display:none}
 .lib-filter-more:hover{color:var(--text)}
 .lib-filter-more svg{width:20px;height:20px}
 .lib-filter-more.is-back svg{transform:rotate(180deg)}
+@media (min-width:860px){.lib-filter-more{display:none!important}}   /* #774: desktop has room, no chevron squeezing the pills */
 .lib-filter-btn{position:relative;flex:1 1 auto;min-width:0;white-space:nowrap;height:32px;padding:0 clamp(3px,2.4cqw,12px);border-radius:16px;border:1px solid var(--border-2);
   font-size:clamp(8.5px,4.2cqw,12.5px);font-weight:600;color:var(--faint);transition:background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out)}
 .lib-filter-btn:hover{color:var(--text)}
@@ -1480,6 +1498,10 @@ body:has(#musicMap:not([hidden])):has(#mini-bar:not([hidden])) .mm-foot{padding-
 .beta-invite .bi-title{font-size:14px;font-weight:600}
 .beta-invite .bi-text{line-height:1.45}
 .beta-invite .bi-join{background:var(--accent);border-color:var(--accent);color:var(--on-accent,#151107);font-weight:600}
+/* #746: "Open music links in EBBLESS" card (LINK PROMPT in the script): the sign-in nudge's card, static */
+.link-prompt .lp-title{font-size:14px;font-weight:600}
+.link-prompt .lp-text{line-height:1.45}
+.link-prompt .lp-go{background:var(--accent);border-color:var(--accent);color:var(--on-accent,#151107);font-weight:600}
 /* the beta pages in the app (openBetaFrame): solid, no video; the covered app stops painting, the players stay */
 #betaJoin{position:fixed;inset:0;z-index:30001;background:#121212;color:#f2f2f2;display:flex;flex-direction:column}
 #betaJoin .bj-bar{display:flex;align-items:center;justify-content:space-between;padding:calc(14px + var(--safe-t)) 16px 4px;max-width:560px;width:100%;margin:0 auto;box-sizing:border-box}
@@ -1547,15 +1569,44 @@ body:has(#import-overlay.is-open) #fsBtn{display:none}
 .v-tab-label{font-size:10px;font-weight:600;line-height:1;letter-spacing:.01em;white-space:nowrap}
 .visual-tabs .v-tab:hover{color:var(--text)}
 .visual-tabs .v-tab.is-active{background:var(--accent);color:var(--on-accent,#151107)}
+.visual-tabs:has(#milkTabBtn.is-active) .v-tab[data-mode="art"].is-active{background:none;color:var(--faint)} /* #768: only fLUX shows as picked while the light show is inline */
 .visual-tabs.yt-on .v-tab:not(#ytPanelBtn).is-active{background:none;color:var(--faint)}
 .visual-tabs .v-tab:disabled{opacity:.35;pointer-events:none}
+/* fLUX tab: glow + twinkling sparkles on hover. Transform/opacity only, and the
+   keyframes run only while hovered/focused, so nothing animates at rest (GPU budget). */
+#milkTabBtn{position:relative;isolation:isolate}
+#milkTabBtn::before{content:"";position:absolute;inset:-5px;border-radius:20px;pointer-events:none;z-index:-1;opacity:0;
+  background:radial-gradient(closest-side,color-mix(in srgb,var(--accent) 55%,transparent),transparent);transition:opacity .25s var(--ease-out)}
+#milkTabBtn::after{content:"";position:absolute;top:2px;right:6px;width:9px;height:9px;pointer-events:none;opacity:0;background:var(--accent);
+  clip-path:polygon(50% 0,60% 40%,100% 50%,60% 60%,50% 100%,40% 60%,0 50%,40% 40%)}
+#milkTabBtn svg{transition:transform .5s var(--ease-out)}
+#milkTabBtn svg circle{transform-box:fill-box;transform-origin:center}
+@media (hover:hover){
+  #milkTabBtn:hover,#milkTabBtn:focus-visible{color:var(--accent)}
+  #milkTabBtn:hover::before,#milkTabBtn:focus-visible::before{opacity:1}
+  #milkTabBtn:hover svg,#milkTabBtn:focus-visible svg{transform:rotate(90deg) scale(1.12)}
+  #milkTabBtn:hover::after,#milkTabBtn:focus-visible::after{animation:fluxSpark 1.3s ease-in-out infinite}
+  #milkTabBtn:hover svg circle,#milkTabBtn:focus-visible svg circle{animation:fluxTwinkle 1.3s ease-in-out .5s infinite}
+}
+#milkTabBtn.is-active::before,#milkTabBtn.is-active::after{display:none}
+@keyframes fluxSpark{0%,100%{opacity:0;transform:scale(.2) rotate(0)}50%{opacity:1;transform:scale(1) rotate(45deg)}}
+@keyframes fluxTwinkle{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.25;transform:scale(.4)}}
+@media (prefers-reduced-motion:reduce){
+  #milkTabBtn:hover::after,#milkTabBtn:focus-visible::after{animation:none;opacity:1;transform:none}
+  #milkTabBtn:hover svg,#milkTabBtn:focus-visible svg{transform:none}
+  #milkTabBtn:hover svg circle,#milkTabBtn:focus-visible svg circle{animation:none}
+}
 /* #747 cinema mode: the Cinema tab shows only while the video is on screen. On (html.ebb-cinema), one static
    dim layer covers the page and only the video, the visual tabs and the transport sit above it. #cinemaDim
    lives inside #view-player so ytPanelSync's #735 cover check still counts it as the player. Solid fill, no
    backdrop-filter (video moves above it), opacity-only fade, hidden after it. Covered means stopped: #ambient pauses. */
 #cinemaBtn{display:none}
-.player-stage:has(> #artworkWrap.yt-video) #cinemaBtn{display:flex}
-#cinemaBtn[aria-pressed="true"]{color:var(--accent)}
+/* #776: with the video showing, the Video tab becomes the Cinema button (#cinemaBtn stays for the T key only) */
+.yt-cin-ico,.yt-cin-label{display:none}
+.player-stage:has(> #artworkWrap.yt-video) #ytPanelBtn.is-active :is(svg:not(.yt-cin-ico),.v-tab-label:not(.yt-cin-label)){display:none}
+.player-stage:has(> #artworkWrap.yt-video) #ytPanelBtn.is-active .yt-cin-ico{display:block}
+.player-stage:has(> #artworkWrap.yt-video) #ytPanelBtn.is-active .yt-cin-label{display:inline}
+#ytPanelBtn.is-active[data-cinema="1"]{color:var(--accent)}
 #cinemaDim{position:fixed;inset:0;z-index:46;background:rgba(0,0,0,.86);opacity:0;visibility:hidden;pointer-events:none;
   transition:opacity var(--dur-surface) var(--ease-in-out),visibility 0s var(--dur-surface)}
 html.ebb-cinema:not(.ebb-pip) body:has(#artworkWrap.yt-video) #cinemaDim{opacity:1;visibility:visible;pointer-events:auto;cursor:pointer;
@@ -1696,7 +1747,7 @@ body[data-disc="cd"] #artRecord{--disc-fs:.66}
 body.split-desktop.desktop-fs:not(.view-settings-active) #artRecord :is(.record-disc,.record-shadow),
 #flow-layer #artRecord :is(.record-disc,.record-shadow){width:calc(var(--disc-fs) * 100%)}
 body[data-disc="cd"].split-desktop.desktop-fs:not(.view-settings-active) #artRecord .rec-ring,body[data-disc="cd"] #flow-layer #artRecord .rec-ring{display:block}
-body.split-desktop.desktop-fs:not(.view-settings-active) #artworkWrap .art-cassette,#flow-layer .flow-art .art-cassette{inset:19% 19%}
+body.split-desktop.desktop-fs:not(.view-settings-active) #artworkWrap .art-cassette,#flow-layer .flow-art .art-cassette{inset:15% 15%} /* #786: the main tape is bigger than its copies, which still size from the old 19% inset (csStackBuild) */
 /* regular view: the vinyl is drawn big enough that its center label is as large as the default cover (label = 38% of the disc, disc = 96% of the
    wrapper), so the wrapper is 100% / .3648 wide, centered with margins (the tap game scales this wrapper with transform), and clipped by the pane. */
 body:not(.desktop-fs):not([data-disc="cd"]) .artwork-wrap[data-mode="art"][data-art-style="record"] > #artRecord{inset:auto;left:50%;top:50%;width:274.1%;height:274.1%;margin:-137.05% 0 0 -137.05%}
@@ -1978,7 +2029,9 @@ text.cs-pen{font:600 17px 'Bradley Hand','Segoe Print','Marker Felt','Comic Sans
 .track-meta .title-row{display:flex;align-items:center;justify-content:center;gap:6px}
 .track-meta .title-row .title{flex:1;min-width:0}
 /* balances the like + options buttons on the right so the title stays centered */
-.track-meta .title-row::before{content:'';flex:none;width:calc(50px + var(--tr-decline,0px) + var(--tr-addpl,0px) + var(--tr-speed,0px))}
+.track-meta .title-row::before{content:'';flex:none;display:none;width:calc(var(--tr-addpl,0px) + var(--tr-speed,0px) - 6px)}
+/* desktop: heart, options and thumbs-down live on the art, so only the opt-in addpl/speed buttons sit beside the title; no spacer when none show */
+@media (min-width:860px){html:is(.adv-show-addpl,.adv-show-speed,.now-podcast) .track-meta .title-row::before{display:block}}
 /* #728: the spacer is as wide as the buttons on the right - like + options (22px + 6px gap each, less the gap the spacer shares with the title),
    plus each extra that is showing: the CuRRentSSsss thumbs-down (Geethub #358), add to playlist and speed (Advanced settings) */
 .track-meta .title-row:has(.player-decline-btn:not([hidden])){--tr-decline:28px}
@@ -2046,7 +2099,10 @@ body.split-desktop .ads-report-btn{margin-bottom:20px}
 .decline-why button:hover,.decline-why button:focus-visible{background:var(--accent);color:var(--on-accent,#151107)}
 .decline-why .decline-why-x{margin-left:auto;padding:4px 10px;font-size:16px;line-height:1;color:var(--faint)}
 /* #692 (desktop): dislike in the art's bottom-right, heart steps left of it while it shows; "more" in the top-left (cast shifts right of it) */
-.art-fs-btn.art-decline-btn{top:auto;bottom:10px;color:var(--faint)}
+.art-fs-btn.art-decline-btn{top:auto;bottom:10px;width:32px;height:32px;background:rgba(10,10,10,.6);color:var(--faint)}
+.art-fs-btn.art-decline-btn svg{width:15px;height:15px}
+.art-fs-btn.art-decline-btn:hover{background:rgba(10,10,10,.78);color:var(--text)}
+.artwork-wrap.mode-viz .art-fs-btn.art-decline-btn{right:auto;left:50px}
 .art-fs-btn.art-decline-btn[hidden]{display:none}
 .art-decline-btn:not([hidden]) ~ .art-like-btn{right:50px}
 .art-fs-btn.art-more-btn{right:auto;left:10px}
@@ -2334,6 +2390,12 @@ body.queue-open #bottom-nav button[data-view].is-active{color:var(--faint-2)}
     transition:background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out)}
   #libpl-panel .queue-head .close-btn svg{width:20px;height:20px}
 }
+/* #794: queue scroll bar on the left; rows flip back to normal */
+#queue-panel .queue-scroll{direction:rtl}
+#queue-panel .queue-scroll>*{direction:ltr}
+/* #798: slim bar while the queue reloads (radio start, playlist still loading) */
+.q-reload-bar{flex:none;border-radius:0}
+.q-reload-bar[hidden]{display:none}
 .queue-scroll{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}   /* #752: a full-width button's hover grow (#395 scale) must not toggle a sideways scrollbar */
 .queue-body{padding:4px 0 24px}   /* #655: rows run edge to edge so the hover box does too */
 .libpl-addbar{padding:0 12px 8px;flex:none}
@@ -2788,6 +2850,9 @@ body:has(#flow-layer.is-open:not(.is-leaving)) :is(#ambient,#topbar,#view-librar
   opacity:1;pointer-events:auto;transition:opacity 600ms var(--ease-in-out)}
 #flow-layer .flow-viz #vizRotateBtn{position:absolute;right:112px;bottom:calc(16px + var(--safe-b));z-index:6;
   opacity:1;pointer-events:auto;transition:opacity 600ms var(--ease-in-out)}
+#flow-layer .flow-viz #vizRainbowBtn{position:absolute;right:154px;bottom:calc(16px + var(--safe-b));z-index:6;
+  opacity:1;pointer-events:auto;transition:opacity 600ms var(--ease-in-out)}
+#flow-layer.chrome-hidden .flow-viz #vizRainbowBtn,
 #flow-layer.chrome-hidden .flow-viz #vizAutoBtn,
 #flow-layer.chrome-hidden .flow-viz #vizRotateBtn,
 #flow-layer.chrome-hidden .flow-viz #vizSpeedBtn{opacity:0;pointer-events:none}
@@ -2824,12 +2889,17 @@ body:has(#flow-layer.is-open:not(.is-leaving)) :is(#ambient,#topbar,#view-librar
 .fs-timeline{display:none}
 /* #723 desktop fullscreen: an up-next timeline down the right edge (ref: the Dribbble player with the vertical track dots).
    The playing song is labeled and ringed, the next ones are dots that name themselves on hover; a click jumps to it. */
-body.split-desktop.desktop-fs:not(.view-settings-active) .fs-timeline{display:flex;flex-direction:column;gap:22px;position:absolute;right:44px;top:50%;transform:translateY(-50%);z-index:3;align-items:flex-end}
-.fs-timeline::before{content:'';position:absolute;right:7px;top:8px;bottom:8px;width:1px;background:rgba(255,255,255,.35)}
-.fst-item{position:relative;display:flex;align-items:center;gap:12px;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.6);cursor:pointer;background:none;border:0;padding:2px 0}
-.fst-label{max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;opacity:0;transition:opacity var(--dur-ui) var(--ease-out)}
+body.split-desktop.desktop-fs:not(.view-settings-active) .fs-timeline{display:flex;flex-direction:column;position:absolute;right:36px;top:calc(var(--topbar-h) + 12px);bottom:24px;z-index:3;align-items:flex-end}
+/* #804: the line zig-zags through the dots (the svg is drawn by fsTimelineSync) and every other dot steps in, so more songs fit from the top nav to the bottom */
+.fst-line{position:absolute;right:0;top:0;width:32px;height:100%;pointer-events:none;overflow:visible}
+.fst-line path{fill:none;stroke:rgba(255,255,255,.35);stroke-width:1.5;stroke-linejoin:round}
+.fst-item{position:relative;flex:none;height:44px;display:flex;align-items:center;gap:12px;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.6);cursor:pointer;background:none;border:0;padding:2px 0}
+.fst-item:nth-child(even){padding-right:16px}
+.fst-label{display:flex;flex-direction:column;align-items:flex-end;max-width:200px;font-size:13px;line-height:1.25;opacity:.72;transition:opacity var(--dur-ui) var(--ease-out)}
+.fst-label > span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fst-artist{font-size:11px;opacity:.8}
 .fst-item:hover .fst-label,.fst-item:focus-visible .fst-label,.fst-item.is-now .fst-label{opacity:1}
-.fst-item.is-now .fst-label{font-size:16px;font-weight:600}
+.fst-item.is-now .fst-label .fst-title{font-size:16px;font-weight:600}
 .fst-dot{flex:none;width:14px;height:14px;display:flex;align-items:center;justify-content:center}
 .fst-dot::before{content:'';width:6px;height:6px;border-radius:50%;background:#fff}
 .fst-item.is-now .fst-dot::before{width:12px;height:12px;background:transparent;box-shadow:0 0 0 2px #fff,inset 0 0 0 3px var(--accent);border-radius:50%}
@@ -2921,6 +2991,7 @@ body.split-desktop.desktop-fs:not(.view-settings-active) .fs-timeline{display:fl
 .set-title{font-size:26px;font-weight:700;letter-spacing:-.3px;margin:14px 0 4px}
 .set-hub{display:flex;flex-direction:column;margin:12px 0 28px;border:1px solid var(--border);border-radius:var(--r-lg,16px);overflow:hidden;background:var(--panel)}
 .set-hub-row{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;min-height:64px;padding:12px 16px;background:none;border:0;border-top:1px solid var(--border);color:inherit;font:inherit;text-align:left;cursor:pointer}
+.set-hub-row[hidden]{display:none}
 .set-hub-row:first-child{border-top:0}
 .set-hub-row:hover,.set-hub-row:active{background:var(--panel-2,var(--panel-3))}
 .set-hub-row svg{flex:none;color:var(--faint)}
@@ -2930,7 +3001,25 @@ body.split-desktop.desktop-fs:not(.view-settings-active) .fs-timeline{display:fl
 .hub-t{font-size:16px;font-weight:600}
 .hub-s{font-size:13px;color:var(--faint);line-height:1.35}
 #view-settings [data-spage]{display:none}
-#view-settings[data-page="playback"] [data-spage="playback"],#view-settings[data-page="privacy"] [data-spage="privacy"],#view-settings[data-page="app"] [data-spage="app"],#view-settings[data-page="help"] [data-spage="help"],#view-settings[data-page="about"] [data-spage="about"],#view-settings[data-page="customize"] [data-spage="customize"]{display:block}
+#view-settings[data-page="playback"] [data-spage="playback"],#view-settings[data-page="privacy"] [data-spage="privacy"],#view-settings[data-page="app"] [data-spage="app"],#view-settings[data-page="help"] [data-spage="help"],#view-settings[data-page="about"] [data-spage="about"],#view-settings[data-page="customize"] [data-spage="customize"],#view-settings[data-page="plans"] [data-spage="plans"]:not([hidden]){display:block}
+/* plan tester (owner only): static, no animation */
+.pt-seg{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:4px;border:1px solid var(--border-2);border-radius:14px}
+.pt-seg button{padding:10px 4px;border-radius:10px;font-size:14px;font-weight:600;color:var(--faint);min-width:0;overflow:hidden;text-overflow:ellipsis}
+.pt-seg button[aria-pressed="true"]{background:var(--accent);color:#121212}
+.pt-seg button:disabled{opacity:.5}
+.pt-status{margin:12px 2px;font-size:13px;color:var(--faint);min-height:18px}
+.pt-list{list-style:none;margin:0;padding:0}
+.pt-list li{display:flex;gap:12px;align-items:flex-start;padding:11px 0;border-top:1px solid var(--border)}
+.pt-mark{flex:none;width:20px;text-align:center;font-weight:700}
+.pt-list li.on .pt-mark{color:var(--accent)}
+.pt-list li.off{color:var(--faint-2)}
+.pt-list li.off .pt-mark{color:var(--faint-2)}
+.pt-txt{flex:1;min-width:0;font-size:14px;line-height:1.4}
+.pt-txt small{display:block;color:var(--faint);font-size:12px;margin-top:2px}
+.pt-tag{flex:none;font-size:11px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;padding:2px 7px;border-radius:8px;border:1px solid var(--border-2)}
+.pt-live{color:var(--accent)}
+.pt-soon{color:var(--faint)}
+.pt-foot{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;padding-top:12px;border-top:1px solid var(--border);font-size:12px;color:var(--faint)}
 #view-settings:not([data-page=""]) :is(#settingsHub,#accountBlock,#updateCtaBlock){display:none}
 #view-settings:not([data-page=""]) .set-title{margin-bottom:0}
 #settingsPlaybackBlock>h2,#settingsSupportBlock>h2,#settingsAppBlock>h2,#settingsAboutBlock>h2,#settingsPrivacyBlock>h2{display:none}
@@ -3021,6 +3110,10 @@ html.reduce-motion *,html.reduce-motion *::before,html.reduce-motion *::after{an
 .page-artist-ic svg{width:18px;height:18px}
 .page-artist-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-underline-offset:3px}
 .page-artist:hover .page-artist-name{text-decoration:underline}
+.song-info-btn{display:inline-flex;align-items:center;min-height:32px;max-width:100%;margin:2px 6px 2px 0;padding:4px 12px;border:1px solid var(--border);border-radius:999px;background:color-mix(in srgb,var(--accent) 10%,transparent);color:var(--accent);font:inherit;font-size:13px;font-weight:600;cursor:pointer;text-align:left}
+.song-info-btn:hover,.song-info-btn:focus-visible{background:color-mix(in srgb,var(--accent) 22%,transparent)}
+.song-info-btn:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.song-info-btn:active{transform:scale(.97)}
 .song-credits{padding:2px 14px 12px}
 .song-credits .section-label{margin:6px 0 6px}
 .song-credits-line{display:flex;flex-wrap:wrap;gap:2px 10px;padding:7px 0;font-size:13px;border-top:1px solid var(--border);line-height:1.45}
@@ -3170,7 +3263,7 @@ body:has(#danger-scrim.is-open) .tester-banner{display:none}
 .install-banner .ib-close:hover{background:var(--panel-3);color:var(--text)}
 .install-banner .ib-close svg{width:14px;height:14px}
 body{--ib-h:44px}
-body.install-banner-on:not(.onb-active):not(.desktop-fs){--topbar-h:calc(60px + var(--ib-h))}
+body.install-banner-on:not(.onb-active):not(.desktop-fs){--topbar-h:calc(60px + var(--safe-t) + var(--ib-h))}
 body.install-banner-on.split-desktop:not(.onb-active):not(.desktop-fs){--topbar-h:calc(52px + var(--ib-h))}
 body.install-banner-on:not(.onb-active):not(.desktop-fs) #topbar{padding-bottom:var(--ib-h)}
 /* the absolutely-positioned paste/search bar centers in the topbar box; keep it above the banner strip */
@@ -3257,7 +3350,7 @@ body.split-desktop .install-banner{padding-left:24px;padding-right:12px}
 
 /* ---------- responsive layout switches ---------- */
 @media (max-width:859.98px){
-  #topbar{padding:0 18px}
+  #topbar{padding:var(--safe-t) 18px 0}
   #topnav{display:none}
   .view,#import-overlay{bottom:calc(var(--nav-h) + var(--safe-b))}
   .view-scroll{--vs-pad:18px;padding:4px 18px calc(120px + var(--safe-b))}
@@ -3642,15 +3735,38 @@ body.split-desktop .install-banner{padding-left:24px;padding-right:12px}
   body.split-desktop.desktop-fs:not(.view-settings-active) :is(#fsBtn,#desktopFsExitBtn,#castBtn){top:calc(var(--topbar-h) + 10px)}
   /* idle auto-hide (issue #147): same 600ms fade and hidden cursor as
      #flow-layer.chrome-hidden, toggled by the shared armFsIdleTimer() */
-  body.split-desktop.desktop-fs:not(.view-settings-active) :is(#topbar,.visual-tabs,.track-meta,.transport-full,#fsTimeline,#fsBtn,#desktopFsExitBtn,#castBtn,#playerLikeBtn){
+  body.split-desktop.desktop-fs:not(.view-settings-active) :is(#topbar,.visual-tabs,.track-meta,.transport-full,#fsTimeline,#fsBtn,#desktopFsExitBtn,#castBtn,#playerLikeBtn,#playerMoreBtn,#playerDeclineBtn){
     /* background/color kept for #fsBtn's own .art-fs-btn hover transition */
     transition:opacity 600ms var(--ease-in-out),background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out);
   }
-  body.split-desktop.desktop-fs.fs-chrome-hidden:not(.view-settings-active) :is(#topbar,.visual-tabs,.track-meta,.transport-full,#fsTimeline,#fsBtn,#desktopFsExitBtn,#castBtn,#playerLikeBtn){
+  body.split-desktop.desktop-fs.fs-chrome-hidden:not(.view-settings-active) :is(#topbar,.visual-tabs,.track-meta,.transport-full,#fsTimeline,#fsBtn,#desktopFsExitBtn,#castBtn,#playerLikeBtn,#playerMoreBtn,#playerDeclineBtn){
     opacity:0;pointer-events:none;
   }
   body.split-desktop.desktop-fs.fs-chrome-hidden:not(.view-settings-active),
   body.split-desktop.desktop-fs.fs-chrome-hidden:not(.view-settings-active) *{cursor:none}
+  /* #804: the art's corner buttons (X, 3 dots, heart, thumbs-down, fullscreen) flank the
+     player controls instead of sitting on the art's corners: X and 3 dots on the left,
+     heart, thumbs-down and fullscreen on the right, all 32px and vertically centered on
+     the controls row. They are always shown here and fade out with the rest of the UI
+     (the hover-only rule above never fires over the controls, which are not inside the art). */
+  body.split-desktop.desktop-fs:not(.view-settings-active) .artwork-wrap > :is(#desktopFsExitBtn,#playerMoreBtn,#playerLikeBtn,#playerDeclineBtn,#fsBtn){
+    top:auto;bottom:50px;width:32px;height:32px;opacity:1;
+  }
+  body.split-desktop.desktop-fs:not(.view-settings-active) .artwork-wrap > #desktopFsExitBtn{left:auto;right:calc(50% + 208px)}
+  body.split-desktop.desktop-fs:not(.view-settings-active) .artwork-wrap > #playerMoreBtn{left:auto;right:calc(50% + 168px)}
+  body.split-desktop.desktop-fs:not(.view-settings-active) .artwork-wrap > #playerLikeBtn{right:auto;left:calc(50% + 168px)}
+  body.split-desktop.desktop-fs:not(.view-settings-active) .artwork-wrap > #playerDeclineBtn{right:auto;left:calc(50% + 208px)}
+  body.split-desktop.desktop-fs:not(.view-settings-active) .artwork-wrap > #fsBtn{right:auto;left:calc(50% + 208px)}
+  body.split-desktop.desktop-fs:not(.view-settings-active) .artwork-wrap:has(#playerDeclineBtn:not([hidden])) > #fsBtn{left:calc(50% + 248px)}
+  body.split-desktop.desktop-fs.fs-chrome-hidden:not(.view-settings-active) .artwork-wrap > :is(#desktopFsExitBtn,#playerMoreBtn,#playerLikeBtn,#playerDeclineBtn,#fsBtn){
+    opacity:0;pointer-events:none;
+  }
+  /* #804: hover turns the UI color (progress bar, player buttons, top nav) */
+  body.split-desktop.desktop-fs:not(.view-settings-active) :is(.art-fs-btn,.viz-ctl-btn,.ctl-btn,.nav-btn):hover,
+  body.split-desktop.desktop-fs:not(.view-settings-active) :is(.art-fs-btn,.viz-ctl-btn,.ctl-btn,.nav-btn).is-liked:hover{
+    background:var(--accent);color:var(--on-accent,#151107);
+  }
+  body.split-desktop.desktop-fs:not(.view-settings-active) .seek-track:hover :is(.fill,.knob){background:var(--accent)}
   /* drawer overlays: only reachable while deskFsOpen, so it's fine for
      these to reuse the library/queue panes' own fixed positioning rather
      than the grid - they sit above the fixed fullscreen player (z-index 44)
@@ -3750,6 +3866,8 @@ body.split-desktop .install-banner{padding-left:24px;padding-right:12px}
 #splashLogoBtn{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:14px;background:none;border:none;padding:0;cursor:default;-webkit-tap-highlight-color:transparent}
 #splash img{width:min(320px,70vw);height:auto;opacity:0}
 #splash.is-active img{animation:splash-logo-in 1800ms var(--ease-out) 900ms forwards}
+#splash .splash-plan{font-size:16px;font-weight:600;letter-spacing:.12em;line-height:1;text-transform:lowercase;color:rgba(255,255,255,.9);margin-top:-4px}
+#splash .splash-plan[hidden]{display:none}
 #splash .splash-install-label{opacity:0;font-size:13px;letter-spacing:.4px;color:var(--text);background:rgba(255,255,255,.12);padding:9px 20px;border-radius:20px;transition:opacity 600ms var(--ease-out)}
 #splash.is-install #splashLogoBtn{cursor:pointer}
 #splash.is-install .splash-install-label{opacity:1}
@@ -4337,6 +4455,14 @@ body.week-up-on{overflow:hidden}
   #milkLayer:not(.milk-live) .milk-ui{opacity:0}
 }
 #milkLayer.milk-idle{cursor:none}
+/* #768: the light show opens inside the player's art box first (the tabs stay usable); the full layer above is its fullscreen look.
+   No page dimming here, and the heavy controls (brand, close, mood) wait for fullscreen. */
+#milkLayer.milk-inline{position:absolute;inset:0;z-index:4;border-radius:inherit;overflow:hidden}
+#milkLayer.milk-inline .milk-brand,#milkLayer.milk-inline .milk-signal,#milkLayer.milk-inline #milkCloseBtn,#milkLayer.milk-inline #milkMoodBtn,#milkLayer.milk-inline #milkBanBtn,#milkLayer.milk-inline .milk-panel{display:none}
+#milkLayer.milk-inline .milk-top{padding:8px 10px}
+#milkLayer.milk-inline .milk-bar{bottom:8px;gap:6px}
+#milkLayer.milk-inline .milk-btn{width:32px;height:32px}
+#milkLayer.milk-inline .milk-btn svg{width:15px;height:15px}
 #milkCanvas{position:absolute;inset:0;width:100%;height:100%;display:block}
 .milk-ui{position:absolute;inset:0;pointer-events:none;opacity:1;visibility:visible;transition:opacity var(--dur-surface,.25s) var(--ease-in-out,ease-in-out),visibility 0s}
 #milkLayer.milk-idle .milk-ui{opacity:0;visibility:hidden;transition:opacity .4s var(--ease-in-out,ease-in-out),visibility 0s .4s}
@@ -4585,10 +4711,11 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
   <div class="splash-black"></div>
   <button id="splashLogoBtn" type="button" aria-label="Install EBBLESS">
     <img src="brand/assets/wordmark-white.png" alt="EBBLESS">
+    <span class="splash-plan" id="splashPlan" hidden></span>
     <span class="splash-install-label">Add to Home Screen</span>
   </button>
   <div id="splashChoice" class="splash-choice">
-    <button id="splashBringMusic" type="button" class="splash-choice-btn splash-choice-btn-primary splash-bring">Bring your music</button>
+    <button id="splashBringMusic" type="button" class="splash-choice-btn splash-choice-btn-primary splash-bring">Import your music</button>
     <button id="splashPlayTutorial" type="button" class="splash-choice-btn">Tutorial</button>
     <button id="splashSkipTutorial" type="button" class="splash-choice-btn">Enter</button>
   </div>
@@ -4601,6 +4728,7 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
   <header id="topbar">
     <button class="wordmark" id="wordmarkBtn" aria-label="EBBLESS home">
       <img src="brand/assets/mark.png" alt="EBBLESS" draggable="false">
+      <span class="plan-badge" id="planBadge" hidden></span>
       <svg class="wm-hold-ring" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="16" pathLength="100"/></svg>
     </button>
     <form class="import-row" id="importForm">
@@ -4685,7 +4813,7 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
       <div id="libraryEmpty" class="empty-lib hidden">
         <div class="queue-head"><h2>Library</h2></div>
         Paste a playlist, album, song, or podcast link to begin.
-        <div><button class="btn-ghost" id="libBringBtnEmpty" style="margin-top:14px;padding:5px 14px;font-size:12.5px">Bring your music</button></div>
+        <div><button class="btn-ghost" id="libBringBtnEmpty" style="margin-top:14px;padding:5px 14px;font-size:12.5px">Import your music</button></div>
         <div><button class="btn-ghost" id="newPlaylistBtnEmpty" style="margin-top:14px;padding:5px 14px;font-size:12.5px">+ New playlist</button></div>
       </div>
 
@@ -4695,7 +4823,7 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
         <div class="section-label-row">
           <div class="lib-head-actions">
             <button type="button" class="view-toggle-btn lib-sort-btn lib-tb-btn" id="newPlaylistBtn" aria-label="New playlist" title="New playlist"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
-            <button type="button" class="view-toggle-btn lib-sort-btn lib-tb-btn" id="libBringBtn" aria-label="Bring your music" title="Bring your music from Spotify, YouTube Music and more"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 19h14"/></svg></button>
+            <button type="button" class="view-toggle-btn lib-sort-btn lib-tb-btn" id="libBringBtn" aria-label="Import your music" title="Import your music from Spotify, YouTube Music and more"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 19h14"/></svg></button>
             <button type="button" class="view-toggle-btn lib-sort-btn lib-tb-btn" id="uploadSongsBtn" aria-label="Add your songs" title="Add your songs from this device"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5M5 20h14"/></svg></button>
             <button type="button" class="view-toggle-btn lib-sort-btn lib-tb-btn" id="driveSongsBtn" aria-label="Add your songs from Google Drive" title="Add your songs from Google Drive"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 18a4 4 0 0 1-.5-7.97A5.5 5.5 0 0 1 17 8.5 4.5 4.5 0 0 1 17.5 18H7zM12 11v6m-3-3 3 3 3-3"/></svg></button>
             <input type="file" id="uploadFileInput" accept="audio/*,.mp3,.m4a,.aac,.wav,.flac,.ogg,.opus" multiple hidden>
@@ -4833,14 +4961,14 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
             <svg class="art-ico-cassette" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3" y="5.5" width="18" height="13" rx="2"/><circle cx="8.5" cy="11" r="1.9" fill="currentColor" stroke="none"/><circle cx="15.5" cy="11" r="1.9" fill="currentColor" stroke="none"/><path d="M7 18.5l1.5-3h7l1.5 3" stroke-width="1.4"/></svg>
             <span class="v-tab-label">Art</span>
           </button>
-          <button class="v-tab" data-mode="viz" title="Visualizer" aria-label="Show visualizer">
+          <button class="v-tab" data-mode="viz" title="Cymatics" aria-label="Show cymatics">
             <svg class="cym-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="12" cy="12" r="9"/>
               <g class="cym-ph"><circle cx="12" cy="12" r="5.2"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/></g>
               <g class="cym-ph"><path d="M12 4.6Q12 12 19.4 12Q12 12 12 19.4Q12 12 4.6 12Q12 12 12 4.6z"/><circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none"/></g>
               <g class="cym-ph" fill="currentColor" stroke="none"><circle cx="12" cy="6.4" r="1.3"/><circle cx="16.85" cy="9.2" r="1.3"/><circle cx="16.85" cy="14.8" r="1.3"/><circle cx="12" cy="17.6" r="1.3"/><circle cx="7.15" cy="14.8" r="1.3"/><circle cx="7.15" cy="9.2" r="1.3"/><circle cx="12" cy="12" r="2.3" fill="none" stroke="currentColor" stroke-width="1.4"/></g>
             </svg>
-            <span class="v-tab-label">Visualizer</span>
+            <span class="v-tab-label">Cymatics</span>
           </button>
           <button class="v-tab" id="milkTabBtn" title="ENTER fLUX: Generative Visual Universe" aria-label="ENTER fLUX">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c.9 4.6 2.6 6.9 9 9-6.4 2.1-8.1 4.4-9 9-.9-4.6-2.6-6.9-9-9 6.4-2.1 8.1-4.4 9-9z"/><circle cx="18.5" cy="5.5" r="1.3" fill="currentColor" stroke="none"/></svg>
@@ -4852,7 +4980,8 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
           </button>
           <button class="v-tab" id="ytPanelBtn" title="Watch the video" aria-label="Watch the video for this song in the player" aria-pressed="false" disabled aria-disabled="true">
             <svg viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" clip-rule="evenodd" d="M3 7.5A2.5 2.5 0 015.5 5h13A2.5 2.5 0 0121 7.5v9a2.5 2.5 0 01-2.5 2.5h-13A2.5 2.5 0 013 16.5zm7.2 1.3v6.4l5.3-3.2z"/></svg>
-            <span class="v-tab-label">Video</span>
+            <svg class="yt-cin-ico" viewBox="0 0 24 24" fill="currentColor"><path d="M20.5 14.6A8.5 8.5 0 019.4 3.5a8.5 8.5 0 1011.1 11.1z"/></svg>
+            <span class="v-tab-label">Video</span><span class="v-tab-label yt-cin-label">Cinema</span>
           </button>
           <button class="v-tab" id="cinemaBtn" title="Cinema mode: dim the rest of the page" aria-label="Cinema mode: dim everything but the video" aria-pressed="false">
             <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.5 14.6A8.5 8.5 0 019.4 3.5a8.5 8.5 0 1011.1 11.1z"/></svg>
@@ -5178,13 +5307,16 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
           </div>
           <canvas class="viz-canvas" id="vizCanvas"></canvas>
           <div class="viz-controls" id="vizControls">
-            <button type="button" class="viz-ctl-btn" id="vizNextBtn" title="Next pattern" aria-label="Next visualizer pattern">
+            <button type="button" class="viz-ctl-btn" id="vizNextBtn" title="Next pattern" aria-label="Next cymatics pattern">
               <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 5v14l9-7zM15 5v14h2V5z"/></svg>
             </button>
             <button type="button" class="viz-ctl-btn viz-auto-btn" id="vizAutoBtn" title="Hold this pattern" aria-label="Toggle holding the current pattern">∞</button>
-            <button type="button" class="viz-ctl-btn viz-speed-btn" id="vizSpeedBtn" title="Visualizer speed" aria-label="Change visualizer speed">1x</button>
-            <button type="button" class="viz-ctl-btn" id="vizRotateBtn" title="Slowly rotate" aria-label="Toggle slow visualizer rotation" aria-pressed="false">
+            <button type="button" class="viz-ctl-btn viz-speed-btn" id="vizSpeedBtn" title="Cymatics speed" aria-label="Change cymatics speed">1x</button>
+            <button type="button" class="viz-ctl-btn" id="vizRotateBtn" title="Slowly rotate" aria-label="Toggle slow cymatics rotation" aria-pressed="false">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.5-5.8"/><path d="M20 4v5h-5"/></svg>
+            </button>
+            <button type="button" class="viz-ctl-btn" id="vizRainbowBtn" title="Rainbow colors" aria-label="Toggle cymatics rainbow mode" aria-pressed="false">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M3 18a9 9 0 0 1 18 0"/><path d="M7 18a5 5 0 0 1 10 0"/></svg>
             </button>
           </div>
           <div class="lyrics-wrap" id="lyricsWrap"><div class="lyrics-scroller" id="lyricsScroller"></div></div>
@@ -5315,12 +5447,13 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
       <button type="button" class="settings-back" id="settingsBackBtn" aria-label="Back"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>Back</button>
       <h1 class="set-title" id="setTitle">Settings</h1>
       <nav class="set-hub" id="settingsHub" aria-label="Settings sections">
-        <button type="button" class="set-hub-row" id="hubBringMusic"><span class="hub-text"><span class="hub-t">Bring your music</span><span class="hub-s">Sign in to Spotify, YouTube Music and more</span></span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+        <button type="button" class="set-hub-row" id="hubBringMusic"><span class="hub-text"><span class="hub-t">Import your music</span><span class="hub-s">Sign in to Spotify, YouTube Music and more</span></span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
         <button type="button" class="set-hub-row" data-spage-go="playback"><span class="hub-text"><span class="hub-t">Playback</span><span class="hub-s">Blending, volume, ad skipping</span></span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
         <button type="button" class="set-hub-row" data-spage-go="customize"><span class="hub-text"><span class="hub-t">Customize</span><span class="hub-s">Look, library, player, gestures, backup</span></span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
         <button type="button" class="set-hub-row" data-spage-go="privacy"><span class="hub-text"><span class="hub-t">Privacy &amp; data</span><span class="hub-s">Listening profile, terms, clear playlists</span></span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
         <label class="set-hub-row ui-lang-row" id="uiLangRow"><span class="hub-text"><span class="hub-t">Language</span><span class="hub-s">English</span></span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 3.8 5.7 3.8 9s-1.3 6.3-3.8 9c-2.5-2.7-3.8-5.7-3.8-9S9.5 5.7 12 3z"/></svg><select id="uiLangSelect" aria-label="Language"></select></label>
         <button type="button" class="set-hub-row" data-spage-go="app"><span class="hub-text"><span class="hub-t">App</span><span class="hub-s">Install, sounds, voice, shortcuts</span></span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+        <button type="button" class="set-hub-row" data-spage-go="plans" id="hubPlanTester" hidden><span class="hub-text"><span class="hub-t">Plan tester</span><span class="hub-s" id="hubPlanTesterSub">Owner only: switch plans and see what changes</span></span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
         <button type="button" class="set-hub-row" data-spage-go="help"><span class="hub-text"><span class="hub-t">Help &amp; feedback</span><span class="hub-s">Tell us about a bug or an idea</span></span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
         <button type="button" class="set-hub-row" data-spage-go="about"><span class="hub-text"><span class="hub-t">About</span><span class="hub-s">What's new, what EBBLESS is, credits</span></span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
       </nav>
@@ -5344,6 +5477,17 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
             <button class="btn-ghost" id="updateCtaBtn" type="button">Update</button>
           </div>
         </div>
+      </div>
+      <!-- Owner-only plan tester: switches the owner's own plan on the worker (POST /owner/tier), so app and
+           worker limits both shift. Hidden for everyone else; the worker refuses anyone but OWNER_EMAIL. -->
+      <div class="settings-block" id="settingsPlansBlock" data-spage="plans" hidden>
+        <div class="pt-seg" id="ptSeg" role="group" aria-label="Test plan">
+          <button type="button" data-pt="discovery">discover</button><button type="button" data-pt="flow">flowwww</button><button type="button" data-pt="deep">deeeep</button><button type="button" data-pt="horizon">horizonnn</button>
+        </div>
+        <div class="pt-status" id="ptStatus" role="status" aria-live="polite"></div>
+        <ul class="pt-list" id="ptList"></ul>
+        <div class="pt-foot"><span class="pt-key"><b class="pt-live">Live</b> changes the moment you switch. <b class="pt-soon">Coming</b> is not built yet.</span>
+          <button type="button" class="btn-ghost" id="ptReal" hidden>Back to my real plan</button></div>
       </div>
       <div class="settings-block" id="settingsSupportBlock" data-spage="help">
         <h2>Feedback &amp; support</h2>
@@ -5474,6 +5618,20 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
           </div>
           <button class="btn-ghost" id="shareAppBtn">Share</button>
         </div>
+        <div class="settings-row" id="linkRow" hidden>
+          <div>
+            <div class="label">Open music links in EBBLESS</div>
+            <div class="desc" id="linkDesc" role="status" aria-live="polite"></div>
+          </div>
+          <button class="btn-ghost" id="linkBtn" type="button">Turn on</button>
+        </div>
+        <div class="settings-row" id="linkSpotifyRow" hidden>
+          <div>
+            <div class="label">Spotify links</div>
+            <div class="desc">Spotify's app holds its own links. This walks you through handing them to EBBLESS.</div>
+          </div>
+          <button class="btn-ghost" id="linkSpotifyBtn" type="button">Set up</button>
+        </div>
         <div class="settings-row">
           <div>
             <div class="label">Replay tutorial</div>
@@ -5513,7 +5671,7 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
           <li><span><kbd>&larr;</kbd> <kbd>&rarr;</kbd></span>With the video open: back / forward 5s</li>
           <li><span><kbd>Shift</kbd>+<kbd>&larr;</kbd> <kbd>&rarr;</kbd></span>With the video open: restart the song / next song</li>
           <li><span><kbd>0</kbd> or <kbd>Home</kbd></span>With the video open: back to the start</li>
-          <li><span><kbd>H</kbd></span>Home: back to the player</li>
+          <li><span><kbd>H</kbd></span>Home (again: back to the player)</li>
           <li><span><kbd>P</kbd> or <kbd>L</kbd></span>Library</li>
           <li><span><kbd>Shift</kbd>+<kbd>L</kbd></span>Paste a link</li>
           <li><span><kbd>Q</kbd></span>Queue</li>
@@ -5525,7 +5683,7 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
           <li><span><kbd>3</kbd></span>fLUX (inside it: <kbd>&uarr;</kbd> <kbd>&darr;</kbd> change the look, other keys work as usual)</li>
           <li><span><kbd>4</kbd></span>Lyrics</li>
           <li><span><kbd>5</kbd></span>Video</li>
-          <li><span><kbd>T</kbd></span>With the video showing: cinema mode (dim the rest)</li>
+          <li><span><kbd>T</kbd></span>With the video showing: cinema mode (dim the rest; the Video button does the same)</li>
           <li><span><kbd>I</kbd></span>Cymatics: hold pattern on / off</li>
           <li><span><kbd>K</kbd></span>Shuffle</li>
           <li><span><kbd>O</kbd></span>Repeat</li>
@@ -5943,6 +6101,7 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
       </div>
     </div>
     <div class="radio-steer" id="radioSteerRow" aria-label="Steer the radio" hidden></div>
+    <div class="flow-line indeterminate q-reload-bar" id="queueReloadBar" role="progressbar" aria-label="Reloading the queue" hidden><div class="fill"></div></div>
     <div class="queue-scroll">
       <div class="queue-body" id="queueBody">
       <div class="q-arrows" id="queueArrowsRow">
@@ -7231,6 +7390,7 @@ async function resolveTrackArt(sourceKind, title, artist, nativeArt){
 const LS_LIB = 'ebbless:library';           // array of playlist ids, most recent first
 const LS_PINNED = 'ebbless:pinned';          // array of pinned playlist ids, most recently pinned first
 const LS_LASTPLAYED = (id) => 'ebbless:lastplayed:' + id;  // ms timestamp a playlist last started playing
+const LS_LASTEDITED = (id) => 'ebbless:lastedited:' + id;  // #765: ms timestamp songs were last added to / removed from a playlist, or it was renamed
 const LS_LASTOPENED = (id) => 'ebbless:lastopened:' + id;  // ms timestamp a playlist's tracklist panel was last opened
 const LS_PL = (id) => 'ebbless:playlist:' + id;  // resolved playlist cache
 /* Advanced settings (phase 1): per-device prefs that have no older home.
@@ -7308,6 +7468,7 @@ const LS_CROSSFADE = 'ebbless:crossfade';
 const LS_VIZ = 'ebbless:visualizer';
 const LS_VIZ_HOLD = 'ebbless:vizHold';     // true = stay within the current pattern family
 const LS_VIZ_SPEED = 'ebbless:vizSpeed';
+const LS_VIZ_RAINBOW = 'ebbless:vizRainbow'; // true = cymatics sand cycles through the rainbow (#773)
 const LS_VIZ_ROTATE = 'ebbless:vizRotate'; // true = slowly rotate the visualizer
 const LS_LIB_VIEW = 'ebbless:libraryView';   // 'grid' | 'list'
 const LS_LIB_SORT = 'ebbless:librarySort';   // 'custom' | 'alpha' | 'plays_desc' | 'tracks_desc'
@@ -7420,7 +7581,7 @@ const LS_SYNC_META = 'ebbless:syncMeta'; // { k: { lsKey: at }, lib/pin: { id: {
 // Durable preferences worth following a person between devices. String
 // literals, not the LS_* constants, where the constant is declared further
 // down the file (lsSet can run before those lines have).
-const PROFILE_SETTING_KEYS = [LS_CROSSFADE, LS_LEVEL, LS_VIZ, LS_VIZ_HOLD, LS_VIZ_SPEED, LS_VIZ_ROTATE, 'ebbless:artstyle', LS_LIB_VIEW, LS_LIB_SORT, LS_LIB_FILTER, 'ebbless:likeStreak', 'ebbless:declined', 'ebbless:playLog', 'ebbless:personalize', LS_BUBBLE];
+const PROFILE_SETTING_KEYS = [LS_CROSSFADE, LS_LEVEL, LS_VIZ, LS_VIZ_HOLD, LS_VIZ_SPEED, LS_VIZ_ROTATE, LS_VIZ_RAINBOW, 'ebbless:artstyle', LS_LIB_VIEW, LS_LIB_SORT, LS_LIB_FILTER, 'ebbless:likeStreak', 'ebbless:declined', 'ebbless:playLog', 'ebbless:personalize', LS_BUBBLE];
 const LS_PLAY_LOG = 'ebbless:playLog';   // see PLAY LOG
 const PROFILE_SETTING_PREFIXES = ['ebbless:discover:'];   // per-playlist, only for ids in the library
 const PROFILE_PUSH_DEBOUNCE_MS = 20000;  // bursts of edits (a playlist resolving) become one push - KV's free tier caps daily writes
@@ -8058,14 +8219,196 @@ async function mintSession(credential, sub){
     if (profileIdToken === credential){ profileIdToken = d.session; profileTokenExp = 0; }
   } catch(e){}
 }
+/* ---------- TIER ----------
+   discovery (basic) < flow < deep < horizon. state.tier is what the
+   worker says for the signed-in account (POST /entitlement, which also re-checks
+   a connected Patreon pledge at most once a day). Fetched once per sign-in and
+   cached on the device so a cold start is not blocked; unknown, offline or
+   signed out means ebbless. The cache is a convenience only: the worker
+   decides what is actually allowed. Raw localStorage, never synced. */
+const LS_TIER = 'ebbless:tier';   // { t: tier, sub }
+const TIER_RANK = { discovery: 0, flow: 1, deep: 2, horizon: 3 };
+function lsDelRaw(k){ try { localStorage.removeItem(k); } catch(e){} }
+// The plan's name under the E logo and on the splash, for a signed-in account only.
+function renderPlanBadge(){
+  const name = profileIdToken ? PLAN_NAMES[state.tier] : '';
+  const b = document.getElementById('planBadge');
+  if (b){ b.textContent = name || ''; b.hidden = !name; b.title = name ? 'Your plan: ' + name : ''; }
+  const sp = document.getElementById('splashPlan');   // the same name on the splash, under the wordmark
+  if (sp){ sp.textContent = name || ''; sp.hidden = !name; }
+  if (!profileIdToken) tierOwner = tierTesting = false;
+  renderPlanTester();
+}
+function hasTier(min){
+  const need = TIER_RANK[min];
+  return need !== undefined && (TIER_RANK[state.tier] || 0) >= need;
+}
+/* ---------- PLAN TESTER (owner only, Settings > Plan tester) ----------
+   One list of what each plan gets. `min` is the lowest plan that has it; `live` means the app or worker
+   already gates it, so switching changes it at once. Keep this list in step with hasTier() calls and the
+   worker's tier checks (voice.js VOICE_CAPS). Owner flags come from POST /entitlement. */
+let tierOwner = false, tierTesting = false, ptBusy = false;
+const PLAN_FEATURES = [
+  { min: 'discovery', live: true, t: 'Every playlist, import, Discover, lyrics and the light show', s: 'The whole player, free' },
+  { min: 'discovery', live: true, t: 'Voice: 7 smart requests a day', s: 'Simple commands are always unlimited', only: 'discovery' },
+  { min: 'flow', live: true, t: 'Voice: 100 smart requests a day', s: 'Checked by the server on every request' },
+  { min: 'flow', live: false, t: 'fLUX without the daily limit', s: 'discover gets a 7-minute taste a day' },
+  { min: 'flow', live: false, t: 'fLUX Flow look: cover-color tint, title cards, curated moods', s: 'In progress (fLUX lane)' },
+  { min: 'deep', live: false, t: 'Offline queue: your next 10 songs held close', s: 'Keeps playing when the signal drops (docs/DOWNLOADS-PLAN.md)' },
+  { min: 'horizon', live: false, t: 'Keep any song on this device, with a storage slider', s: 'Default 2 GB' },
+  { min: 'horizon', live: false, t: 'Video layer and song info kept with each song', s: 'Picture, artist, album, credits' },
+  { min: 'horizon', live: false, t: 'fLUX interactive: ripples, ghost artwork, poster capture, film pass', s: 'Planned' },
+];
+function renderPlanTester(){
+  const hub = document.getElementById('hubPlanTester'), block = document.getElementById('settingsPlansBlock');
+  if (!hub || !block) return;
+  const on = !!(tierOwner && profileIdToken);
+  hub.hidden = !on; block.hidden = !on;
+  if (!on){ const v = document.getElementById('view-settings'); if (v && v.dataset.page === 'plans') settingsShowPage(''); return; }
+  const cur = TIER_RANK[state.tier] !== undefined ? state.tier : 'discovery';
+  const sub = document.getElementById('hubPlanTesterSub');
+  if (sub) sub.textContent = 'Now on ' + PLAN_NAMES[cur] + (tierTesting ? ' (test)' : '') + '. Switch plans and see what changes.';
+  block.querySelectorAll('[data-pt]').forEach(b => { b.setAttribute('aria-pressed', String(b.dataset.pt === cur)); b.disabled = ptBusy; });
+  const list = document.getElementById('ptList');
+  list.textContent = '';
+  PLAN_FEATURES.forEach(f => {
+    const has = f.only ? cur === f.only : (TIER_RANK[cur] || 0) >= TIER_RANK[f.min];
+    if (f.only && !has) return;   // a limit that only applies to one plan
+    const li = document.createElement('li');
+    li.className = has ? 'on' : 'off';
+    const mark = document.createElement('span'); mark.className = 'pt-mark'; mark.textContent = has ? '\u2713' : '\u2715'; mark.setAttribute('aria-label', has ? 'included' : 'not included');
+    const txt = document.createElement('span'); txt.className = 'pt-txt'; txt.textContent = f.t;
+    const sm = document.createElement('small'); sm.textContent = has ? f.s : 'Needs ' + PLAN_NAMES[f.min]; txt.appendChild(sm);
+    const tag = document.createElement('span'); tag.className = 'pt-tag ' + (f.live ? 'pt-live' : 'pt-soon'); tag.textContent = f.live ? 'Live' : 'Coming';
+    li.append(mark, txt, tag); list.appendChild(li);
+  });
+  const st = document.getElementById('ptStatus');
+  if (st && !ptBusy) st.textContent = tierTesting ? 'Testing ' + PLAN_NAMES[cur] + '. Your real plan comes back with the button below.' : 'This is your real plan. Pick another to try it.';
+  document.getElementById('ptReal').hidden = !tierTesting;
+}
+async function ptSwitch(tier){
+  if (ptBusy || !profileIdToken || !tierOwner) return;
+  ptBusy = true;
+  const st = document.getElementById('ptStatus');
+  if (st) st.textContent = 'Switching...';
+  renderPlanTester();
+  try {
+    const res = await fetch(BACKEND + '/owner/tier', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idToken: profileIdToken, tier }) });
+    const d = res.ok ? await res.json() : null;
+    if (!d || TIER_RANK[d.tier] === undefined) throw new Error('refused');
+    state.tier = d.tier; tierTesting = d.testing === true;
+    const s = sessionLoad();
+    if (s && s.sub) try { localStorage.setItem(LS_TIER, JSON.stringify({ t: d.tier, sub: s.sub })); } catch(e){}
+    ptBusy = false;
+    renderPlanBadge();
+    showToast((tierTesting ? 'Now testing ' : 'Back on your real plan: ') + PLAN_NAMES[d.tier] + '.');
+  } catch(e){
+    ptBusy = false; renderPlanTester();
+    if (st) st.textContent = "Couldn't switch. Check you're signed in, then try again.";
+  }
+}
+document.getElementById('ptSeg')?.addEventListener('click', (e) => { const b = e.target.closest('[data-pt]'); if (b && b.getAttribute('aria-pressed') !== 'true') ptSwitch(b.dataset.pt); });
+document.getElementById('ptReal')?.addEventListener('click', () => ptSwitch('real'));
+/* Links from the Patreon thank-you note and the thank-you emails:
+   ?activate=patreon connects the pledge, ?redeem=CODE redeems a code, and
+   ?patreon=ok|taken|error is Patreon sending the person back. Read once on
+   load, stripped from the address bar, and acted on as soon as they are signed
+   in. Not offered in the Android app (R8: no purchase UI until the Play Billing
+   vs Patreon decision). */
+const IS_ANDROID_APP = /EBBLESS-Android/.test(navigator.userAgent);
+let pendingTierAction = null;
+(function(){
+  try {
+    const q = new URLSearchParams(location.search), a = q.get('activate'), c = q.get('redeem'), r = q.get('patreon');
+    if (a === 'patreon' && !IS_ANDROID_APP) pendingTierAction = { kind: 'connect' };
+    else if (c && /^[A-Za-z0-9-]{8,24}$/.test(c) && !IS_ANDROID_APP) pendingTierAction = { kind: 'redeem', code: c };
+    else if (r === 'ok' || r === 'taken' || r === 'error') pendingTierAction = { kind: 'result', r };
+    if (a || c || r){
+      ['activate', 'redeem', 'patreon'].forEach(k => q.delete(k));
+      history.replaceState(null, '', location.pathname + (q.toString() ? '?' + q : '') + location.hash);
+    }
+  } catch(e){}
+})();
+async function runPendingTierAction(){
+  const p = pendingTierAction; if (!p) return;
+  pendingTierAction = null;
+  if (p.kind === 'result'){
+    showToast(p.r === 'ok' ? 'Patreon connected. Your plan is updated.' : p.r === 'taken' ? 'That Patreon account is already connected to another EBBLESS account.' : "Couldn't connect Patreon. Try again in a moment.");
+  } else if (p.kind === 'connect'){ await patreonConnect(); }
+  else if (p.kind === 'redeem'){
+    const t = await redeemCode(p.code);
+    showToast(t ? 'Code accepted. Your plan is ' + (PLAN_NAMES[t] || t) + '.' : "That code didn't work. It may be used or expired.");
+  }
+}
+/* Welcome video: once per plan, the first time this device sees that plan for
+   the signed-in account (after activating, or after an upgrade). Links to the
+   unlisted videos on the EBBLESS YouTube channel; an empty link means no card for
+   that plan. Shown as a toast with a Watch button, opened in a new tab. Not tied to
+   any purchase, so it also shows in the Android app. */
+const WELCOME_VIDEOS = { discovery: 'https://youtu.be/67-j1W6QPnE', flow: 'https://youtu.be/ka8ncF4saiU', deep: 'https://youtu.be/lAakr4MRV28', horizon: 'https://youtu.be/s028t5i117Y' };
+const PLAN_NAMES = { discovery: 'discover', flow: 'flowwww', deep: 'deeeep', horizon: 'horizonnn' };   // what Patreon and the videos call them
+const LS_WELCOME = 'ebbless:welcomeVideo';   // { sub, t: last plan shown }
+function maybeWelcomeVideo(tier, sub){
+  const url = WELCOME_VIDEOS[tier];
+  if (!url || url.indexOf('https://') !== 0 || !sub) return;
+  let seen = null;
+  try { seen = JSON.parse(localStorage.getItem(LS_WELCOME) || 'null'); } catch(e){}
+  if (seen && seen.sub === sub && seen.t === tier) return;
+  try { localStorage.setItem(LS_WELCOME, JSON.stringify({ sub, t: tier })); } catch(e){ return; }
+  showToast('Welcome to ' + (PLAN_NAMES[tier] || tier) + '. A quick hello from MAL GRIOT.', { label: 'Watch', run: () => { window.open(url, '_blank', 'noopener'); } }, 'welcome-video');
+}
+async function refreshTier(){
+  if (!profileIdToken){ state.tier = 'discovery'; renderPlanBadge(); return; }
+  const sess = sessionLoad();
+  try { const c = JSON.parse(localStorage.getItem(LS_TIER) || 'null'); if (c && TIER_RANK[c.t] !== undefined && c.sub && sess && sess.sub === c.sub) state.tier = c.t; } catch(e){}
+  renderPlanBadge();
+  try {
+    const res = await fetch(BACKEND + '/entitlement', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idToken: profileIdToken }) });
+    if (!res.ok) return;
+    const d = await res.json();
+    if (!d || TIER_RANK[d.tier] === undefined) return;
+    tierOwner = d.owner === true; tierTesting = d.testing === true;
+    state.tier = d.tier; renderPlanBadge();
+    const s = sessionLoad();
+    if (s && s.sub) try { localStorage.setItem(LS_TIER, JSON.stringify({ t: d.tier, sub: s.sub })); } catch(e){}
+    if (s && s.sub) maybeWelcomeVideo(d.tier, s.sub);
+  } catch(e){ return; }
+  runPendingTierAction();
+}
+// Starts the Patreon connection for the signed-in account (the worker returns
+// Patreon's authorize URL). No button yet and none for the native Android app
+// until the Play Billing vs Patreon decision (docs/ANDROID-NATIVE-AUDIT.md, R8).
+async function patreonConnect(){
+  if (!profileIdToken) return false;
+  try {
+    const res = await fetch(BACKEND + '/patreon/connect', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idToken: profileIdToken }) });
+    const d = res.ok ? await res.json() : null;
+    if (d && typeof d.url === 'string' && d.url.indexOf('https://www.patreon.com/') === 0){ window.location.href = d.url; return true; }
+  } catch(e){}
+  showToast("Couldn't reach Patreon. Try again in a moment.");
+  return false;
+}
+// Redeem a flow/horizon code (owner-minted, handed out through Patreon or directly).
+// Returns the new tier name, or '' when the code did not work. No input field yet.
+async function redeemCode(code){
+  if (!profileIdToken) return '';
+  try {
+    const res = await fetch(BACKEND + '/redeem', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idToken: profileIdToken, code: String(code || '').slice(0, 40) }) });
+    if (!res.ok) return '';
+    await refreshTier();
+    return state.tier;
+  } catch(e){ return ''; }
+}
 // On load: a remembered session signs the person back in with no Google involved.
 function restoreSession(){
   if (lsGet(LS_PROFILE_SIGNED_OUT, false) === true){ sessionDrop(); return; }
   const s = sessionLoad();
+  if (!s && pendingTierAction && pendingTierAction.kind !== 'result') showToast('Sign in to finish activating your plan.');
   if (!s || profileIdToken) return;
   profileIdToken = s.t; profileTokenExp = 0;
   renderAccountRow();
   npSchedulePublish(2000);   // music already playing when the session comes back: go on air (#500)
+  refreshTier();
   syncProfileNow({ force: true });
   const gate = window.ebblessBetaGate;
   if (gate && s.sub && gate.hasToken && !gate.hasToken()) betaAccountLink(s.t, s.sub);
@@ -8075,6 +8418,7 @@ function restoreSession(){
 function sessionRejected(){
   if (!isOurSession(profileIdToken)) return false;
   sessionDrop(); profileIdToken = null; profileTokenExp = 0; profileSyncStatus = '';
+  state.tier = 'discovery'; renderPlanBadge();
   renderAccountRow();
   silentReSignIn();
   return true;
@@ -8108,6 +8452,7 @@ function handleGoogleCredential(response){
   lsDel(LS_PROFILE_SIGNED_OUT);
   profileSyncStatus = '';
   npSchedulePublish(2000);   // signed in mid-song: go on air (#500)
+  refreshTier();
   syncProfileNow({ force: true, announce: true });
   betaAccountLink(response.credential, sub);
   mintSession(response.credential, sub);
@@ -8221,6 +8566,7 @@ function signOutProfile(){
   const sess = sessionRaw(); sessionDrop();
   if (sess && isOurSession(sess.t)) fetch(BACKEND + '/auth/signout', { method: 'POST', keepalive: true, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ session: sess.t }) }).catch(() => {});
   profileIdToken = null; profileTokenExp = 0; profileSyncStatus = '';
+  state.tier = 'discovery'; lsDelRaw(LS_TIER); renderPlanBadge();
   try { if (window.google && google.accounts && google.accounts.id) google.accounts.id.disableAutoSelect(); } catch(e){}
   lsDel(LS_PROFILE_EMAIL);
   lsDel(LS_PROFILE_SYNCED_AT);
@@ -8751,7 +9097,10 @@ function sortLibraryIds(ids, mode){
   const withPl = ids.map(id => ({ id, pl: getCachedPlaylist(id) })).filter(x => x.pl);
   if (mode === 'recent'){
     // #607: most recently played first; never-played keep their order (stable sort)
-    withPl.sort((a, b) => (getLastPlayed(b.id) || 0) - (getLastPlayed(a.id) || 0));
+    // #765: an edit counts like a play, and the playlist playing right now sits above all of them
+    const nowId = state.playlist && state.playlist.id;
+    const stamp = (id) => id === nowId ? Infinity : Math.max(getLastPlayed(id) || 0, lsGet(LS_LASTEDITED(id), 0) || 0);
+    withPl.sort((a, b) => { const x = stamp(a.id), y = stamp(b.id); return x === y ? 0 : (y > x ? 1 : -1); });
   } else if (mode === 'alpha'){
     withPl.sort((a, b) => a.pl.name.localeCompare(b.pl.name, undefined, { sensitivity: 'base' }));
   } else if (mode === 'plays_desc'){
@@ -8779,6 +9128,7 @@ function orderedLibraryIds(){
 
 function recordLastPlayed(plId){ if (plId && plId !== UNLIKED_ID) lsSet(LS_LASTPLAYED(plId), Date.now()); }
 function getLastPlayed(id){ return lsGet(LS_LASTPLAYED(id), null); }
+function recordLastEdited(plId){ if (plId && plId !== UNLIKED_ID) lsSet(LS_LASTEDITED(plId), Date.now()); }
 function recordLastOpened(plId){ if (plId) lsSet(LS_LASTOPENED(plId), Date.now()); }
 function getLastOpened(id){ return lsGet(LS_LASTOPENED(id), null); }
 function formatLastPlayed(ts){
@@ -8819,19 +9169,36 @@ const RESOLVE_LOGIC_VERSION = 8;
 // #550: the cache is overwritten mid-resolve by in-progress snapshots, so the
 // hand-added songs are captured once when a resolve starts (manualCarry) and
 // every payload written during it carries them.
+// #767: also kept: (a) songs added while a resolve is running (read from the
+// cache too, not only the start-of-resolve capture), (b) hand-added songs
+// that never matched a video, and (c) a hand-added song the source now also
+// lists: that row stays marked as added, so the source dropping it later
+// doesn't take the user's song with it. No duplicates either way.
 const manualCarry = new Map();
+function manualNameKey(t){ return '?' + String(t.title || '').trim().toLowerCase() + '|' + String(t.artist || '').trim().toLowerCase(); }
 function withManualTracks(playlistId, resolvedTracks){
   const old = getCachedPlaylist(playlistId);
-  const carried = manualCarry.get(playlistId) || (old ? old.tracks.filter(t => t.manual && t.videoId) : []);
+  // a song is the same song by video or by title + artist
+  const keys = (t) => [t.videoId, manualNameKey(t)].filter(k => k && k !== '?|');
+  const seen = new Set(), carried = [];
+  (old ? old.tracks.filter(t => t && t.manual) : []).concat((manualCarry.get(playlistId) || []).filter(t => keys(t).length)).forEach(t => {
+    if (keys(t).some(k => seen.has(k))) return;
+    keys(t).forEach(k => seen.add(k));
+    carried.push(t);
+  });
   if (!carried.length) return resolvedTracks;
-  const known = new Set(resolvedTracks.filter(t => t.videoId).map(t => t.videoId));
-  const manual = carried.filter(t => !known.has(t.videoId));
-  return manual.length ? resolvedTracks.concat(manual) : resolvedTracks;
+  const hit = new Set();
+  const out = resolvedTracks.map(t => {
+    if (!t || !keys(t).some(k => seen.has(k))) return t;
+    keys(t).forEach(k => hit.add(k));
+    return t.manual ? t : Object.assign({}, t, { manual: true });
+  });
+  return out.concat(carried.filter(t => !keys(t).some(k => hit.has(k))));
 }
 async function resolvePlaylist(playlistId, type, onProgress, onFirstTrack){
   const old = getCachedPlaylist(playlistId);
   const had = manualCarry.has(playlistId);
-  if (!had) manualCarry.set(playlistId, old ? old.tracks.filter(t => t.manual && t.videoId) : []);
+  if (!had) manualCarry.set(playlistId, old ? old.tracks.filter(t => t && t.manual) : []);
   try { return await resolvePlaylistInner(playlistId, type, onProgress, onFirstTrack); }
   finally { if (!had) manualCarry.delete(playlistId); }
 }
@@ -9047,6 +9414,7 @@ async function resolvePlaylistInner(playlistId, type, onProgress, onFirstTrack){
   let firstTrackFired = false;
   for (let i = 0; i < tracks.length; i++){
     const t = tracks[i];
+    if (i > 0) onProgress({ stage: 'matching', done: i, total: tracks.length, track: t }); // #797: the footer names the song being matched now
     // SoundCloud-sourced tracks play natively (see soundcloud-native-
     // playback) - build the match straight off t.scId instead of asking
     // searchYouTubeCached() to find a YouTube stand-in for it.
@@ -9278,6 +9646,7 @@ const bgResolveProgress = new Map();
    STATE
    ========================================================================= */
 const state = {
+  tier: 'discovery',     // discovery | flow | deep | horizon, see TIER; use hasTier('flow')
   playlist: null,       // { id, name, tracks, ts } — the playlist currently being viewed/browsed
   queue: [],             // array of { plId, idx } pairs, effective play order (can span playlists)
   queuePos: -1,          // pointer into queue
@@ -9347,6 +9716,16 @@ function thumbArtUrl(url){
   if (/^https:\/\/(img\.youtube\.com|i\.ytimg\.com)\/vi\//.test(url)) return url.replace(/\/(maxresdefault|sddefault)\.jpg$/, '/hqdefault.jpg');
   return url;
 }
+// #727: small icons (library rows, queue rows, mini bar) only need a ~64px
+// image, so they ask for each source's smallest variant first. The sized
+// chain falls back to the thumbnail and then the full cover if it is missing.
+function iconArtUrl(url){
+  if (typeof url !== 'string') return url;
+  if (/^https:\/\/(i\.scdn\.co|image-cdn-[a-z]+\.spotifycdn\.com)\/image\/ab67616d0000(b273|1e02)/.test(url)) return url.replace(/ab67616d0000(b273|1e02)/, 'ab67616d00004851');
+  if (/^https:\/\/[a-z0-9.-]*mzstatic\.com\//.test(url)) return url.replace(/\/(\d{2,4})x(\d{2,4})(bb|cc)?\.(jpg|jpeg|png|webp)$/i, (m, w, h, suf, ext) => '/100x100' + (suf || 'bb') + '.' + ext);
+  if (/^https:\/\/[a-z0-9.-]*sndcdn\.com\//.test(url)) return url.replace(/-(t500x500|t300x300|original|large)\./, '-t67x67.');
+  return thumbArtUrl(url);
+}
 function attachCardArt(img, track){
   img.decoding = 'async';
   attachArtworkFallback(img, track, true);
@@ -9382,7 +9761,8 @@ const YT_PLACEHOLDER_SIZE = { w: 120, h: 90 };
 function attachArtworkFallback(img, track, thumb){
   let chain = artworkUrls(track);
   // thumbnails first, the full-size chain behind them if a variant is missing
-  if (thumb) chain = Array.from(new Set(chain.map(thumbArtUrl).concat(chain)));
+  if (thumb === 'icon') chain = Array.from(new Set(chain.map(iconArtUrl).concat(chain.map(thumbArtUrl), chain)));
+  else if (thumb) chain = Array.from(new Set(chain.map(thumbArtUrl).concat(chain)));
   if (!chain.length){ img.removeAttribute('src'); return; }
   let i = 0;
   img.onerror = function(){ i++; if (i < chain.length) img.src = chain[i]; else img.onerror = null; };
@@ -9470,13 +9850,17 @@ const libSearchBox = $('libSearchBox'), libSearchToggle = $('libSearchToggle');
 const libSearchTracks = $('libSearchTracks'), libSearchTracksList = $('libSearchTracksList');
 const importOverlay = $('import-overlay'), importStage = $('importStage');
 const trackTitle = $('trackTitle'), trackArtist = $('trackArtist');
-$('emptyFindBtn').addEventListener('click', () => openFindMusic());
+// #761: with no songs of your own yet, Find music lands on Home, where import and genres sit together
+$('emptyFindBtn').addEventListener('click', () => {
+  const mine = getLibrary().filter(id => ![SWELL_ID, BLEND_ID, NP_ID, LIKED_ID].includes(id));
+  if (mine.length) openFindMusic(); else { leaveFullscreen(true); setView('home'); }
+});
 $('emptyVibeBtn').addEventListener('click', () => openHomeVibe());
 $('browseBtn').addEventListener('click', () => openFindMusic());
 $('hubBringMusic').addEventListener('click', () => openBring());
 $('libBringBtn').addEventListener('click', () => openBring());
 $('libBringBtnEmpty').addEventListener('click', () => openBring());
-// Splash "Bring your music": enter exactly like Enter (every splash path
+// Splash "Import your music": enter exactly like Enter (every splash path
 // already handles that button), then open the service list on top.
 document.addEventListener('click', (e) => {
   if (!e.target.closest || !e.target.closest('#splashBringMusic')) return;
@@ -9661,7 +10045,7 @@ function fmRender(){
     body += '<div class="fm-grid">' + Object.keys(src).map(k => fmTile('pick', k, src[k], ' data-t="' + escapeHtml(k) + '"')).join('') + '</div>';
   }
   sc.innerHTML =
-    '<button type="button" class="fm-load" data-fm="bring">Bring your music from another app</button>' +
+    '<button type="button" class="fm-load" data-fm="bring">Import your music from another app</button>' +
     '<div class="fm-tabs" role="tablist">' + [['genres', 'Genres'], ['region', 'Region'], ['vibe', 'Vibe']].map(([k, l]) =>
       '<button type="button" role="tab" class="fm-tab' + (fmTab === k ? ' is-active' : '') + '" aria-selected="' + (fmTab === k) + '" data-fm="tab" data-v="' + k + '">' + l + '</button>').join('') + '</div>' + body;
 }
@@ -9749,8 +10133,8 @@ function bringBuild(){
   bringEl.id = 'bringMusic';
   bringEl.hidden = true;
   bringEl.setAttribute('role', 'dialog');
-  bringEl.setAttribute('aria-label', 'Bring your music');
-  bringEl.innerHTML = '<div class="fm-head"><button type="button" class="fm-back" id="bmBack" aria-label="Back"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20z"/></svg></button><div class="fm-title" id="bmTitle">Bring your music</div></div><div class="bm-scroll" id="bmScroll"></div>';
+  bringEl.setAttribute('aria-label', 'Import your music');
+  bringEl.innerHTML = '<div class="fm-head"><button type="button" class="fm-back" id="bmBack" aria-label="Back"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20z"/></svg></button><div class="fm-title" id="bmTitle">Import your music</div></div><div class="bm-scroll" id="bmScroll"></div>';
   document.body.appendChild(bringEl);
   $('bmBack').addEventListener('click', () => { if (bringView !== 'home'){ bringView = 'home'; bringRender(); } else closeBring(); });
   bringEl.addEventListener('click', (e) => {
@@ -9819,7 +10203,7 @@ function bringRender(){
       '</div><div class="bm-note">Last.fm counts plays from the moment you connect, so your list fills up as you listen. Your loved songs and most played songs come over.</div>';
     return;
   }
-  $('bmTitle').textContent = 'Bring your music';
+  $('bmTitle').textContent = 'Import your music';
   const muted = !!bringStoreGet('ebbless:bringMute');
   sc.innerHTML = '<div class="bm-lead">Pick where your music lives now. EBBLESS brings your playlists and loved songs over, then finds every song to play.</div>' +
     '<div class="bm-h">Bring it over now</div><div class="bm-grid">' + bringSignin().map(n => bringTile(n, n === 'Spotify' ? 'Paste your playlists' : 'Sign in')).join('') + '</div>' +
@@ -10031,7 +10415,7 @@ function spotifyLibraryImport(entries){
 
 // Periodic nudge: only while nothing has been brought over, at most every 3 days,
 // never in a visitor's first day (the splash already offers it), and "Don't ask
-// again" silences it for good (Bring your music page offers to turn it back on).
+// again" silences it for good (Import your music page offers to turn it back on).
 let bringNudgeEl = null;
 function hideBringNudge(){ if (bringNudgeEl){ bringNudgeEl.classList.remove('is-open'); const el = bringNudgeEl; setTimeout(() => { el.hidden = true; }, 350); } }
 function bringNudgeBuild(kind){
@@ -10050,10 +10434,10 @@ function bringNudgeBuild(kind){
     });
   }
   bringNudgeEl.dataset.kind = kind;
-  bringNudgeEl.setAttribute('aria-label', kind === 'file' ? 'Your Spotify file' : 'Bring your music');
+  bringNudgeEl.setAttribute('aria-label', kind === 'file' ? 'Your Spotify file' : 'Import your music');
   bringNudgeEl.innerHTML = kind === 'file'
     ? '<div class="bn-t">Your Spotify file should be here</div><div class="bn-s">Spotify takes a few days to send your data. When it arrives, add it and your Liked Songs and playlists come over.</div><div class="bn-row"><button type="button" class="bm-btn bm-btn-go" data-bn="go">Add my file</button><button type="button" class="bm-btn" data-bn="later">Not yet</button></div><button type="button" class="bm-link bn-never" data-bn="never">Stop reminding me</button>'
-    : '<div class="bn-t">Bring your music to EBBLESS</div><div class="bn-s">Already have playlists on Spotify, YouTube Music or another app? Bring them over in a minute.</div><div class="bn-row"><button type="button" class="bm-btn bm-btn-go" data-bn="go">Bring my music</button><button type="button" class="bm-btn" data-bn="later">Not now</button></div><button type="button" class="bm-link bn-never" data-bn="never">Don\'t ask me again</button>';
+    : '<div class="bn-t">Import your music to EBBLESS</div><div class="bn-s">Already have playlists on Spotify, YouTube Music or another app? Bring them over in a minute.</div><div class="bn-row"><button type="button" class="bm-btn bm-btn-go" data-bn="go">Bring my music</button><button type="button" class="bm-btn" data-bn="later">Not now</button></div><button type="button" class="bm-link bn-never" data-bn="never">Don\'t ask me again</button>';
   bringNudgeEl.hidden = false;
   requestAnimationFrame(() => requestAnimationFrame(() => bringNudgeEl.classList.add('is-open')));
 }
@@ -10585,7 +10969,7 @@ const shuffleBtn = $('shuffleBtn'), repeatBtn = $('repeatBtn'), repeatOneBadge =
 const fsBtn = $('fsBtn'), reportMatchBtn = $('reportMatchBtn'), flowReportBtn = $('flowReportBtn'), playerLikeBtn = $('playerLikeBtn'), playerDeclineBtn = $('playerDeclineBtn');
 const desktopFsExitBtn = $('desktopFsExitBtn');
 const vizCanvas = $('vizCanvas'), artworkWrap = $('artworkWrap');
-const vizNextBtn = $('vizNextBtn'), vizAutoBtn = $('vizAutoBtn'), vizSpeedBtn = $('vizSpeedBtn'), vizRotateBtn = $('vizRotateBtn');
+const vizNextBtn = $('vizNextBtn'), vizAutoBtn = $('vizAutoBtn'), vizSpeedBtn = $('vizSpeedBtn'), vizRotateBtn = $('vizRotateBtn'), vizRainbowBtn = $('vizRainbowBtn');
 const visualTabs = document.querySelectorAll('#visualTabs .v-tab[data-mode]');
 const lyricsWrap = $('lyricsWrap'), lyricsScroller = $('lyricsScroller');
 const miniBar = $('mini-bar'), miniArt = $('miniArt'), miniTitle = $('miniTitle'), miniArtist = $('miniArtist'),
@@ -10845,7 +11229,7 @@ function showLoadSuccess(){
    ========================================================================= */
 document.getElementById('settingsBackBtn')?.addEventListener('click', () => { const v = document.getElementById('view-settings'); if (v && v.dataset.page) settingsShowPage(''); else setView(state.preSettingsView || 'library'); });
 /* Settings v2 hub: which page of #view-settings shows ('' = the hub). Blocks keep their ids; data-spage on each block names its page. */
-const SET_PAGE_TITLES = { playback: 'Playback', customize: 'Customize', privacy: 'Privacy & data', app: 'App', help: 'Help & feedback', about: 'About' };
+const SET_PAGE_TITLES = { playback: 'Playback', customize: 'Customize', privacy: 'Privacy & data', app: 'App', help: 'Help & feedback', about: 'About', plans: 'Plan tester' };
 function settingsShowPage(p){
   const v = document.getElementById('view-settings');
   if (!v) return;
@@ -11302,6 +11686,7 @@ function toggleDesktopFs(){
   if (state.deskFsOpen){ closeDesktopFs(); return; }
   state.deskFsOpen = true;
   document.body.classList.add('desktop-fs');
+  fsTimelineSync();   // #804: size the up-next strip to this window
   // Defensive reset: don't rely on these already being false - always start
   // a fresh fullscreen entry with the library/queue drawers closed.
   state.deskFsLibOpen = false;
@@ -11834,7 +12219,7 @@ const libFilterMore = $('libFilterMore');
 function updateLibFilterMore(){
   // #632: judge by the pills' own boxes. libFilter.scrollWidth also counts a label slipping out of its pill, which (Podcasts, the last and longest, first) lit this arrow, took 38px from the row, shrank every pill and made the row scrollable
   const lastPill = Array.from(libFilter.querySelectorAll('.lib-filter-btn:not(.hidden)')).pop();
-  const over = !libFilter.classList.contains('hidden') && !!lastPill && lastPill.getBoundingClientRect().right > libFilter.getBoundingClientRect().right + 2;
+  const over = !window.matchMedia('(min-width:860px)').matches && !libFilter.classList.contains('hidden') && !!lastPill && lastPill.getBoundingClientRect().right > libFilter.getBoundingClientRect().right + 2;
   libFilterMore.classList.toggle('hidden', !over);
   if (!over) return;
   const atEnd = libFilter.scrollLeft + libFilter.clientWidth >= libFilter.scrollWidth - 2;
@@ -13098,7 +13483,7 @@ function toggleLibraryPlaylistPanel(id){
       row.className = 'track-row' + (t.videoId ? '' : ' is-missing');
       row.dataset.plId = id; row.dataset.idx = i;
       const img = document.createElement('img');
-      if (t.videoId || t.art) attachArtworkFallback(img, t);
+      if (t.videoId || t.art) attachArtworkFallback(img, t, 'icon');
       const meta = document.createElement('div'); meta.className = 'meta';
       const title = document.createElement('div'); title.className = 'title'; title.textContent = t.title;
       const artist = document.createElement('div'); artist.className = 'artist';
@@ -13565,7 +13950,7 @@ function artistSongRow(song, album, n, year){
   const row = document.createElement('div'); row.className = 'track-row';
   row.style.cursor = 'pointer';
   const img = document.createElement('img');
-  if (song.art) attachArtworkFallback(img, { art: song.art });
+  if (song.art) attachArtworkFallback(img, { art: song.art }, 'icon');
   const meta = document.createElement('div'); meta.className = 'meta';
   const ttl = document.createElement('div'); ttl.className = 'title'; ttl.textContent = song.title;
   meta.appendChild(ttl);
@@ -13801,7 +14186,21 @@ function fetchSongInfo(title, artist){
   job.then(v => { if (!v) songCreditsCache.delete(key); });
   return job;
 }
-function buildSongInfoEl(c){
+// #777: open an album named by the info lookup: library copy first, else find it in the artist's catalog
+async function openInfoAlbum(name, artist, backFn){
+  const akey = artistNameKey(name);
+  const inLib = getLibrary().find(id => { const p = getCachedPlaylist(id); return p && !isArtistEntry(p) && artistNameKey(p.name) === akey; });
+  if (inLib){ toggleLibraryPlaylistPanel(inLib); return; }
+  try{
+    const res = await itunesArtistAlbums({ type: 'artist', id: '', name: artist }, { sections: true });
+    const all = (res.albums || res).concat(res.singles || []);
+    const a = all.find(x => artistNameKey(x.name) === akey) || all.find(x => artistNameKey(x.name).startsWith(akey));
+    if (a){ openAlbumPreview(a, artist, backFn); return; }
+  } catch(e){}
+  showToast("Couldn't find that album.");
+}
+function buildSongInfoEl(c, ctx){
+  ctx = ctx || {};
   const box = document.createElement('div');
   box.className = 'song-credits';
   const lbl = document.createElement('div'); lbl.className = 'section-label'; lbl.textContent = 'Info';
@@ -13814,16 +14213,21 @@ function buildSongInfoEl(c){
     line.appendChild(r); line.appendChild(v); box.appendChild(line);
   };
   if (c.date) row('Released', c.date);
-  if (c.album) row('Album', c.album);
+  if (c.album){
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'song-info-btn';
+    b.setAttribute('aria-label', 'Open album ' + c.album); b.textContent = c.album;
+    b.addEventListener('click', () => openInfoAlbum(c.album, ctx.artist, ctx.backFn));
+    row('Album', b);
+  }
   if (c.label) row('Label', c.label);
   if (c.genres && c.genres.length) row('Genre', c.genres.join(', '));
   if (c.samples && c.samples.length) row('Samples', c.samples.join('; '));
   c.roles.forEach(role => {
     const names = document.createElement('span');
     role.names.forEach((n, i) => {
-      if (i) names.append(', ');
-      const a = document.createElement('span'); a.className = 'song-page-link'; a.textContent = n;
-      a.addEventListener('click', () => openArtistPage(n));
+      const a = document.createElement('button'); a.type = 'button'; a.className = 'song-info-btn'; a.textContent = n;
+      a.setAttribute('aria-label', 'Open artist ' + n);
+      a.addEventListener('click', () => openArtistPage(n, ctx.title));
       names.appendChild(a);
     });
     row(role.label, names);
@@ -13928,7 +14332,7 @@ function openSongPage(t, plId, trackIdx){
   infoPane.appendChild(infoStatus);
   fetchSongInfo(t.title, t.artist).then(c => {
     if (openLibraryPanelId !== id) return;
-    if (c) infoStatus.replaceWith(buildSongInfoEl(c)); else infoStatus.textContent = 'No extra info found.', infoStatus.style.animation = 'none';
+    if (c) infoStatus.replaceWith(buildSongInfoEl(c, { artist: t.artist, title: t.title, backFn: () => openSongPage(t, plId, trackIdx) })); else infoStatus.textContent = 'No extra info found.', infoStatus.style.animation = 'none';
   }).catch(() => { if (openLibraryPanelId === id){ infoStatus.textContent = 'No extra info found.'; infoStatus.style.animation = 'none'; } });
 }
 // Lyrics for a song page: plain lines, no timing (the player's own Lyrics view is the synced one). Same lookup as the player.
@@ -14488,8 +14892,8 @@ function mmBuild(){
 }
 
 function openMusicMap(rawName){
+  if (!rawName){ const ct = currentTrack(); rawName = ct && ct.artist; }   // #763: no artist given = the playing one
   const name = splitArtistNames(rawName || '')[0];
-  if (!name) return;
   if (!mmEl) mmBuild();
   closeTrackCtxMenu();
   leaveFullscreen(true);
@@ -14498,6 +14902,7 @@ function openMusicMap(rawName){
   mmTrail = last && artistNameKey(last) === artistNameKey(name) ? mmLastTrail.slice(0, -1) : [];
   mmData = null;
   $('mmStage').innerHTML = '';
+  if (!name){ mmTrail = []; mmRenderTrail(); $('mmStage').innerHTML = '<div class="mm-center"><div class="mm-center-name">Pick an artist</div><div class="mm-note">Type a name above to start your map.</div></div>'; }
   mmEl.hidden = false;
   // covered means stopped (#487): the visualizer's canvas loop and the lyrics
   // scroll pause while the map covers them; CSS pauses the ambient and art
@@ -14505,7 +14910,8 @@ function openMusicMap(rawName){
   window.addEventListener('resize', mmOnResize);
   document.addEventListener('keydown', mmOnKey);
   statsFeature('music_map');
-  mmGo(name, null);
+  if (name) mmGo(name, null);
+  else { mmPlaceCenter($('mmStage').firstChild); setTimeout(() => $('mmSearch').focus(), 50); }
   updateMiniBarVisibility();   // the player bar stays on top of the map
   syncHistoryBuffer();
 }
@@ -15473,6 +15879,7 @@ function openRenamePlaylistFlow(id, pl){
     };
     apply(pl);
     lsSet(LS_PL(id), pl);
+    recordLastEdited(id);
     if (state.playlist && state.playlist.id === id) apply(state.playlist);
     closeImportOverlay();
     renderLibrary();
@@ -16215,7 +16622,7 @@ function fillLibRowLive(plId, idx, t){
   const spin = row && row.querySelector('.row-spinner');
   if (!row || row.dataset.plId !== plId || !spin) return;
   const title = row.querySelector('.title'); if (title) title.textContent = t.title;
-  const img = row.querySelector('img'); if (img && (t.videoId || t.art)) attachArtworkFallback(img, t);
+  const img = row.querySelector('img'); if (img && (t.videoId || t.art)) attachArtworkFallback(img, t, 'icon');
   const menuBtn = document.createElement('button');
   menuBtn.setAttribute('aria-label', 'Song options'); menuBtn.setAttribute('aria-haspopup', 'true'); menuBtn.setAttribute('aria-expanded', 'false');
   menuBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>';
@@ -16307,7 +16714,7 @@ function repaintNowPlayingArt(cur){
   swapAltArt(cur);
   setAmbient(cur);
   updatePlayerAccentColor(cur);
-  attachArtworkFallback(miniArt, cur);
+  attachArtworkFallback(miniArt, cur, 'icon');
   cassetteSetLabelArt(cur);
   updateMediaSessionMeta(cur);
 }
@@ -16601,6 +17008,7 @@ function removeTrackFromPlaylistAt(playlistId, idx){
   if (!pl || idx < 0 || idx >= pl.tracks.length) return;
   const gone = pl.tracks.splice(idx, 1)[0];
   lsSet(LS_PL(playlistId), pl);
+  recordLastEdited(playlistId);
   if (playlistId === UPLOADS_ID && gone) dropLocalFileSoon(gone.videoId);
   if (state.playlist && state.playlist.id === playlistId){
     state.queue = state.queue
@@ -16622,6 +17030,7 @@ function insertTrackIntoPlaylistAt(playlistId, idx, track){
   idx = Math.max(0, Math.min(idx, pl.tracks.length));
   pl.tracks.splice(idx, 0, track);
   lsSet(LS_PL(playlistId), pl);
+  recordLastEdited(playlistId);
   if (state.playlist && state.playlist.id === playlistId){
     state.queue = state.queue.map(e => (e.plId === playlistId && e.idx >= idx) ? { ...e, idx: e.idx + 1 } : e);
     state.playlist = pl;
@@ -16807,6 +17216,7 @@ function createCustomPlaylist(name){
   const id = 'custom-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   const pl = { id, type: 'custom', name, image: null, tracks: [], ts: Date.now() };
   lsSet(LS_PL(id), pl);
+  recordLastEdited(id);
   saveToLibrary(id);
   awardMilestone('playlist');
   renderLibrary();
@@ -16838,6 +17248,7 @@ function addTracksToPlaylist(playlistId, tracks, allowDup){
     if (state.playlist && state.playlist.id === LIKED_ID) state.queue = state.queue.map(e => e.plId === LIKED_ID ? Object.assign({}, e, { idx: e.idx + added }) : e);
   } else pl.tracks = pl.tracks.concat(fresh);
   lsSet(LS_PL(playlistId), pl);
+  recordLastEdited(playlistId);
   renderLibrary();
   if (state.playlist && state.playlist.id === playlistId) state.playlist = pl;
   return added;
@@ -16992,7 +17403,7 @@ let relinkDragCtx = null; // { list, t } of the open matching-links window
   // dragover (many a second) froze the app on a big library. Ask once per drag.
   let addableIds = null;
   const addableSet = () => addableIds || (addableIds = new Set(addablePlaylists().map(p => p.id)));
-  const okTarget = (card) => !!card && addableSet().has(card.dataset.plId);
+  const okTarget = (card) => !!card && (card.dataset.plId === UNLIKED_ID || addableSet().has(card.dataset.plId));
   let hiCard = null, hiPanel = false;
   function clearHi(){
     if (hiCard){ hiCard.classList.remove('is-drop-target'); hiCard = null; }
@@ -17007,7 +17418,7 @@ let relinkDragCtx = null; // { list, t } of the open matching-links window
   // #548: the open playlist is itself a drop target (not the one the song is already dragged out of)
   function panelDropId(el){
     if (!el || !el.closest || !el.closest('#libpl-panel') || !openLibraryPanelId) return null;
-    if (!addableSet().has(openLibraryPanelId)) return null;
+    if (openLibraryPanelId !== UNLIKED_ID && !addableSet().has(openLibraryPanelId)) return null;
     if (dragFromLib && dragSrcPl === openLibraryPanelId) return null;
     return openLibraryPanelId;
   }
@@ -17100,6 +17511,13 @@ let relinkDragCtx = null; // { list, t } of the open matching-links window
     const card = cardOf(e.target);
     const panelId = panelDropId(e.target);
     clearHi();
+    // #785: a song dropped on Unliked (its card or its open list) is thumbed down, not added
+    if (panelId === UNLIKED_ID || (card && card.dataset.plId === UNLIKED_ID)){
+      e.preventDefault();
+      if (relinkDrag) closeImportOverlay();
+      unlikeDroppedSong(dragTrack);
+      return;
+    }
     if (panelId){
       e.preventDefault();
       const addViewOpen = !!$('asInput') && importOverlay.classList.contains('is-open');
@@ -17384,7 +17802,7 @@ let relinkDragCtx = null; // { list, t } of the open matching-links window
 let radioBusy = false;
 async function startRadio(name, own, keepPlaying){
   if (radioBusy) return;
-  radioBusy = true;
+  radioBusy = true; syncQueueReloadBar();
   showToast('Starting ' + name + '...');
   try {
     const exclude = new Set(own.map(t => t.videoId));
@@ -17422,7 +17840,7 @@ async function startRadio(name, own, keepPlaying){
       loadIndex(state.queuePos, true);
     }
     showToast('Playing ' + name);
-  } finally { radioBusy = false; }
+  } finally { radioBusy = false; syncQueueReloadBar(); }
 }
 
 // #742: Liked Songs is always the first row (even before the first like), the
@@ -17430,31 +17848,50 @@ async function startRadio(name, own, keepPlaying){
 function openAddToPlaylistPicker(track){
   openImportOverlay();
   const liked = getCachedPlaylist(LIKED_ID) || { id: LIKED_ID, name: 'Liked Songs', tracks: [] };
-  const customs = [liked].concat(addablePlaylists().filter(p => p.id !== LIKED_ID));
-  const rowsHtml = customs.map(p =>
-    '<label class="btn-ghost pl-pick" style="width:100%;text-align:left;margin-bottom:8px;display:flex;align-items:center;gap:10px;cursor:pointer">' +
-      '<input type="checkbox" class="pl-pick-cb" data-id="' + p.id + '" style="flex:none">' +
-      '<span>' + escapeHtml(p.name) + ' <span style="color:var(--faint-2)">(' + p.tracks.length + (p.tracks.length === 1 ? ' song' : ' songs') + ')</span></span>' +
-    '</label>'
-  ).join('');
+  const others = addablePlaylists().filter(p => p.id !== LIKED_ID);
+  const picked = new Set();   // #766: ticks survive searching and re-sorting
+  const fieldCss = 'background:var(--panel-2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-size:14px';
   importStage.innerHTML =
     '<div class="step">Add to playlist</div>' +
-    '<div style="width:100%;max-height:55vh;overflow-y:auto;overscroll-behavior:contain;margin-bottom:16px">' +
-      (rowsHtml || '<div style="color:var(--faint-2);font-size:13px;margin-bottom:12px">No playlists yet.</div>') +
+    '<div style="display:flex;gap:8px;width:100%;margin-bottom:10px">' +
+      '<input id="plPickSearch" type="search" placeholder="Search playlists" autocomplete="off" spellcheck="false" aria-label="Search playlists" style="flex:1;min-width:0;' + fieldCss + '">' +
+      '<select id="plPickSort" aria-label="Sort playlists" style="' + fieldCss + '">' +
+        '<option value="recent">Most recent</option><option value="alpha">A to Z</option>' +
+        '<option value="tracks_desc">Most songs</option><option value="plays_desc">Most played</option>' +
+      '</select>' +
     '</div>' +
+    '<div id="plPickList" style="width:100%;max-height:50vh;overflow-y:auto;overscroll-behavior:contain;margin-bottom:16px"></div>' +
     '<button class="btn-ghost" id="plAddSelectedBtn" style="width:100%;margin-bottom:8px" disabled>Add</button>' +
     '<button class="btn-ghost" id="plNewFromPickerBtn" style="width:100%">+ New playlist</button>';
-  const addBtn = $('plAddSelectedBtn');
-  const checked = () => Array.from(importStage.querySelectorAll('.pl-pick-cb:checked'));
-  importStage.querySelectorAll('.pl-pick-cb').forEach(cb => {
-    cb.addEventListener('change', () => {
-      const n = checked().length;
-      addBtn.disabled = !n;
-      addBtn.textContent = n > 1 ? 'Add to ' + n + ' playlists' : 'Add';
-    });
+  const addBtn = $('plAddSelectedBtn'), listEl = $('plPickList'), searchEl = $('plPickSearch'), sortEl = $('plPickSort');
+  const rowHtml = (p) =>
+    '<label class="btn-ghost pl-pick" style="width:100%;text-align:left;margin-bottom:8px;display:flex;align-items:center;gap:10px;cursor:pointer">' +
+      '<input type="checkbox" class="pl-pick-cb" data-id="' + escapeHtml(p.id) + '"' + (picked.has(p.id) ? ' checked' : '') + ' style="flex:none">' +
+      '<span>' + escapeHtml(p.name) + ' <span style="color:var(--faint-2)">(' + p.tracks.length + (p.tracks.length === 1 ? ' song' : ' songs') + ')</span></span>' +
+    '</label>';
+  function renderList(){
+    const q = searchEl.value.trim().toLowerCase();
+    const order = sortLibraryIds(others.map(p => p.id), sortEl.value);
+    const byId = new Map(others.map(p => [p.id, p]));
+    const rows = [liked].concat(order.map(id => byId.get(id)).filter(Boolean)).filter(p => !q || String(p.name || '').toLowerCase().includes(q));
+    listEl.innerHTML = rows.length ? rows.map(rowHtml).join('') : '<div style="color:var(--faint-2);font-size:13px;margin-bottom:12px">' + (q ? 'No playlists match.' : 'No playlists yet.') + '</div>';
+  }
+  const refreshBtn = () => {
+    const n = picked.size;
+    addBtn.disabled = !n;
+    addBtn.textContent = n > 1 ? 'Add to ' + n + ' playlists' : 'Add';
+  };
+  listEl.addEventListener('change', (e) => {
+    const cb = e.target.closest('.pl-pick-cb');
+    if (!cb) return;
+    if (cb.checked) picked.add(cb.dataset.id); else picked.delete(cb.dataset.id);
+    refreshBtn();
   });
+  searchEl.addEventListener('input', renderList);
+  sortEl.addEventListener('change', renderList);
+  renderList();
   addBtn.addEventListener('click', () => {
-    let ids = checked().map(cb => cb.dataset.id);
+    let ids = Array.from(picked);
     closeImportOverlay();
     // Liked Songs goes through the like path so hearts, taste signals and streaks stay in sync
     if (ids.includes(LIKED_ID)){
@@ -17922,7 +18359,8 @@ function stageMatchingProgress(done, total, track){
   $('matchFill').style.width = Math.round((done/total)*100) + '%';
   $('matchCounter').textContent = done + ' / ' + total + queuedImportsLabel();
   if (track && track.title) $('matchNames').textContent = 'Matching: ' + track.title + (track.artist ? ' - ' + track.artist : '');
-  if (done >= total) matchStatusTimer = setTimeout(hideMatchStatus, 900);
+  // #797: clear when matching ends, and never let a stalled or failed import leave the bar up
+  matchStatusTimer = setTimeout(hideMatchStatus, done >= total ? 900 : 45000);
 }
 
 // Plain-language version of a load/import/search error for the screen;
@@ -18162,6 +18600,133 @@ function playSingleSongLink(pl, targetIndex){
   $('ssNowBtn').addEventListener('click', () => { closeImportOverlay(); playNow(false); });
 }
 
+/* LINK-COLLECTION:BEGIN */
+// #746 follow-up: what happens after a pasted/shared link has been matched.
+// Pure decisions only; the sheet, the picker and the queue calls are in
+// showCollectionLanding below. A single song keeps its own flow
+// (playSingleSongLink). A collection (album, playlist, artist) with a queue
+// already going gets the actions sheet instead of a toast that vanishes; with
+// nothing playing it starts playing, as before, and a toast says where it went.
+function linkLandingMode(isSingle, queueActive, targetIndex){
+  if (isSingle) return 'single';
+  if (targetIndex || !queueActive) return 'play';
+  return 'sheet';
+}
+// tracks without a videoId did not match a playable version
+function linkMatchCounts(tracks){
+  const list = Array.isArray(tracks) ? tracks.filter(Boolean) : [];
+  const missing = list.filter(t => !t.videoId).map(t => String(t.title || '').trim()).filter(Boolean);
+  return { total: list.length, matched: list.filter(t => t.videoId).length, missing };
+}
+function linkResultLine(c){
+  if (!c || !c.total) return 'No songs found';
+  if (!c.matched) return 'None of the ' + c.total + (c.total === 1 ? ' song' : ' songs') + ' matched';
+  if (c.matched === c.total) return 'Matched ' + (c.total === 1 ? '1 song' : 'all ' + c.total + ' songs');
+  return 'Matched ' + c.matched + ' of ' + c.total + ' songs';
+}
+// up to three names, then "and N more"; '' when nothing is missing
+function linkMissingLine(c){
+  const m = c && Array.isArray(c.missing) ? c.missing : [];
+  if (!m.length) return '';
+  const shown = m.slice(0, 3).join(', ');
+  return 'Not found: ' + shown + (m.length > 3 ? ' and ' + (m.length - 3) + ' more' : '');
+}
+// libSectionOf's answer in words; the entry is already filed there when this shows
+function linkSavedLine(section){
+  const where = { album: 'Albums', playlist: 'Playlists', artist: 'Artists', set: 'Sets' }[section];
+  return where ? 'Saved in your Library under ' + where : 'Saved in your Library';
+}
+// the tiles of the sheet, in order; none when no song matched
+function linkCollectionActions(matched){
+  if (!(matched > 0)) return [];
+  return [
+    { id: 'now', label: 'Play now', sub: 'Replaces the queue', primary: true },
+    { id: 'next', label: 'Play next' },
+    { id: 'queue', label: 'Add to queue' },
+    { id: 'playlist', label: 'Add to playlist' },
+  ];
+}
+/* LINK-COLLECTION:END */
+
+// Every song of a saved collection that matched a playable version, as the
+// plain rows a playlist holds.
+function collectionPlayableTracks(pl){ return (pl.tracks || []).filter(t => t && t.videoId); }
+
+// "Add to playlist" for a whole collection: one tap on a playlist adds every
+// matched song (skipping ones it already holds), or start a new playlist named
+// after the collection.
+function openAddCollectionToPlaylistPicker(pl){
+  const songs = collectionPlayableTracks(pl);
+  openImportOverlay();
+  const customs = addablePlaylists().filter(p => p.id !== pl.id);
+  const rowsHtml = customs.map(p =>
+    '<button class="btn-ghost pl-pick" data-id="' + escapeHtml(p.id) + '" style="width:100%;text-align:left;margin-bottom:8px;display:block">' +
+      escapeHtml(p.name) + ' <span style="color:var(--faint-2)">(' + p.tracks.length + (p.tracks.length === 1 ? ' song' : ' songs') + ')</span>' +
+    '</button>'
+  ).join('');
+  importStage.innerHTML =
+    '<div class="step">Add ' + songs.length + (songs.length === 1 ? ' song' : ' songs') + ' to&hellip;</div>' +
+    '<div style="width:100%;max-height:50vh;overflow-y:auto;overscroll-behavior:contain;margin-bottom:16px">' +
+      (rowsHtml || '<div style="color:var(--faint-2);font-size:13px;margin-bottom:12px">No playlists yet.</div>') +
+    '</div>' +
+    '<button class="btn-ghost" id="plNewFromCollectionBtn" style="width:100%">+ New playlist</button>';
+  importStage.querySelectorAll('.pl-pick').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const target = getCachedPlaylist(btn.dataset.id);
+      closeImportOverlay();
+      if (!target) return;
+      const n = addTracksToPlaylist(target.id, songs);
+      showToast(n ? 'Added ' + n + (n === 1 ? ' song' : ' songs') + ' to ' + target.name : 'Already in ' + target.name);
+    });
+  });
+  $('plNewFromCollectionBtn').addEventListener('click', () => openCreatePlaylistFlow(null, { prefill: pl.name, onCreate: (name) => {
+    const np = createCustomPlaylist(name);
+    const n = addTracksToPlaylist(np.id, songs);
+    showToast('Created ' + np.name + ' with ' + n + (n === 1 ? ' song' : ' songs'));
+  } }));
+}
+
+// The collection actions sheet: the single-song sheet's tiles for a whole
+// album/playlist/artist, with the match result and where it was filed.
+function showCollectionLanding(pl){
+  const counts = linkMatchCounts(pl.tracks);
+  const acts = linkCollectionActions(counts.matched);
+  const miss = linkMissingLine(counts);
+  openImportOverlay();
+  const tile = (a) => '<button type="button" class="ss-tile' + (a.primary ? ' is-primary' : '') + '" data-coll-act="' + a.id + '"><span class="ss-ic">' +
+    ({ now: CTX_ICON_PLAY, next: CTX_ICON_PLAY_NEXT, queue: CTX_ICON_ADD_QUEUE, playlist: CTX_ICON_ADD_PLAYLIST }[a.id]) + '</span>' +
+    '<span class="ss-lbl">' + a.label + (a.sub ? '<span class="ss-sub">' + a.sub + '</span>' : '') + '</span></button>';
+  importStage.innerHTML =
+    '<div class="ss-head"><div class="ss-art">' + CTX_ICON_ALBUM + '</div><div class="ss-meta"><div class="ss-title"></div><div class="ss-artist"></div></div></div>' +
+    '<div class="step" id="collResult" style="margin:0 0 ' + (acts.length ? '16' : '0') + 'px;font-size:13px;text-align:left;width:100%"></div>' +
+    (acts.length ? '<div class="ss-acts">' + acts.map(tile).join('') + '</div>' : '');
+  importStage.querySelector('.ss-title').textContent = pl.name;
+  importStage.querySelector('.ss-artist').textContent = isAlbumEntry(pl) && !isArtistEntry(pl) ? albumArtistName(pl) : '';
+  $('collResult').textContent = linkResultLine(counts) + '. ' + linkSavedLine(libSectionOf(pl)) + '.' + (miss ? ' ' + miss + '.' : '');
+  const artTrack = pl.image ? { art: pl.image } : (pl.tracks || []).find(t => t && (t.art || t.videoId));
+  if (artTrack){ const img = document.createElement('img'); img.alt = ''; attachArtworkFallback(img, artTrack, true); importStage.querySelector('.ss-art').appendChild(img); }
+  const on = (id, fn) => { const b = importStage.querySelector('[data-coll-act="' + id + '"]'); if (b) b.addEventListener('click', fn); };
+  on('now', () => { closeImportOverlay(); playPlaylistNow(pl.id); });
+  on('next', () => { closeImportOverlay(); const n = queuePlayNextCollection(pl.id); showToast(n ? 'Playing ' + n + (n === 1 ? ' song' : ' songs') + ' next' : 'Nothing to add'); });
+  on('queue', () => { closeImportOverlay(); const n = queueAddCollection(pl.id); showToast(n ? 'Added ' + n + (n === 1 ? ' song' : ' songs') + ' to queue' : 'Nothing to add'); });
+  on('playlist', () => openAddCollectionToPlaylistPicker(pl));
+}
+
+// A collection that started playing on its own: a toast says what matched and
+// where it was filed, with Add to playlist one tap away.
+function toastCollectionPlaying(pl){
+  const counts = linkMatchCounts(pl.tracks);
+  showToast(linkResultLine(counts) + '. ' + linkSavedLine(libSectionOf(pl)) + '.', counts.matched ? { label: 'Add to playlist', run: () => openAddCollectionToPlaylistPicker(pl) } : undefined);
+}
+// The one place a finished collection import lands. Falls back to a toast while
+// another import waits its turn, so the sheet never covers the next one.
+function collectionImportDone(pl, mode){
+  if (isPodcastEntry(pl)) { if (mode === 'sheet') showToast('Added ' + pl.name + ' to your library', { label: 'Play now', run: () => playPlaylistNow(pl.id) }); return; }
+  if (mode === 'sheet' && importsPending <= 1) showCollectionLanding(pl);
+  else if (mode === 'sheet') showToast(linkResultLine(linkMatchCounts(pl.tracks)) + '. ' + linkSavedLine(libSectionOf(pl)) + '.', { label: 'Play now', run: () => playPlaylistNow(pl.id) });
+  else toastCollectionPlaying(pl);
+}
+
 // Loads run one at a time (Geethub #465): anything started while another
 // import is still matching waits its turn instead of fighting it for the
 // screen. The footer bar shows how many are waiting.
@@ -18193,7 +18758,7 @@ async function beginImportNow(id, force, type, targetIndex, waited){
     if (cached){
       if (keepQueue && !isSingleTrackType(cached.type)){
         if (!wasSaved){ statsImport(id); saveToLibrary(id); renderLibrary(); }
-        showToast('Added ' + cached.name + ' to your library', { label: 'Play now', run: () => playPlaylistNow(id) }); showLoadSuccess();
+        showLoadSuccess(); collectionImportDone(cached, 'sheet');
         if (isResolveStale(cached)) reResolveStaleInBackground(id, cached.type);
         return;
       }
@@ -18216,6 +18781,7 @@ async function beginImportNow(id, force, type, targetIndex, waited){
       loadIndex(state.queuePos, true);
       setView('player');
       showLoadSuccess();
+      if (!isSingleTrackType(cached.type)) collectionImportDone(cached, 'play');
       // Cached before the resolution logic last changed - the tracks that
       // are showing now may point at outdated links. Don't make the visitor
       // wait on a full re-resolve to see their playlist; refresh it behind
@@ -18274,6 +18840,7 @@ async function beginImportNow(id, force, type, targetIndex, waited){
       saveToLibrary(id);
       renderLibrary();
     });
+    hideMatchStatus(); // #797: matching is over
     if (isSingleTrackType(pl.type)){
       closeFindingOverlay();
       // See the cache-hit branch above (discovery-radio-continuation): play
@@ -18287,7 +18854,7 @@ async function beginImportNow(id, force, type, targetIndex, waited){
     if (!startedEarly) statsImport(id);
     saveToLibrary(id);
     renderLibrary();
-    if (keepQueue){ showToast('Added ' + pl.name + ' to your library', { label: 'Play now', run: () => playPlaylistNow(id) }); showLoadSuccess(); }
+    if (keepQueue){ showLoadSuccess(); collectionImportDone(pl, 'sheet'); }
     if (!wasSaved && isArtistEntry(pl)){
       addArtistAlbumsToLibrary(pl, undefined, true);
       // warm the artist-info cache now so the bio is ready when the panel opens
@@ -18305,6 +18872,7 @@ async function beginImportNow(id, force, type, targetIndex, waited){
         loadPlaylistIntoPlayer(pl);
         buildQueueFrom(anchor);
       }
+      if (!keepQueue) collectionImportDone(pl, 'play');
     } else if (keepQueue){
       closeFindingOverlay();
     } else {
@@ -18314,6 +18882,7 @@ async function beginImportNow(id, force, type, targetIndex, waited){
       loadIndex(state.queuePos, true);
       setView('player');
       showLoadSuccess();
+      collectionImportDone(pl, 'play');
     }
   } catch(e){
     if (startedEarly) bgResolveProgress.delete(id);
@@ -18811,6 +19380,218 @@ function nativeLinkAllowed(u){
 }
 /* NATIVE-LINK:END */
 
+/* LINK-PROMPT:BEGIN */
+// #746: the "open music links in EBBLESS" prompts in the Android app. Pure
+// decisions only; the cards, the Settings rows and the native calls are in
+// LINK PROMPT below. hosts is what EbbNative.linkHosts() returns: the
+// comma-separated music hosts that are on for EBBLESS ("" none), "unsupported"
+// (Android 11 and below ask each time anyway) or "unknown". An older app has
+// no linkHosts(), only linkState() ("all", "some", "none", ...): then hosts is
+// not a string and legacyState is used, with the first prompt only.
+const LINK_PROMPT_SNOOZE_MS = 14 * 24 * 60 * 60 * 1000;      // Not now on the Apple Music / YouTube Music card
+const LINK_SPOTIFY_SNOOZE_MS = 30 * 24 * 60 * 60 * 1000;     // Not now on the Spotify card
+const LINK_SPOTIFY_WAIT_MS = 3 * 24 * 60 * 60 * 1000;        // Spotify card: days after the first card was shown
+const LINK_SPOTIFY_MIN_SONGS = 10;                           // Spotify card: songs started
+function linkPromptLabel(state){
+  return state === 'all' ? 'On' : state === 'some' ? 'Partly on' : state === 'none' ? 'Off' : '';
+}
+// -> null (unknown), { supported:false }, or { supported:true, apple, youtube, spotify }
+function linkPromptParse(hosts){
+  if (typeof hosts !== 'string' || hosts === 'unknown') return null;
+  if (hosts === 'unsupported') return { supported: false };
+  const set = hosts.split(',').map(s => s.trim());
+  return { supported: true, apple: set.includes('music.apple.com'), youtube: set.includes('music.youtube.com'), spotify: set.includes('open.spotify.com') };
+}
+// What the Settings rows say. -> { hidden, detail, appOn (Apple Music + YouTube Music done), spotifyOff }
+function linkPromptSettingsInfo(hosts, legacyState){
+  if (typeof hosts !== 'string') return { hidden: legacyState === 'unsupported', detail: linkPromptLabel(legacyState), appOn: legacyState === 'all', spotifyOff: false };
+  const h = linkPromptParse(hosts);
+  if (!h) return { hidden: false, detail: '', appOn: false, spotifyOff: false };
+  if (!h.supported) return { hidden: true, detail: '', appOn: false, spotifyOff: false };
+  const on = [], off = [];
+  (h.apple ? on : off).push('Apple Music');
+  (h.youtube ? on : off).push('YouTube Music');
+  (h.spotify ? on : off).push('Spotify');
+  const parts = [];
+  if (on.length) parts.push(on.join(', ') + ': on');
+  if (off.length) parts.push(off.join(', ') + ': off');
+  return { hidden: false, detail: parts.join('. '), appOn: h.apple && h.youtube, spotifyOff: !h.spotify };
+}
+// o: { isNative, hosts, legacyState, songsPlayed, loading (a song is mid-load), now (ms), spotifyInstalled,
+//      shownAt (first card shown), dismissedAt, visitedAt (opened the link settings), confirmed,
+//      spDismissedAt, spVisitedAt (opened Spotify's settings), spConfirmed, spForced (asked from Settings) }
+// -> { show: null | 'p1' | 'p2A' | 'p2B', resolve: [] of 'p1' | 'p2' that just came true }
+function linkPromptDecide(o){
+  const out = { show: null, resolve: [] };
+  if (!o || o.isNative !== true) return out;
+  const now = Number(o.now) || 0, plays = Number(o.songsPlayed) || 0, calm = o.loading !== true;
+  const snoozed = (at, ms) => { at = Number(at) || 0; return at > 0 && at <= now && now - at < ms; };
+  if (typeof o.hosts !== 'string'){   // older app: all three links in one state, one prompt
+    const st = o.legacyState;
+    if (st === 'all'){ if (o.confirmed !== true) out.resolve.push('p1'); return out; }
+    if ((st === 'none' || st === 'some') && o.confirmed !== true && calm && plays >= 1 && !snoozed(o.dismissedAt, LINK_PROMPT_SNOOZE_MS)) out.show = 'p1';
+    return out;
+  }
+  const h = linkPromptParse(o.hosts);
+  if (!h || !h.supported) return out;
+  // Prompt 1 is about Apple Music and YouTube Music. Spotify never counts here: its app often keeps its link greyed.
+  const visited = Number(o.visitedAt) > 0;
+  const p1Done = (h.apple && h.youtube) || (visited && (h.apple || h.youtube));
+  if (p1Done && o.confirmed !== true) out.resolve.push('p1');
+  if (h.spotify && o.spConfirmed !== true) out.resolve.push('p2');
+  if (!calm) return out;
+  if (!p1Done && o.confirmed !== true && plays >= 1 && !snoozed(o.dismissedAt, LINK_PROMPT_SNOOZE_MS)){ out.show = 'p1'; return out; }
+  // Prompt 2 is Spotify: only once prompt 1 is settled, and never at the same moment.
+  if (h.spotify || o.spConfirmed === true) return out;
+  if (o.spForced !== true){
+    const p1Resolved = o.confirmed === true || p1Done || Number(o.dismissedAt) > 0;
+    const shownAt = Number(o.shownAt) || 0;
+    if (!p1Resolved || plays < LINK_SPOTIFY_MIN_SONGS) return out;
+    if (!(shownAt > 0 && shownAt <= now && now - shownAt >= LINK_SPOTIFY_WAIT_MS)) return out;
+    if (snoozed(o.spDismissedAt, LINK_SPOTIFY_SNOOZE_MS)) return out;
+  }
+  out.show = o.spotifyInstalled === true && !(Number(o.spVisitedAt) > 0) ? 'p2A' : 'p2B';
+  return out;
+}
+/* LINK-PROMPT:END */
+
+/* LINK PROMPT (#746): Android app only. The native bridge says which music
+   hosts open in EBBLESS (EbbNative.linkHosts) and opens Android's "Open by
+   default" page (EbbNative.openLinkSettings); Android makes the user tick the
+   links themselves. Card 1 (Apple Music, YouTube Music) waits for a first song
+   and a calm moment. Card 2 (Spotify, whose app holds its own link, so it
+   takes two steps) comes later, see linkPromptDecide. "Not now" snoozes a card
+   (14 / 30 days) and coming back with the links on swaps it for one line and
+   ends it for good. Device-only state, never synced. */
+const LS_LINK_PROMPT = 'ebbless:linkPrompt';   // { plays, shownAt, dismissedAt, visitedAt, confirmed, spDismissedAt, spVisitedAt, spConfirmed, spForced }
+function linkNative(){ return !!(window.EbbNative && typeof EbbNative.linkState === 'function' && typeof EbbNative.openLinkSettings === 'function'); }
+function linkHostsNative(){ return !!(window.EbbNative && typeof EbbNative.linkHosts === 'function'); }
+function linkPromptData(){ const d = lsGet(LS_LINK_PROMPT, {}); return d && typeof d === 'object' ? d : {}; }
+function linkPromptSave(patch){ lsSet(LS_LINK_PROMPT, Object.assign(linkPromptData(), patch)); }
+function linkPromptState(){ try { return String(EbbNative.linkState()); } catch(e){ return 'unknown'; } }
+function linkPromptHostsNow(){ try { return String(EbbNative.linkHosts()); } catch(e){ return 'unknown'; } }
+function linkPromptSpotifyInstalled(){ try { return typeof EbbNative.spotifyInstalled === 'function' && EbbNative.spotifyInstalled() === true; } catch(e){ return false; } }
+function linkPromptInputs(d){
+  const o = { isNative: true, now: Date.now(), loading: activeLoadProgress() !== null, songsPlayed: d.plays,
+    shownAt: d.shownAt, dismissedAt: d.dismissedAt, visitedAt: d.visitedAt, confirmed: d.confirmed === true,
+    spDismissedAt: d.spDismissedAt, spVisitedAt: d.spVisitedAt, spConfirmed: d.spConfirmed === true, spForced: d.spForced === true };
+  if (linkHostsNative()){ o.hosts = linkPromptHostsNow(); o.spotifyInstalled = linkPromptSpotifyInstalled(); }
+  else o.legacyState = linkPromptState();
+  return o;
+}
+// the page of Android's link settings for EBBLESS; counts as a visit so one tickable link is enough afterwards
+function linkPromptOpenSettings(visit){
+  if (visit !== false) linkPromptSave({ visitedAt: Date.now() });
+  try { EbbNative.openLinkSettings(); } catch(e){ showToast('Open Android Settings, then Apps, EBBLESS, Open by default.'); }
+}
+function linkPromptOpenSpotifySettings(){
+  linkPromptSave({ spVisitedAt: Date.now() });
+  try { EbbNative.openSpotifyLinkSettings(); } catch(e){ showToast("Open Android Settings, then Apps, Spotify, Open by default, and turn off Open supported links."); }
+}
+// the Settings "Spotify links" row: step A if Spotify's app is installed, else straight to step B
+function linkPromptSpotifyFlow(){
+  if (linkHostsNative() && linkPromptSpotifyInstalled() && typeof EbbNative.openSpotifyLinkSettings === 'function'){
+    linkPromptSave({ spForced: true });
+    showToast("Turn off Spotify's Open supported links, then come back.");
+    linkPromptOpenSpotifySettings();
+  } else {
+    showToast('Tap Add links, then tick open.spotify.com.');
+    linkPromptOpenSettings(false);
+  }
+}
+let linkPromptTimer = 0;
+// counted when a song starts; the first card waits for the first one, the Spotify card for ten
+function linkPromptNotePlay(){
+  if (!linkNative()) return;
+  const n = linkPromptData().plays | 0;
+  if (n >= LINK_SPOTIFY_MIN_SONGS) return;
+  linkPromptSave({ plays: n + 1 });
+  if (n === 0 || n + 1 === LINK_SPOTIFY_MIN_SONGS) setTimeout(linkPromptCheck, 8000);
+}
+function linkPromptCalm(){
+  return vibeCheckCalm() && !document.getElementById('signinNudge') && !document.getElementById('betaInvite') && !document.getElementById('linkPrompt');
+}
+function linkPromptCardHtml(kind){
+  if (kind === 'p2A') return '<div class="lp-title">Open Spotify links in EBBLESS</div>' +
+    '<div class="lp-text">Spotify\'s app is holding these links. Turn off its Open supported links, then come back.</div>' +
+    '<button type="button" class="btn-ghost lp-go">Open Spotify\'s settings</button>';
+  if (kind === 'p2B') return '<div class="lp-title">Open Spotify links in EBBLESS</div>' +
+    '<div class="lp-text">Now tap Add links and tick open.spotify.com.</div>' +
+    '<button type="button" class="btn-ghost lp-go">Add links</button>';
+  if (!linkHostsNative()) return '<div class="lp-title">Open music links in EBBLESS</div>' +
+    '<div class="lp-text">Tap a Spotify, Apple Music or YouTube Music link anywhere and the song plays here. On the next screen tap Add links and tick all three.</div>' +
+    '<button type="button" class="btn-ghost lp-go">Turn on</button>';
+  return '<div class="lp-title">Open Apple Music and YouTube Music links</div>' +
+    '<div class="lp-text">Links to songs from those apps will play here, even if you don\'t have them installed. On the next screen tap Add links and tick both.</div>' +
+    '<button type="button" class="btn-ghost lp-go">Turn on</button>';
+}
+function showLinkPrompt(kind){
+  let card = document.getElementById('linkPrompt');
+  if (card && card.dataset.kind === kind) return;
+  const fresh = !card;
+  if (fresh){
+    card = document.createElement('div');
+    card.className = 'signin-nudge link-prompt';
+    card.id = 'linkPrompt';
+    card.setAttribute('role', 'region');
+  }
+  card.dataset.kind = kind;
+  card.setAttribute('aria-label', kind === 'p1' ? 'Open music links in EBBLESS' : 'Open Spotify links in EBBLESS');
+  card.innerHTML = linkPromptCardHtml(kind) + '<button type="button" class="link-btn lp-later">Not now</button>';
+  card.querySelector('.lp-go').addEventListener('click', () => {
+    if (kind === 'p2A') linkPromptOpenSpotifySettings();
+    else linkPromptOpenSettings(kind === 'p1');
+  });
+  card.querySelector('.lp-later').addEventListener('click', () => {
+    linkPromptSave(kind === 'p1' ? { dismissedAt: Date.now() } : { spDismissedAt: Date.now(), spForced: false });
+    card.remove();
+  });
+  if (kind === 'p1' && !linkPromptData().shownAt) linkPromptSave({ shownAt: Date.now() });
+  if (fresh) document.body.appendChild(card);
+}
+function linkPromptRenderRow(o){
+  const row = $('linkRow'); if (!row) return;
+  const info = linkPromptSettingsInfo(o.hosts, o.legacyState);
+  row.hidden = !linkNative() || info.hidden;
+  const sp = $('linkSpotifyRow'); if (sp) sp.hidden = row.hidden || !info.spotifyOff;
+  if (row.hidden) return;
+  $('linkDesc').textContent = (info.detail ? info.detail + '. ' : '') + 'Tap a song link from these apps and it plays here.';
+  $('linkBtn').textContent = info.appOn ? 'Change' : 'Turn on';
+}
+function linkPromptCheck(){
+  if (!linkNative()) return;
+  const d = linkPromptData(), o = linkPromptInputs(d), r = linkPromptDecide(o);
+  linkPromptRenderRow(o);
+  const card = document.getElementById('linkPrompt');
+  const kind = card ? card.dataset.kind || '' : '';
+  let said = false;
+  if (r.resolve.includes('p1')) linkPromptSave({ confirmed: true, shownAt: d.shownAt || Date.now() });
+  if (r.resolve.includes('p2')) linkPromptSave({ spConfirmed: true, spForced: false });
+  if (card && !card.classList.contains('lp-done') &&
+      ((r.resolve.includes('p1') && kind === 'p1') || (r.resolve.includes('p2') && kind.indexOf('p2') === 0))){
+    said = true;
+    card.classList.add('lp-done');
+    card.innerHTML = '<div class="lp-text">Links will open in EBBLESS</div>';
+    setTimeout(() => card.remove(), 3500);
+  }
+  if (said) return;
+  if (card){   // a Spotify card moves on to its second step once the user is back from Spotify's settings
+    if (kind === 'p2A' && r.show === 'p2B') showLinkPrompt('p2B');
+    return;
+  }
+  if (r.show && linkPromptCalm()) showLinkPrompt(r.show);
+}
+function initLinkPrompt(){
+  if (!linkNative()) return;
+  const later = ms => { clearTimeout(linkPromptTimer); linkPromptTimer = setTimeout(linkPromptCheck, ms); };
+  const btn = $('linkBtn'); if (btn) btn.addEventListener('click', () => linkPromptOpenSettings(true));
+  const spBtn = $('linkSpotifyBtn'); if (spBtn) spBtn.addEventListener('click', linkPromptSpotifyFlow);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') later(600); });
+  window.addEventListener('focus', () => later(600));
+  linkPromptRenderRow(linkPromptInputs(linkPromptData()));
+  [15000, 45000, 90000].forEach(ms => setTimeout(linkPromptCheck, ms));
+}
+
 // #746: the Android app calls this when a music link is opened with or shared
 // to EBBLESS (MainActivity.takeLink). Checked again here, then held until
 // startApp() is done (a cold start) and put through the paste box like any
@@ -19029,6 +19810,22 @@ function renderHome(){
   };
   const row = (sec, cards) => { const r = mk('div', 'hm-row'); cards.forEach(c => r.appendChild(c)); sec.appendChild(r); };
   renderHomeVibe(body, mk);
+  // #761: every way to get songs in lives here: import, or pick a genre
+  {
+    const sec = section('Add songs');
+    const r = mk('div', 'hm-add-row');
+    const big = (t, sub, fn) => { const b = mk('button', 'hm-add-btn'); b.type = 'button'; b.appendChild(mk('b', '', t)); b.appendChild(mk('span', '', sub)); b.addEventListener('click', fn); return b; };
+    r.appendChild(big('Import your music', 'Spotify, YouTube Music and more', () => openBring()));
+    r.appendChild(big('Browse by genre', 'Hip-Hop, Soul, Funk and more', () => openFindMusic()));
+    sec.appendChild(r);
+    const chips = mk('div', 'hm-add-chips');
+    Object.keys(FM_GENRES).slice(0, 6).forEach(g => {
+      const c = mk('button', 'hm-add-chip', g); c.type = 'button';
+      c.addEventListener('click', () => { openFindMusic(); fmTab = 'genres'; fmOpenGenre = g; fmRender(); });
+      chips.appendChild(c);
+    });
+    sec.appendChild(chips);
+  }
   const coverOf = (pl) => pl.image ? { art: pl.image } : (pl.tracks.find(t => t && (t.videoId || t.art)) || null);
   const plays = (pl) => totalPlaylistPlays(pl);
   // recently played: playlists and albums you played last, newest first (one tap plays)
@@ -19078,12 +19875,13 @@ function renderHome(){
     }
   } catch(e){}
   // music map, started from your top artist
-  const mapFrom = artists[0] && artists[0].name;
-  if (mapFrom){
+  const nowT = currentTrack(), nowArtist = nowT && nowT.artist && splitArtistNames(nowT.artist)[0];   // #763: the playing artist first
+  const mapFrom = nowArtist || (artists[0] && artists[0].name);
+  {
     const sec = section('Music map'), b = mk('button', 'hm-map'); b.type = 'button';
     b.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="12" r="3"/><circle cx="4.5" cy="6" r="2"/><circle cx="19.5" cy="6" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="18" r="2"/><path d="M10 10.5L6 7.5M14 10.5l4-3M10.2 13.8L6.4 17.6M14 13.5l3.6 3.2"/></svg>';
-    const tx = mk('div'); tx.appendChild(mk('b', '', 'Explore your music map')); tx.appendChild(mk('span', '', 'Start from ' + mapFrom + ' and follow who sounds like who.')); b.appendChild(tx);
-    b.addEventListener('click', () => openMusicMap(mapFrom));
+    const tx = mk('div'); tx.appendChild(mk('b', '', 'Explore your music map')); tx.appendChild(mk('span', '', mapFrom ? 'Start from ' + mapFrom + ' and follow who sounds like who.' : 'Pick an artist and follow who sounds like who.')); b.appendChild(tx);
+    b.addEventListener('click', () => openMusicMap(mapFrom || ''));
     sec.appendChild(b);
   }
   if (body.children.length < 2) body.appendChild(mk('p', 'hm-empty', 'Play a few songs and your top artists, albums, playlists and songs will show up here.'));
@@ -20684,7 +21482,7 @@ function setArcSummary(meta){
 /* SET-ARC:END */
 
 const VOICE_STEP = 10;           // in-app volume step, percent
-function voiceSetAppVolume(p){ voiceVolPct = Math.max(0, Math.min(100, p)); reapplyLevel(); }
+function voiceSetAppVolume(p){ voiceVolPct = Math.max(0, Math.min(100, p)); reapplyLevel(); volZeroCheck(); }
 // Android: the phone's media volume (AudioManager STREAM_MUSIC) by one step, through the native
 // shell. Returns "level/max", or "" when the shell has no such method (older build) or it failed.
 function voiceNativeVolume(dir){
@@ -22132,7 +22930,7 @@ function closeYtPanel(auto){
   ytPanelTimer = null;
   ytPanelSync();
 }
-ytPanelBtn.addEventListener('click', (e) => { e.stopPropagation(); if (ytOn) closeYtPanel(); else openYtPanel(); });
+ytPanelBtn.addEventListener('click', (e) => { e.stopPropagation(); if (ytOn && artworkWrap.classList.contains('yt-video') && !state.flowOpen) cinemaBtn.click(); else if (ytOn) closeYtPanel(); else openYtPanel(); }); // #776: showing the video, this button is Cinema
 // #751: a click on the video puts keyboard focus inside YouTube's iframe, where
 // the app's shortcuts never arrive (#467). Once the click has landed, focus
 // comes back to the page; the click itself still reaches YouTube's controls.
@@ -22152,6 +22950,7 @@ const cinemaBtn = $('cinemaBtn');
 function setCinema(on, save){
   document.documentElement.classList.toggle('ebb-cinema', !!on);
   cinemaBtn.setAttribute('aria-pressed', String(!!on));
+  ytPanelBtn.dataset.cinema = on ? '1' : '';
   if (save !== false) lsSet(LS_CINEMA, !!on);
 }
 function cinemaActive(){
@@ -22189,8 +22988,69 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
-  { version: 515, date: '2026-11-11', items: [
+  { version: 531, date: '2026-11-12', items: [
     'fLUX, the premium look: the song title fades in on each new song, the colors lean toward the cover, only smooth, well-lit looks play, and the controls go quiet. New Moods: Ember, Deep Water, Neon, Ghost, or follow the song.'
+  ]},
+  { version: 530, date: '2026-11-12', items: [
+    'The desktop mini player no longer has the shape button next to the album color button.',
+    'The "Matching" bar at the bottom now shows the song being matched right now and goes away when matching is over.',
+    'The waveform on the progress bar now shows in fullscreen too.',
+    'The accent color now fades fully to the next song\'s color, including the text on colored buttons, instead of part of it switching harshly.',
+    'In fullscreen, the close, 3 dots, heart, thumbs-down and fullscreen buttons now sit on either side of the player controls, and they fade out with the rest of the screen.',
+    'In fullscreen, the progress bar, the player buttons and the top menu buttons now turn the app color when you point at them.',
+    'In fullscreen, the up-next line on the right now zig-zags, shows as many songs as fit from the top menu to the bottom, and lists the artist under each song.'
+  ]},
+  { version: 529, date: '2026-11-12', items: [
+    'The song title on the player is now centered.',
+    'The music map now starts from the artist that is playing. If nothing is playing, it opens with a box where you type an artist.',
+    'On a song\'s info page, the album and each credited person (producer, writer and so on) now look like buttons. Tap the album to open it, or a name to open that artist.'
+  ]},
+  { version: 528, date: '2026-11-12', items: [
+    'The queue scroll bar is now on the left side of the window.',
+    'A progress bar shows at the top of the queue while it is reloading.',
+    'On your phone, if the volume stays at 0 (or muted) for more than 7 seconds while a song plays, the music pauses by itself. Turn the volume up before then and it keeps playing. The Android app needs the next update for this to work with the volume buttons.'
+  ]},
+  { version: 526, date: '2026-11-11', items: [
+    'Switching the chips above the queue (Discover, Popular, Deep cuts, Chill, Energy, Focus, decades) no longer changes the song that is playing, even if it is already fading into the next one. Only the upcoming songs change.',
+    'New songs show up in the queue within seconds, one by one, instead of all at once after a long wait. This happens after you clear the queue, switch a chip, or the queue runs out at the end of a song, so playback keeps going.',
+    'Switching back to a chip you already used brings its songs back instantly.'
+  ]},
+  { version: 525, date: '2026-11-11', items: [
+    'Press H to switch between Home and the player.',
+    'The Video button turns into the Cinema button while video is on.',
+    'Find music on a fresh library takes you to Home, where you can import music and pick genres together.',
+    'The add to playlist window now has search and sorting.',
+    'Playlists you edited recently rise to the top of your list, just below pinned ones.',
+    'Dragging a song into Unliked now unlikes it.',
+    'The Visualizer is now called Cymatics. It follows your UI color and has a rainbow mode.',
+    'The LP spins slower than the CD, the main cassette is bigger in fullscreen, and the CD rings look finer.',
+    'Fixed the phone top bar hiding under the clock, missing return buttons on the splash, the missing desktop thumbs down, and the extra chevron in desktop Library Podcasts.'
+  ]},
+  { version: 524, date: '2026-11-11', items: [
+    'Bring your music is now called Import your music everywhere it appears.',
+    'The library scrollbar now matches the queue scrollbar.',
+    'Small song icons in the library, queue and mini player load faster.'
+  ]},
+  { version: 523, date: '2026-11-11', items: [
+    'Your plan name now shows under the E logo and on the opening screen once you are signed in.'
+  ]},
+  { version: 521, date: '2026-11-11', items: [
+    'Plans are now discover, flowwww, deeeep and horizonnn. Backing on Patreon sets yours automatically, and each plan has a welcome hello from MAL GRIOT.'
+  ]},
+  { version: 519, date: '2026-11-11', items: [
+    'Album and playlist links now end on the same choices as a single song: play now, play next, add to queue or add to a playlist, with a line saying how many songs matched and where the album was saved.',
+  ]},
+  { version: 518, date: '2026-11-11', items: [
+    'Android app: Apple Music and YouTube Music links now open and play in EBBLESS even if you don\'t have those apps. Spotify links get their own setup step later.',
+  ]},
+  { version: 517, date: '2026-11-11', items: [
+    'Android app: after your first song, EBBLESS offers a one-tap way to open Spotify, Apple Music and YouTube Music links here. You can also find it in Settings.',
+  ]},
+  { version: 516, date: '2026-11-11', items: [
+    'Patreon patrons can activate flow or horizon from the link in their thank-you note, and redeem the code in their thank-you email.'
+  ]},
+  { version: 515, date: '2026-11-11', items: [
+    'EBBLESS now knows your plan (ebbless, flow or horizon) once you sign in, ready for Patreon connection.'
   ]},
   { version: 514, date: '2026-11-11', items: [
     'fLUX: all your normal keys now work inside it. Left/right skip songs, Space pauses, K and O toggle shuffle and repeat, and H, P, Q, S, M and 1 to 5 leave fLUX and take you there. Up/down change the look.'
@@ -22332,7 +23192,7 @@ const WHATS_NEW = [
     'The background glows again: the blurred album art brightens and dims as it drifts, like it used to, without the flicker.'
   ]},
   { version: 482, date: '2026-11-02', items: [
-    'Light show: a new tab next to Visualizer with nearly 400 MilkDrop looks. Swipe or use the arrow keys to change look, heart the ones you like, hide the ones you don\'t.',
+    'Light show: a new tab next to Cymatics with nearly 400 MilkDrop looks. Swipe or use the arrow keys to change look, heart the ones you like, hide the ones you don\'t.',
     'Mood picks looks by energy, brightness and color, with a count on every choice. Match the song sets them from its tempo and cover. Looks change on the beat every 16 bars by default.',
     'Songs you uploaded drive the light show directly. YouTube and SoundCloud can\'t be heard by the page, so for those it follows a beat at the song\'s real tempo.'
   ]},
@@ -23108,7 +23968,7 @@ const weekUpSim = (() => {
     return sessionStorage.getItem('ebbless:wrappedSim') === '1';
   } catch(e){ return weekUpParam === 'gate'; }
 })();
-const WEEK_UP_FEATURES = { lyrics: 'Lyrics', cymatics: 'Visualizer', lp: 'LP mode', cassette: 'Cassette', youtube_video: 'YouTube video',
+const WEEK_UP_FEATURES = { lyrics: 'Lyrics', cymatics: 'Cymatics', lp: 'LP mode', cassette: 'Cassette', youtube_video: 'YouTube video',
   fullscreen: 'Fullscreen', discover: 'Discover', podcast: 'Podcasts', soundcloud: 'SoundCloud', cast: 'Cast', vibe_search: 'Vibe search', share: 'Share' };
 function weekUpMe(){ try { return JSON.parse(localStorage.getItem(WEEK_UP_ME_KEY)) || {}; } catch(e){ return {}; } }
 function weekUpBypassed(){ try { return !!(localStorage.getItem(WEEK_UP_BYPASS_KEY) || localStorage.getItem(STATS_OFF_KEY)); } catch(e){ return false; } }
@@ -23447,7 +24307,7 @@ function betaInviteEligible(){
   return (vibeState().days || 0) >= BETA_INVITE_MIN_DAYS && hasEverPlayed();
 }
 function betaInviteCalm(){
-  return vibeCheckCalm() && !document.getElementById('signinNudge') && !document.getElementById('weekUp') && !document.getElementById('betaJoin');
+  return vibeCheckCalm() && !document.getElementById('signinNudge') && !document.getElementById('weekUp') && !document.getElementById('betaJoin') && !document.getElementById('linkPrompt');
 }
 // The beta pages (signup, feedback survey) inside the app, over everything,
 // while the music keeps playing. The covered app stops painting (body.beta-join-on).
@@ -23822,6 +24682,27 @@ function queueAddToEnd(trackIndex, plId){
   renderQueuePanel();
   schedulePreload(state.queuePos);
 }
+// Whole playlist/album onto the queue right after the playing song, in order
+// (or shuffled when shuffle is on). Songs already further down the queue move
+// up instead of doubling, like a single Play next. Returns the number added.
+function queuePlayNextCollection(plId){
+  const pl = playlistById(plId);
+  if (!pl) return 0;
+  if (state.queuePos < 0) return queueAddCollection(plId);
+  awardMilestone('qadd');
+  let order = validIndices(pl);
+  if (!order.length) return 0;
+  if (state.shuffle) order = shuffleTail(order, 0);
+  const want = new Set(order);
+  for (let i = state.queue.length - 1; i > state.queuePos; i--){
+    const e = state.queue[i];
+    if (e.plId === plId && want.has(e.idx)) state.queue.splice(i, 1);
+  }
+  state.queue.splice(state.queuePos + 1, 0, ...order.map(idx => ({ plId, idx })));
+  renderQueuePanel();
+  schedulePreload(state.queuePos);
+  return order.length;
+}
 // Whole playlist/album/podcast onto the end of the queue, in order (or
 // shuffled when shuffle is on). Returns the number of tracks added.
 function queueAddCollection(plId){
@@ -23861,6 +24742,9 @@ function queueClearUpcoming(){
   queueHistSnapshot();
   const cleared = state.queue.slice(state.queuePos + 1);
   state.queue = state.queue.slice(0, state.queuePos + 1);
+  // #770: with Discover on, new songs start filling in right away (the
+  // schedulePreload below kicks it off); an earlier empty try doesn't hold it back
+  discoverEmptyTs = 0;
   renderQueuePanel();
   // Undo puts the cleared songs back right after whatever's playing now
   showToast('Queue cleared', cleared.length ? { label: 'Undo', run: () => {
@@ -23928,18 +24812,19 @@ function toggleShuffle(){
     if (!(o && isDiscoverOn(o))) removeDiscoverFromQueue();
   }
   if (!state.playlist || state.queuePos < 0) return;
-  const upcoming = state.queue.slice(state.queuePos + 1);
+  const keep = soundingQueuePos();   // #769: a song already fading in stays where it is
+  const upcoming = state.queue.slice(keep + 1);
   if (state.shuffle){
-    state.queue = state.queue.slice(0, state.queuePos + 1).concat(shuffleTail(upcoming, 0));
+    state.queue = state.queue.slice(0, keep + 1).concat(shuffleTail(upcoming, 0));
   } else if (state.playlist && upcoming.every(e => e.discover || e.plId === state.playlist.id)){
     /* everything upcoming came from the viewed playlist (plus Discover's
        additions): restore its natural order, with the discovered tracks -
        which only ever extend the listener's queue - back after it */
     const pl = state.playlist;
     const valid = validIndices(pl);
-    const played = new Set(state.queue.slice(0, state.queuePos + 1).filter(e => !e.discover && e.plId === pl.id).map(e => e.idx));
+    const played = new Set(state.queue.slice(0, keep + 1).filter(e => !e.discover && e.plId === pl.id).map(e => e.idx));
     const rest = valid.filter(i => !played.has(i)).map(idx => ({ plId: pl.id, idx }));
-    state.queue = state.queue.slice(0, state.queuePos + 1).concat(rest, upcoming.filter(e => e.discover));
+    state.queue = state.queue.slice(0, keep + 1).concat(rest, upcoming.filter(e => e.discover));
   }
   /* otherwise the queue mixes tracks manually added from other playlists —
      there's no single canonical order to restore, so leave it as-is */
@@ -24861,7 +25746,9 @@ function bubbleLookupSet(pool, base){
    opts.preferYear (optional): nudge the ranking toward the seed's release
    era (see applyYearPreference); a no-op when years aren't available.
    opts.timeBias (optional): 0..1 strength of the time-of-day lean (see
-   applyTimePreference); defaults to TIME_QUEUE_SCALE. */
+   applyTimePreference); defaults to TIME_QUEUE_SCALE.
+   opts.onTrack (optional): called with each song the moment it resolves,
+   so a caller can queue it before the rest of the batch is done (#770). */
 async function fetchDiscoverCandidates(seedTracks, excludeVideoIds, count, allowLong, opts){
   const steer = opts && opts.steer;
   let skipArtists = opts && opts.skipArtists;
@@ -24969,6 +25856,7 @@ async function fetchDiscoverCandidates(seedTracks, excludeVideoIds, count, allow
       resolved.push({ title: meta.title, artist: meta.artist, videoId: c.videoId, matchedTitle: c.title, channel: c.artist, plays: 0, art: meta.art, duration: c.duration || 0, tags: tagNames });
       pickedKeys.push(dupeKey);
       took();
+      if (opts && opts.onTrack) opts.onTrack(resolved[resolved.length - 1]);
       continue;
     }
     try{
@@ -24979,6 +25867,7 @@ async function fetchDiscoverCandidates(seedTracks, excludeVideoIds, count, allow
       resolved.push({ title: meta.title, artist: meta.artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '', plays: 0, art: meta.art, duration: match.duration || 0, tags: tagNames });
       pickedKeys.push(dupeKey);
       took();
+      if (opts && opts.onTrack) opts.onTrack(resolved[resolved.length - 1]);
     } catch(e){ /* discover is best-effort - a miss here never blocks playback */ }
   }
   rememberDiscoverPicks(seedKey, pickedKeys);
@@ -25284,6 +26173,23 @@ function unlikedRefresh(){
   rerenderLibraryKeepPanel();
   if (sc) sc.scrollTop = top;
 }
+// #785: dragging any song onto Unliked thumbs it down: out of Liked, into Unliked, and into taste.
+function unlikeDroppedSong(t){
+  if (!t || !t.videoId){ showToast('That song cannot be unliked'); return; }
+  const wasLiked = isTrackLiked(t.videoId);
+  if (wasLiked) removeTrackFromPlaylistByVideoId(LIKED_ID, t.videoId);
+  addDecline(t, t.tags || []);
+  recordListenSignal(t, -3);
+  rerenderLibraryKeepPanel();
+  csMarksSync();
+  syncDeclineBtn();
+  showToast('Moved to Unliked', { label: 'Undo', run: () => {
+    removeDecline(t.videoId);
+    recordListenSignal(t, 3);
+    if (wasLiked) addTracksToPlaylist(LIKED_ID, [t]);
+    rerenderLibraryKeepPanel(); csMarksSync(); syncDeclineBtn();
+  } });
+}
 // Same path as the Undo on a thumbs-down (undoDeclineCurrents).
 function restoreUnlikedSong(t){
   removeDecline(t.videoId);
@@ -25527,6 +26433,8 @@ const DISCOVER_RETRY_MS = 20000;
 // is still long, and keeps the result for the extension to use. One prefetch at
 // a time, keyed by origin + track: a track change replaces it (the stale result
 // is simply never used), and the same track never fetches twice.
+// #770: it also keeps each song as it resolves (got), so an extension that
+// takes it over queues those at once and the rest as they land (listen).
 let discoverPrefetch = null;
 function discoverPrefetchKey(originPlId, t){ return originPlId + '|' + (t && t.videoId || '') + '|' + currentRadioSteer(); }
 function prefetchDiscover(originPlId){
@@ -25541,14 +26449,63 @@ function prefetchDiscover(originPlId){
   }
   const allowLong = discoverQueuedThisSession >= DISCOVER_LONG_AFTER;
   const steer = currentRadioSteer();
-  const promise = fetchDiscoverCandidates(seedTracks, libraryVideoIdSet(), DISCOVER_BATCH, allowLong, { steer, vibe: discoverVibeFor(originPlId), alive: () => steer === currentRadioSteer() }).catch(() => []);
-  discoverPrefetch = { key, promise };
+  const pf = { key, promise: null, got: [], listen: null };
+  pf.promise = fetchDiscoverCandidates(seedTracks, libraryVideoIdSet(), DISCOVER_BATCH, allowLong, { steer, vibe: discoverVibeFor(originPlId), alive: () => steer === currentRadioSteer(),
+    onTrack: t => { pf.got.push(t); if (pf.listen) pf.listen(t); } }).catch(() => []);
+  discoverPrefetch = pf;
+}
+// #770: songs join the queue one by one as they resolve, not after the whole
+// batch (28 songs at ~4s each took about two minutes before the first one
+// showed). Anyone waiting on "is there a next song yet" (playNext at the end
+// of the queue) is told on each one through discoverAddWaiters.
+let discoverAddWaiters = [];
+function notifyDiscoverAdd(){ const w = discoverAddWaiters; discoverAddWaiters = []; w.forEach(f => f()); }
+// Resolves once a song is queued after the current one, or the extension ends.
+function discoverNextReady(){
+  if (state.queue.length > state.queuePos + 1 || !discoverExtendPromise) return Promise.resolve();
+  return new Promise(res => discoverAddWaiters.push(res));
 }
 function extendQueueWithDiscover(originPlId){
   if (discoverExtendPromise) return discoverExtendPromise;
   discoverExtendPromise = (async () => {
+    // yield first, so an early return can't run the finally (which clears
+    // discoverExtendPromise) before the assignment above has happened
+    await null;
+    const steer = currentRadioSteer();
+    const vibeText = discoverVibeFor(originPlId);
+    const extId = discoverExtId(originPlId);
+    const added = [];
+    // Discover may have been switched off, a steering chip tapped, or the
+    // queue replaced while songs were still resolving - those land nowhere.
+    const live = () => steer === currentRadioSteer() && (isDiscoverOn(originPlId) || state.shuffleDiscover) && discoverOriginId() === originPlId && state.queuePos >= 0;
+    let queued = null;   // videoIds already in the queue, built on the first song
+    const add = (t) => {
+      if (!t || !t.videoId || !live()) return;
+      if (!queued) queued = new Set(state.queue.map((e, i) => { const x = trackAt(i); return x && x.videoId; }));
+      if (queued.has(t.videoId)) return;
+      queued.add(t.videoId);
+      const ext = getOrCreateDiscoverExt(originPlId);
+      ext.tracks.push(t);
+      lsSet(LS_PL(extId), ext);
+      // Queue entries Discover adds are tagged `discover: true` (not just
+      // inferred from the discover-ext plId - the listener can queue a
+      // discovered song themselves from its menu, and that entry is theirs)
+      // so switching Discover off can take exactly these back out
+      // (removeDiscoverFromQueue). They always go after the listener's own
+      // queue; with shuffle on, each lands at a random spot in what is
+      // coming up, never ahead of the immediate next entry (it may already
+      // be buffering on the standby deck for a gapless/crossfaded handoff).
+      const entry = { plId: extId, idx: ext.tracks.length - 1, discover: true };
+      const from = state.queuePos + 2;
+      if (state.shuffle && state.queue.length > from) state.queue.splice(from + Math.floor(Math.random() * (state.queue.length - from + 1)), 0, entry);
+      else state.queue.push(entry);
+      added.push(t);
+      discoverQueuedThisSession++;
+      renderQueuePanel();
+      schedulePreload(state.queuePos);
+      notifyDiscoverAdd();
+    };
     try{
-      const steer = currentRadioSteer();
       const seedTracks = [];
       for (let p = state.queuePos; p >= 0 && seedTracks.length < 5; p--){
         const t = trackAt(p);
@@ -25556,49 +26513,25 @@ function extendQueueWithDiscover(originPlId){
       }
       if (!seedTracks.length) return;
       const allowLong = discoverQueuedThisSession >= DISCOVER_LONG_AFTER;
-      // Reuse the fetch started when this track loaded (prefetchDiscover) if it
-      // is for the same track, so the batch is usually already there.
+      // Take over the fetch started when this track loaded (prefetchDiscover)
+      // if it is for the same track: what it has already resolved goes in now.
       const pf = discoverPrefetch;
       discoverPrefetch = null;
-      const found = (pf && pf.key === discoverPrefetchKey(originPlId, seedTracks[0])) ? await pf.promise
-        : await fetchDiscoverCandidates(seedTracks, libraryVideoIdSet(), DISCOVER_BATCH, allowLong, { steer, vibe: discoverVibeFor(originPlId), alive: () => steer === currentRadioSteer() });
-      // A steering chip was tapped mid-fetch: drop this batch, the chip refetches.
+      if (pf && pf.key === discoverPrefetchKey(originPlId, seedTracks[0])){
+        pf.got.forEach(add);
+        pf.listen = add;
+        await pf.promise;
+      } else {
+        await fetchDiscoverCandidates(seedTracks, libraryVideoIdSet(), DISCOVER_BATCH, allowLong, { steer, vibe: vibeText, alive: live, onTrack: add });
+      }
+      // A steering chip was tapped mid-fetch: the chip refetches.
       if (steer !== currentRadioSteer()) return;
-      // Discover may have been switched off (or the queue replaced) while
-      // the fetch was in flight - don't append a batch nobody asked for.
-      if (!found.length || !(isDiscoverOn(originPlId) || state.shuffleDiscover) || discoverOriginId() !== originPlId){
-        if (!found.length) noteDiscoverEmpty();
-        return;
-      }
+      if (!added.length){ noteDiscoverEmpty(); return; }
       discoverEmptyTs = 0;
-      discoverQueuedThisSession += found.length;
-      const vibeText = discoverVibeFor(originPlId);
-      if (vibeText) vibeRememberPlayed(vibeText, found, { noWhen: true });
-      const extId = discoverExtId(originPlId);
-      const ext = getOrCreateDiscoverExt(originPlId);
-      const startIdx = ext.tracks.length;
-      found.forEach(t => ext.tracks.push(t));
-      lsSet(LS_PL(extId), ext);
-      // Queue entries Discover adds are tagged `discover: true` (not just
-      // inferred from the discover-ext plId - the listener can queue a
-      // discovered song themselves from its menu, and that entry is theirs)
-      // so switching Discover off can take exactly these back out
-      // (removeDiscoverFromQueue). They always go after the listener's own
-      // queue; with shuffle on, the upcoming part is reshuffled so shuffle
-      // draws from both the original queue and the discovered tracks.
-      if (state.queuePos < 0) return;
-      found.forEach((t, i) => state.queue.push({ plId: extId, idx: startIdx + i, discover: true }));
-      if (state.shuffle){
-        const head = state.queue.slice(0, state.queuePos + 1);
-        // The immediate next entry stays put - it may already be buffering
-        // on the standby deck for a gapless/crossfaded handoff.
-        state.queue = head.concat(shuffleTail(state.queue.slice(state.queuePos + 1), 1));
-      }
-      renderQueuePanel();
-      schedulePreload(state.queuePos);
+      if (vibeText) vibeRememberPlayed(vibeText, added, { noWhen: true });
     } catch(e){
-      noteDiscoverEmpty();
-    } finally { discoverExtendPromise = null; }
+      if (!added.length) noteDiscoverEmpty();
+    } finally { discoverExtendPromise = null; notifyDiscoverAdd(); }
   })();
   return discoverExtendPromise;
 }
@@ -26277,16 +27210,37 @@ function renderRadioSteer(){
     b.title = on ? 'Back to the usual mix' : 'Steer the radio: ' + b.textContent;
   });
 }
+// #769: the last queue position a Discover/steer switch must leave alone. In a
+// track-end crossfade the next song is already sounding on the standby deck
+// while queuePos still points at the outgoing one (finishCrossfade moves it),
+// so that song counts as the current one too.
+function soundingQueuePos(){
+  const nd = standbyDeck();
+  return (swapInProgress && crossfadeTriggered && nd.pos > state.queuePos) ? nd.pos : state.queuePos;
+}
 // Takes out what Discover/radio added after the playing song (never the
 // listener's own entries), then refills with the new steer.
+// #770: the songs a switch takes out are kept per steer (this queue only, in
+// memory), so switching back puts them straight back in - no new requests,
+// and the upcoming list is there at once. A steer tried for the first time
+// still has to fetch; its songs then stream in one by one.
+let radioSteerStash = { origin: null, bySteer: {} };
 function setRadioSteer(id){
-  const next = currentRadioSteer() === id ? '' : id;
+  const prev = currentRadioSteer();
+  const next = prev === id ? '' : id;
   lsSet(LS_RADIO_STEER, next);
   renderRadioSteer();
   const originPlId = discoverOriginId();
   if (!originPlId || state.queuePos < 0) return;
-  const cur = state.queue[state.queuePos];
-  state.queue = state.queue.filter((e, i) => i <= state.queuePos || !(e.discover || /^radio:/.test(String(e.plId))));
+  const cur = state.queue[state.queuePos], keep = soundingQueuePos();
+  const isRadioPart = e => e.discover || /^radio:/.test(String(e.plId));
+  if (radioSteerStash.origin !== originPlId) radioSteerStash = { origin: originPlId, bySteer: {} };
+  const out = state.queue.filter((e, i) => i > keep && isRadioPart(e));
+  if (out.length) radioSteerStash.bySteer[prev] = out;
+  state.queue = state.queue.filter((e, i) => i <= keep || !isRadioPart(e));
+  const back = radioSteerStash.bySteer[next] || [];
+  delete radioSteerStash.bySteer[next];
+  state.queue = state.queue.concat(back);
   state.queuePos = state.queue.indexOf(cur);
   discoverPrefetch = null;
   discoverEmptyTs = 0;
@@ -26294,7 +27248,7 @@ function setRadioSteer(id){
   schedulePreload(state.queuePos);
   persistResume();
   const d = radioSteerDefs().find(x => x.id === next);
-  showToast(d ? 'Finding ' + d.label + ' songs...' : 'Back to the usual mix');
+  showToast(d ? (back.length ? d.label + ' songs' : 'Finding ' + d.label + ' songs...') : 'Back to the usual mix');
   // an extension already in flight drops its batch (steer changed), then this refills
   (discoverExtendPromise || Promise.resolve()).then(() => {
     if (discoverOriginId() === originPlId) maybeExtendDiscoverQueue();
@@ -26311,11 +27265,13 @@ $('radioSteerRow').addEventListener('click', (e) => {
 function removeDiscoverFromQueue(){
   if (state.queuePos < 0) return 0;
   const before = state.queue.length;
-  const cur = state.queue[state.queuePos];
-  const kept = state.queue.filter(e => e === cur || !e.discover);
+  const cur = state.queue[state.queuePos], keep = soundingQueuePos();
+  const sounding = keep > state.queuePos ? state.queue[keep] : null;
+  const kept = state.queue.filter((e, i) => (i >= state.queuePos && i <= keep) || !e.discover);
   if (kept.length === before) return 0;
   state.queue = kept;
   state.queuePos = kept.indexOf(cur);
+  if (sounding) standbyDeck().pos = kept.indexOf(sounding);   // the song fading in keeps its deck
   renderQueuePanel();
   schedulePreload(state.queuePos);
   persistResume();
@@ -27187,19 +28143,41 @@ function fsTimelineSync(){
   if (!box) return;
   box.textContent = '';
   if (state.queuePos < 0) return;
-  for (let pos = state.queuePos; pos < Math.min(state.queue.length, state.queuePos + 6); pos++){
+  // #804: as many songs as fit from just under the top nav to the bottom (44px per song)
+  const room = window.innerHeight - ($('topbar') ? $('topbar').offsetHeight : 60) - 36;
+  const n = Math.max(6, Math.min(24, Math.floor(room / 44)));
+  const H = 44, NS = 'http://www.w3.org/2000/svg';
+  const pts = [];
+  for (let pos = state.queuePos; pos < Math.min(state.queue.length, state.queuePos + n); pos++){
     const t = trackAt(pos);
     if (!t) continue;
+    const i = pts.length;
+    pts.push([i % 2 ? 23 : 7, i * H + H / 2]);   // dot centre, measured from the right edge
     const b = document.createElement('button'); b.type = 'button'; b.className = 'fst-item' + (pos === state.queuePos ? ' is-now' : ''); b.setAttribute('role', 'listitem');
-    b.setAttribute('aria-label', (pos === state.queuePos ? 'Now playing: ' : 'Play ') + t.title);
-    const l = document.createElement('span'); l.className = 'fst-label'; l.textContent = t.title;
+    b.setAttribute('aria-label', (pos === state.queuePos ? 'Now playing: ' : 'Play ') + t.title + (t.artist ? ', ' + t.artist : ''));
+    const l = document.createElement('span'); l.className = 'fst-label';
+    const lt = document.createElement('span'); lt.className = 'fst-title'; lt.textContent = t.title; l.appendChild(lt);
+    if (t.artist){ const la = document.createElement('span'); la.className = 'fst-artist'; la.textContent = t.artist; l.appendChild(la); }
     const d = document.createElement('span'); d.className = 'fst-dot'; d.setAttribute('aria-hidden', 'true');
     b.appendChild(l); b.appendChild(d);
     if (pos !== state.queuePos) b.addEventListener('click', () => queueJumpTo(pos));
     box.appendChild(b);
   }
+  if (pts.length > 1){
+    const svg = document.createElementNS(NS, 'svg'); svg.setAttribute('class', 'fst-line'); svg.setAttribute('aria-hidden', 'true');
+    const path = document.createElementNS(NS, 'path');
+    path.setAttribute('d', pts.map((p, k) => (k ? 'L' : 'M') + (32 - p[0]) + ' ' + p[1]).join(' '));
+    svg.appendChild(path); box.insertBefore(svg, box.firstChild);
+  }
+}
+window.addEventListener('resize', () => { if (document.body.classList.contains('desktop-fs')) fsTimelineSync(); });
+function syncQueueReloadBar(){
+  const bar = $('queueReloadBar'); if (!bar) return;
+  const cur = state.queue[state.queuePos];
+  try { bar.hidden = !(radioBusy || (cur && bgResolveProgress.has(cur.plId))); } catch(e){ bar.hidden = true; }   // radioBusy is declared later; at startup this just hides
 }
 function renderQueuePanel(){
+  syncQueueReloadBar();
   try { renderShuffleButtons(); } catch(e){}   // a restored or changed queue may be a vibe (sleep timer) or not (shuffle)
   fsTimelineSync();
   renderDiscoverToggle();
@@ -29480,7 +30458,27 @@ function startLoadIconTicker(){
   }, 250);
 }
 
+/* #787 mobile: volume (phone media volume, in-app volume or muted player) held at 0 for more than 7s
+   while playing pauses the music. One timer, armed/cleared on play-state and volume changes, no polling.
+   The Android app calls __ebbVolChanged after volume-key presses. */
+let volZeroTimer = 0;
+function volIsZero(){
+  try { if (window.EbbNative && typeof EbbNative.adjustVolume === 'function'){ const r = String(EbbNative.adjustVolume(0) || ''); if (r && parseInt(r, 10) === 0) return true; } } catch(e){}
+  if (voiceVolPct <= 0) return true;
+  try { const ad = activeDeck(); if (ad && ad.player && ad.player.isMuted && ad.player.isMuted()) return true; } catch(e){}
+  return false;
+}
+function volZeroCheck(){
+  clearTimeout(volZeroTimer); volZeroTimer = 0;
+  if (!isMobileUA || !artworkWrap.classList.contains('is-playing') || !volIsZero()) return;
+  volZeroTimer = setTimeout(() => {
+    volZeroTimer = 0;
+    if (artworkWrap.classList.contains('is-playing') && volIsZero()) { try { pausePlayback(); } catch(e){} }
+  }, 7000);
+}
+window.__ebbVolChanged = volZeroCheck;
 function setPlayingUI(isPlaying){
+  volZeroCheck();
   if (resumeBootDone) lsSet(LS_RESUME_PLAY, !!isPlaying);
   ytPanelBtnSync();
   if (isPlaying && activeLoadProgress() !== null) startLoadIconTicker();
@@ -29948,6 +30946,19 @@ function vizSetRotate(on){
   vizRotateBtn.setAttribute('aria-pressed', vizRotateOn ? 'true' : 'false');
 }
 vizSetRotate(vizRotateOn);
+/* #772/#773: the sand is the UI color (same one as the accent everywhere else); Rainbow mode cycles its hue slowly instead */
+let vizRainbowOn = lsGet(LS_VIZ_RAINBOW, false) === true;
+function vizSetRainbow(on){
+  vizRainbowOn = !!on;
+  lsSet(LS_VIZ_RAINBOW, vizRainbowOn);
+  vizRainbowBtn.classList.toggle('is-active', vizRainbowOn);
+  vizRainbowBtn.setAttribute('aria-pressed', vizRainbowOn ? 'true' : 'false');
+}
+vizSetRainbow(vizRainbowOn);
+function vizSandColor(){
+  if (vizRainbowOn) return 'hsl(' + Math.floor((performance.now() / 45) % 360) + ',88%,62%)';
+  return advPrefs().accent || songAccent || vizRosicrucianColor();
+}
 
 // Every transition also rolls a fresh set of cosmetic params - jitter/step
 // scale, hold duration, grain size - so the motion (not just the plate
@@ -30161,7 +31172,7 @@ function vizDraw(t){
   const aLv = vizAudioLevel() * VIZ_LOUD;   // 0 with the current setting: the song's loudness does not change the sand or the glow
   const jitter = (vizPlaying ? 0.020 : 0.004) * jitterMul * (1 + 1.2 * aLv);
   const step = (vizPlaying ? 0.016 : 0.006) * stepMul;
-  const color = vizRosicrucianColor();
+  const color = vizSandColor();
 
   vizCtx2d.fillStyle = color;
   const r = 0.5 * grain;
@@ -30255,6 +31266,7 @@ vizNextBtn.addEventListener('click', (e) => { e.stopPropagation(); vizAdvancePat
 vizAutoBtn.addEventListener('click', (e) => { e.stopPropagation(); vizSetHoldMode(!vizHoldMode); });
 vizAutoBtn.classList.toggle('is-active', vizHoldMode);
 vizRotateBtn.addEventListener('click', (e) => { e.stopPropagation(); vizSetRotate(!vizRotateOn); });
+vizRainbowBtn.addEventListener('click', (e) => { e.stopPropagation(); vizSetRainbow(!vizRainbowOn); });
 vizSpeedBtn.addEventListener('click', (e) => {
   e.stopPropagation();
   const idx = VIZ_SPEEDS.indexOf(vizSpeed);
@@ -30333,7 +31345,7 @@ const MILK_MOODS = [
 const milkFavs = new Set(lsGet(LS_MILK_FAVS, []));
 const milkBans = new Set(lsGet(LS_MILK_BANS, []));
 const milk = {
-  open: false, viz: null, raf: 0, lastT: 0, loading: null,
+  inline: false, open: false, viz: null, raf: 0, lastT: 0, loading: null,
   presets: new Map(),          // name -> preset object, for loaded packs
   tags: null, tagByName: new Map(),
   history: [], hIdx: -1, cur: '',
@@ -30887,16 +31899,27 @@ function milkDesktopUntap(){
   window.ebblessAudioStream(null);
 }
 /* ---------- open / close ---------- */
-async function openMilk(){
+// #768: inline = the layer lives inside the player's art box; fullscreen = back on the page body, over everything (the old look)
+function milkSetInline(on){
+  milk.inline = !!on;
+  if (on){ artworkWrap.appendChild(milkLayer); document.body.classList.remove('milk-open'); }
+  else { document.body.appendChild(milkLayer); if (milk.open) document.body.classList.add('milk-open'); }
+  milkLayer.classList.toggle('milk-inline', !!on);
+  $('milkTabBtn').classList.toggle('is-active', !!on);
+  const ic = $('milkFsBtn'); if (ic){ ic.title = on ? 'Fullscreen' : 'Fullscreen (F)'; }
+  milkApplySize();
+}
+if (window.ResizeObserver) new ResizeObserver(() => { if (milk.open) milkApplySize(); }).observe(milkLayer);
+async function openMilk(inline = true){
   if (milk.open) return;
   milk.open = true;
+  milkSetInline(inline);
   milk.openedAt = performance.now();
   clearTimeout(milk.closeTimer);
   milkLayer.classList.add('is-open', 'milk-dim');
   milkLayer.classList.toggle('milk-flow', milkFlowOn());
   milk.cardFor = null;
   milkLayer.setAttribute('aria-hidden', 'false');
-  document.body.classList.add('milk-open');
   vizStop();                       // covered: the cymatics loop stops underneath
   milkLoadMetrics();
   milkSongChanged();
@@ -30923,6 +31946,7 @@ async function openMilk(){
 const milkReduced = matchMedia('(prefers-reduced-motion: reduce)');
 function closeMilk(){
   if (!milk.open) return;
+  if (!milk.inline && milk.fromTab){ milkSetInline(true); return; }   // fullscreen steps back to the player first
   // Reduced motion: fLUX fades to black first, then the page fades back in.
   if (milkReduced.matches && !milk.closing){
     milk.closing = true;
@@ -30943,6 +31967,8 @@ function closeMilkNow(){
   else milkLayer.classList.remove('is-open');
   milkLayer.setAttribute('aria-hidden', 'true');
   document.body.classList.remove('milk-open');
+  milk.fromTab = false;
+  $('milkTabBtn').classList.remove('is-active');
   $('milkPanel').hidden = true;
   milkUntap();
   milkDesktopUntap();
@@ -30971,11 +31997,12 @@ document.addEventListener('fullscreenchange', () => {
 });
 let milkFsWas = false;
 function milkToggleFs(){
+  if (milk.inline){ milkSetInline(false); return; }
   milkFsIntent = true;
   if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
   else if (milkLayer.requestFullscreen) milkLayer.requestFullscreen().catch(() => {});
 }
-$('milkTabBtn').addEventListener('click', (e) => { e.stopPropagation(); openMilk(); });
+$('milkTabBtn').addEventListener('click', (e) => { e.stopPropagation(); if (milk.open && milk.inline){ closeMilk(); return; } milk.fromTab = true; openMilk(true); });
 $('milkCloseBtn').addEventListener('click', closeMilk);
 $('milkNextBtn').addEventListener('click', () => milkNext());
 $('milkPrevBtn').addEventListener('click', () => milkPrev());
@@ -31040,6 +32067,7 @@ function milkKeyFeedback(e){
 }
 document.addEventListener('keydown', (e) => {
   if (!milk.open || e.metaKey || e.ctrlKey || e.altKey) return;
+  if (milk.inline && e.key !== 'f' && e.key !== 'F' && e.key !== '3') return;   // inline: the player keeps its own keys
   const t = e.target;
   if (t && (t.tagName === 'INPUT' && !/^(checkbox|range|button)$/i.test(t.type) || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
   let used = true;
@@ -31071,6 +32099,7 @@ const lyricsCache = new Map();
 let lyricsState = { videoId: null, lines: [], synced: false, activeIdx: -1 };
 
 function applyVisualMode(){
+  if (milk.open && milk.inline) closeMilk();   // another tab was picked
   visualTabs.forEach(b => b.classList.toggle('is-active', b.dataset.mode === visualMode));
   artworkWrap.dataset.mode = visualMode;
   artworkWrap.classList.toggle('mode-lyrics', visualMode === 'lyrics');
@@ -31088,6 +32117,7 @@ function applyVisualMode(){
   }
 }
 function setVisualMode(mode){
+  if (milk.open && milk.inline) closeMilk();   // #768: picking any tab (even the current one) leaves the inline light show
   if (mode === visualMode) return;
   visualMode = mode;
   lsSet(LS_VIZ, mode);
@@ -31871,7 +32901,7 @@ advApplySections();
 /* Back up / restore settings (#469 phase 4): one file with this device's
    settings (not the library, which profile sync already carries). Restoring
    writes each key back through lsSet so sync sees the change, then reloads. */
-const advBackupKeys = () => [LS_ADV, LS_LEVEL, LS_CROSSFADE, LS_VIZ, LS_VIZ_HOLD, LS_VIZ_SPEED, LS_VIZ_ROTATE, LS_LIB_VIEW, LS_LIB_SORT, LS_LIB_FILTER, LS_ART_STYLE, LS_MINI_PLAYER, LS_ARTIST_ALBUM_SORT];
+const advBackupKeys = () => [LS_ADV, LS_LEVEL, LS_CROSSFADE, LS_VIZ, LS_VIZ_HOLD, LS_VIZ_SPEED, LS_VIZ_ROTATE, LS_VIZ_RAINBOW, LS_LIB_VIEW, LS_LIB_SORT, LS_LIB_FILTER, LS_ART_STYLE, LS_MINI_PLAYER, LS_ARTIST_ALBUM_SORT];
 const ADV_BACKUP_PREFIXES = ['ebbless:plview:'];
 $('advBackupBtn').addEventListener('click', () => {
   const keys = {};
@@ -31936,6 +32966,8 @@ applyArtStyle();
    ========================================================================= */
 const recordDisc = recordLabelImg.parentElement;
 const REC_DEG_PER_S = 80; /* #738: calmer spin, 4.5s per rotation (was 120) */
+const REC_LP_DEG_PER_S = 56; /* #764: the LP turns slower than the CD (80) */
+function recRestSpeed(){ return discSkin === 'cd' ? REC_DEG_PER_S : REC_LP_DEG_PER_S; }
 const REC_GAME_DEG_PER_S = 120; /* the LP game keeps its old pace, eased to while a run is on */
 let recBase = REC_DEG_PER_S;
 let recAngle = 0, recSpeedMul = 0, recTargetMul = 0, recRafId = null, recLastTs = 0;
@@ -31955,7 +32987,7 @@ function recordTick(ts){
   // as "a real object", not a wobble.
   const wow = 1 + 0.004 * Math.sin(recAngle * Math.PI / 180);
   if (!recGame.on && recGameMul > 1) recGameMul = Math.max(1, recGameMul - dt / 1500); /* run over: ease back to normal pace */
-  const recBaseTo = (recGame.on || recGameMul > 1) ? REC_GAME_DEG_PER_S : REC_DEG_PER_S;
+  const recBaseTo = (recGame.on || recGameMul > 1) ? REC_GAME_DEG_PER_S : recRestSpeed();
   recBase += Math.sign(recBaseTo - recBase) * Math.min(Math.abs(recBaseTo - recBase), dt * 0.05);
   recAngle += (dt / 1000) * recBase * recSpeedMul * recGameMul * wow;
   recordApplyRotation();
@@ -32586,6 +33618,7 @@ visualTabs.forEach(btn => btn.addEventListener('click', (e) => {
     // the disc where the cue is, so a click there is a tap on the record,
     // never the art-style menu
     if (recGame.on){ recordGameTap(); return; }
+    if (milk.open && milk.inline){ closeMilk(); return; }   // #768: Art leaves the inline light show
     if (visualMode !== 'art'){ setVisualMode('art'); closeArtStyleMenu(); }
     else cycleArtStyle();
     return;
@@ -33901,6 +34934,7 @@ function bumpPlayCount(entry){
   t.plays = (t.plays || 0) + 1;
   persistPlaylistObj(pl);
   recordLatestPlayed(t);
+  try{ linkPromptNotePlay(); }catch(e){}
   npSchedulePublish(4000);
   if (!isPodcastPlaylistId(entry.plId)) noteTaste(t, 'play');
 }
@@ -33953,7 +34987,7 @@ function reflectCurrentTrackUI(pos, opts){
   }
   setAmbient(t);
   updatePlayerAccentColor(t);
-  attachArtworkFallback(miniArt, t);
+  attachArtworkFallback(miniArt, t, 'icon');
   cassetteUpdateTrack(t, pos, { skipLabelArt: skipArt });
   bumpPlayCount(entry);
   renderQueuePanel();
@@ -34082,7 +35116,8 @@ function runCrossfade(nd, nextPos){
     const p = Math.min(1, (Date.now() - start) / durationMs);
     if (old.player && old.player.setVolume) old.player.setVolume(Math.round(effectiveVolume(old) * (1 - p)));
     if (nd.player && nd.player.setVolume) nd.player.setVolume(Math.round(effectiveVolume(nd) * p));
-    if (p >= 1){ clearInterval(old.fadeTimer); old.fadeTimer = null; finishCrossfade(old, nd, nextPos); }
+    // nd.pos, not nextPos: a queue edit mid-fade (#769) may have re-indexed the incoming song
+    if (p >= 1){ clearInterval(old.fadeTimer); old.fadeTimer = null; finishCrossfade(old, nd, nd.pos >= 0 ? nd.pos : nextPos); }
   }, 100);
 }
 
@@ -34896,7 +35931,9 @@ function playNext(auto){
   if (pos >= state.queue.length){
     const originPlId = discoverOriginId();
     if (originPlId && isDiscoverOn(originPlId)){
-      extendQueueWithDiscover(originPlId).then(() => finishQueueAtEnd(opts));
+      // #770: go as soon as the first new song is queued, not after the whole batch
+      extendQueueWithDiscover(originPlId);
+      discoverNextReady().then(() => finishQueueAtEnd(opts));
       return;
     }
     finishQueueAtEnd(opts);
@@ -35140,10 +36177,11 @@ document.addEventListener('keydown', (e) => {
       // every fullscreen layer closed, then setView('player')
       // (closes the queue / playlist panel, steps out of Settings). Settings
       // opened from desktop fullscreen would otherwise restore it.
+      // #762: pressed again from Home, it goes back to the player
       if (e.repeat) break;
       leaveFullscreen(true);
       state.settingsFromDeskFs = false;
-      setView('player'); // not the wordmark click: that returns to the splash where the mini player is supported (#661)
+      setView(state.currentView === 'home' ? 'player' : 'home'); // not the wordmark click: that returns to the splash where the mini player is supported (#661)
       break;
     case 'Escape':
       // The YouTube video card first (Geethub #249: it sits over everything,
@@ -35992,14 +37030,7 @@ function wireMiniDesktop(win){
     menu.style.top = Math.max(4, Math.min(y, win.innerHeight - r.height - 4)) + 'px';
   };
   doc.addEventListener('contextmenu', (e) => { e.preventDefault(); openMenu(e.clientX, e.clientY); });
-  // #612: the shape picker is also a button in the header (right-click works on every shape)
-  const shapeBtn = doc.createElement('button');
-  shapeBtn.id = 'mpShape'; shapeBtn.className = 'mp-tool'; shapeBtn.title = 'Shape: LP, cassette, card...'; shapeBtn.setAttribute('aria-label', 'Change shape');
-  shapeBtn.innerHTML = '<svg viewBox="0 0 24 24">' + MP_ICO.shape + '</svg>';
-  shapeBtn.addEventListener('click', (e) => { e.stopPropagation(); const r = shapeBtn.getBoundingClientRect(); openMenu(r.left, r.bottom + 2); });
-  const styleBtn = doc.getElementById('mpStyle');
-  styleBtn.parentNode.insertBefore(shapeBtn, styleBtn);
-  doc.head.appendChild(Object.assign(doc.createElement('style'), { textContent: '#mpShape{opacity:0}body:hover #mpShape,#mpShape:focus-visible{opacity:1}' }));
+  // #796: no shape button in the header; the right-click menu above still picks the shape
   mpMagnetize(win, mpDesktopSize(mpDesktopShape()).w, mpDesktopSize(mpDesktopShape()).h);
   menu.addEventListener('click', (e) => {
     const b = e.target.closest('button');
@@ -36165,7 +37196,7 @@ function mpRecTick(ts){
   const dt = Math.min(64, ts - mpRec.last); mpRec.last = ts;
   if (mpRec.speed < mpRec.target) mpRec.speed = Math.min(mpRec.target, mpRec.speed + dt / 900);
   else if (mpRec.speed > mpRec.target) mpRec.speed = Math.max(mpRec.target, mpRec.speed - dt / 700);
-  mpRec.angle += (dt / 1000) * REC_DEG_PER_S * mpRec.speed * (1 + 0.004 * Math.sin(mpRec.angle * Math.PI / 180));
+  mpRec.angle += (dt / 1000) * recRestSpeed() * mpRec.speed * (1 + 0.004 * Math.sin(mpRec.angle * Math.PI / 180));
   const el = win.document.getElementById('mpRecord');
   if (el) el.style.transform = 'rotate(' + (mpRec.angle % 360).toFixed(2) + 'deg)';
   if (mpRec.speed <= 0 && mpRec.target === 0){ mpRec.raf = 0; return; }
@@ -38506,7 +39537,8 @@ function waveDraw(){
   if (key === waveDrawKey) return;
   waveDrawKey = key;
   const k = Math.floor(r), f = r - k;
-  seekTrack.style.setProperty('--wave', waveSvg(waveShape.map((v, i) => i < k ? v : i === k ? .31 + (v - .31) * f : .31)));
+  const waveCss = waveSvg(waveShape.map((v, i) => i < k ? v : i === k ? .31 + (v - .31) * f : .31));
+  seekTrack.style.setProperty('--wave', waveCss); flowSeekTrack.style.setProperty('--wave', waveCss);
 }
 function waveShow(shape, full){ waveShape = shape; waveFullShape = !!full; waveDrawKey = -1; waveDraw(); }
 function waveSvg(peaks){
@@ -38640,7 +39672,7 @@ function waveRelease(){
 // #723: the ring around the fullscreen CD listens to the song. With the desktop audio tap (waveAn) each bar follows the real spectrum (bass at the top,
 // mirrored left and right); without it the stored waveform shape pulses with how loud that part of the song is. On pause the bars settle on the stored
 // waveform and the frame loop stops. One canvas, redrawn only while it is on screen and moving.
-const REC_RING = { raf: 0, n: 120, lv: new Float32Array(120), rest: new Float32Array(120), peak: new Float32Array(120).fill(.25), freq: null, color: '#e0b26a', hsl: [30, 70, 60], colorAt: 0, restKey: '', patchE: new Float32Array(6) };
+const REC_RING = { raf: 0, n: 180, lv: new Float32Array(180), rest: new Float32Array(180), peak: new Float32Array(180).fill(.25), freq: null, color: '#e0b26a', hsl: [30, 70, 60], colorAt: 0, restKey: '', patchE: new Float32Array(6) };
 function recRingVisible(){ return discSkin === 'cd' && !document.hidden && (document.body.classList.contains('desktop-fs') || state.flowOpen); }
 function recRingRest(){
   const id = waveId, row = id && waveStore()[id], key = row ? id : '';
@@ -38707,18 +39739,28 @@ function recRingFrame(now){
   const disc = parseFloat(getComputedStyle(document.getElementById('artRecord')).getPropertyValue('--disc-fs')) || .66;
   const ctx = cv.getContext('2d'), c = W / 2, r0 = disc * c + W * .022, maxLen = Math.max(W * .02, c - r0 - W * .01);
   ctx.clearRect(0, 0, W, W);
-  ctx.lineCap = 'round'; ctx.lineWidth = Math.max(2, W * .0068);
+  // #778: fine tapered bars, smoothed across neighbours so the ring flows like one shape, with a hairline circle at the base and a soft outline
+  // joining the tips (no fat round-capped sticks)
+  ctx.lineCap = 'butt'; ctx.lineWidth = Math.max(1.2, W * .0034);
+  const sm1 = new Float32Array(n);
+  for (let i = 0; i < n; i++) sm1[i] = (REC_RING.lv[(i + n - 1) % n] + 2 * REC_RING.lv[i] + REC_RING.lv[(i + 1) % n]) / 4;
   // colour: the cover's own colours, in soft patches that flow slowly round the ring; a bar brightens a little with its own level
   const pal = (artPalette && artPalette.length) ? artPalette : [hslToRgb(REC_RING.hsl[0] / 360, REC_RING.hsl[1] / 100, REC_RING.hsl[2] / 100)];
-  const K = pal.length, drift = (now * .00004) % 1;
+  const K = pal.length, drift = (now * .00004) % 1, rgbAt = new Array(n), tipX = new Float32Array(n), tipY = new Float32Array(n);
   for (let i = 0; i < n; i++){
     const u = (((i / n + drift) % 1) + 1) % 1 * K, k0 = Math.floor(u) % K, k1 = (k0 + 1) % K, f = u - Math.floor(u), m = f < .3 ? 0 : f > .7 ? 1 : (f - .3) / .4, sm = m * m * (3 - 2 * m);
-    const lift = REC_RING.lv[i] * 40;
-    const r = Math.min(255, pal[k0][0] + (pal[k1][0] - pal[k0][0]) * sm + lift), g = Math.min(255, pal[k0][1] + (pal[k1][1] - pal[k0][1]) * sm + lift), bl = Math.min(255, pal[k0][2] + (pal[k1][2] - pal[k0][2]) * sm + lift);
-    ctx.strokeStyle = 'rgb(' + (r | 0) + ',' + (g | 0) + ',' + (bl | 0) + ')';
-    const a = i / n * Math.PI * 2 - Math.PI / 2, len = W * .008 + Math.min(1, REC_RING.lv[i]) * maxLen, cs = Math.cos(a), sn = Math.sin(a);
+    const lift = sm1[i] * 40;
+    const r = Math.min(255, pal[k0][0] + (pal[k1][0] - pal[k0][0]) * sm + lift) | 0, g = Math.min(255, pal[k0][1] + (pal[k1][1] - pal[k0][1]) * sm + lift) | 0, bl = Math.min(255, pal[k0][2] + (pal[k1][2] - pal[k0][2]) * sm + lift) | 0;
+    rgbAt[i] = r + ',' + g + ',' + bl;
+    const a = i / n * Math.PI * 2 - Math.PI / 2, len = W * .006 + Math.min(1, sm1[i]) * maxLen, cs = Math.cos(a), sn = Math.sin(a);
+    ctx.strokeStyle = 'rgba(' + rgbAt[i] + ',' + (.5 + .45 * Math.min(1, sm1[i])).toFixed(2) + ')';
     ctx.beginPath(); ctx.moveTo(c + cs * r0, c + sn * r0); ctx.lineTo(c + cs * (r0 + len), c + sn * (r0 + len)); ctx.stroke();
+    tipX[i] = c + cs * (r0 + len); tipY[i] = c + sn * (r0 + len);
   }
+  ctx.lineWidth = Math.max(1, W * .0018); ctx.strokeStyle = 'rgba(' + rgbAt[0] + ',.5)';
+  ctx.beginPath(); ctx.arc(c, c, r0 - W * .004, 0, Math.PI * 2); ctx.stroke();
+  ctx.strokeStyle = 'rgba(255,255,255,.28)';
+  ctx.beginPath(); ctx.moveTo(tipX[0], tipY[0]); for (let i = 1; i < n; i++) ctx.lineTo(tipX[i], tipY[i]); ctx.closePath(); ctx.stroke();
   if (playing || !settled) REC_RING.raf = requestAnimationFrame(recRingFrame);
 }
 function recRingSync(){ if (!REC_RING.raf && recRingVisible()) REC_RING.raf = requestAnimationFrame(recRingFrame); }
@@ -38728,7 +39770,7 @@ function waveSync(){
   waveSave();
   waveId = id; waveLastCur = -1; waveShape = null; waveFullShape = false; waveReach = 0; waveDrawKey = -1; wavePaintK = -1;
   recRingSync();
-  seekTrack.style.removeProperty('--wave');
+  seekTrack.style.removeProperty('--wave'); flowSeekTrack.style.removeProperty('--wave');
   waveLoading(false);
   if (!id) return;
   if (!(isLocalVideoId(id) || isAudioVideoId(id))){
@@ -39019,7 +40061,7 @@ function tryResume(){
   swapAltArt(track);
   setAmbient(track);
   updatePlayerAccentColor(track);
-  attachArtworkFallback(miniArt, track);
+  attachArtworkFallback(miniArt, track, 'icon');
   cassetteUpdateTrack(track, state.queuePos);
   // a podcast episode reopened paused still gets its chapter button (#256)
   // - reflectCurrentTrackUI, which normally does this, only runs on play
@@ -39126,7 +40168,8 @@ const flowVizWrap = $('flowVizWrap');
 const vizCanvasHome = vizCanvas.parentElement, vizCanvasAnchor = vizCanvas.nextElementSibling;
 const vizAutoBtnHome = vizAutoBtn.parentElement, vizAutoBtnAnchor = vizAutoBtn.nextElementSibling;
 const vizSpeedBtnHome = vizSpeedBtn.parentElement, vizSpeedBtnAnchor = vizSpeedBtn.nextElementSibling;
-const vizRotateBtnHome = vizRotateBtn.parentElement, vizRotateBtnAnchor = vizRotateBtn.nextElementSibling;
+const vizRotateBtnHome = vizRotateBtn.parentElement, vizRotateBtnAnchor = vizRotateBtn.nextElementSibling; // (the rainbow button, so it is restored first)
+const vizRainbowBtnHome = vizRainbowBtn.parentElement;
 /* the real #artRecord / #artCassette elements (not copies) get moved into
    flowArtWrap while flow mode is open on that art style, mirroring how the
    viz canvas above is relocated - so the same spinning-disc / cassette-reel
@@ -39166,7 +40209,7 @@ function syncFlowArtStyle(){
 /* mount/unmount the current visual (art / cymatics / lyrics) in #flow-layer */
 function flowMountVisual(){
   const showViz = visualMode === 'viz', showLyrics = visualMode === 'lyrics';
-  if (showViz){ flowVizWrap.appendChild(vizCanvas); flowVizWrap.appendChild(vizAutoBtn); flowVizWrap.appendChild(vizSpeedBtn); flowVizWrap.appendChild(vizRotateBtn); }
+  if (showViz){ flowVizWrap.appendChild(vizCanvas); flowVizWrap.appendChild(vizAutoBtn); flowVizWrap.appendChild(vizSpeedBtn); flowVizWrap.appendChild(vizRotateBtn); flowVizWrap.appendChild(vizRainbowBtn); }
   if (showLyrics) flowLyricsWrap.appendChild(lyricsWrap);
   flowArtWrap.hidden = showViz || showLyrics;
   flowVizWrap.hidden = !showViz;
@@ -39182,6 +40225,7 @@ function flowUnmountVisual(){
     // (its next sibling) IS vizSpeedBtn, which was also moved out to the
     // flow layer - restoring in the original order throws a NotFoundError
     // because the anchor isn't back in the home container yet.
+    vizRainbowBtnHome.appendChild(vizRainbowBtn);
     vizRotateBtnHome.insertBefore(vizRotateBtn, vizRotateBtnAnchor);
     vizSpeedBtnHome.insertBefore(vizSpeedBtn, vizSpeedBtnAnchor);
     vizAutoBtnHome.insertBefore(vizAutoBtn, vizAutoBtnAnchor);
@@ -39255,6 +40299,7 @@ function onDocFsSettled(cb){
   setTimeout(go, 1000);
 }
 function openFlow(immersive = document.body.classList.contains('split-desktop')){
+  if (milk.open && milk.inline) closeMilk();
   clearTimeout(flowFsT);
   const seq = ++flowCloseSeq; // also cancels a close still waiting on the fullscreen exit
   flowLayer.classList.remove('is-leaving');
@@ -39433,7 +40478,8 @@ function csStackBuild(){
   const k = flow ? 1 : r.width / hw; // screen px per local px
   // .art-cassette has padding 2% 1% (of width); SVG viewBox 400x256 meet
   // #734: size from the cassette itself, not the host - fullscreen insets it to 62% of the host, and the copies must shrink with it
-  const ce = host.querySelector('.art-cassette'), cw = (ce && ce.offsetWidth) || hw, ch = (ce && ce.offsetHeight) || hh;
+  const ce = host.querySelector('.art-cassette'), ins = ce ? ce.offsetLeft / hw : 0, cut = ins > .05 ? .62 / (1 - 2 * ins) : 1; // #786: copies keep the old size (19% inset) while the main tape is larger
+  const cw = ((ce && ce.offsetWidth) || hw) * cut, ch = ((ce && ce.offsetHeight) || hh) * cut;
   const sc = Math.min(cw * .98 / 400, (ch - cw * .04) / 256);
   const W = 384 * sc, H = 240 * sc, svgW = 400 * sc, svgH = 256 * sc;
   const cx = flow ? host.offsetLeft + hw / 2 : r.left + r.width / 2;
@@ -40546,6 +41592,7 @@ function startApp(){
   try{ scheduleVibeCheck(); } catch(e){}
   try{ initTesterBanner(); } catch(e){}
   try{ scheduleBetaInvite(); } catch(e){}
+  try{ initLinkPrompt(); } catch(e){}
   try{ initBetaCommunityRow(); } catch(e){}
   // the Android app always has the feedback button, tester or not, trial or not
   if (document.documentElement.classList.contains('ebb-android')){ const fbNav = $('navFeedbackBtn'); if (fbNav) fbNav.hidden = false; if (testerBanner) testerBanner.hidden = false; }   // desktop nav button + the phone header icon

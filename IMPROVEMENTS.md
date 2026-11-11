@@ -158,6 +158,7 @@ Add entries in this shape:
 - **Built (desktop app only):** the main process calls the page's __ebbWaveTap right after load with userGesture=true, so no click is needed; the existing display-media handler still only returns this app page's own sound, speakers untouched. The page keeps one analyser open, records one peak per second per streamed song (64 buckets, kept on the device, capped at 300 songs) and redraws the bars every 4 s. Android and web do not record yet. NOT run in the Electron app (not built here): the no-gesture call and the recording are untested end to end; the Electron app needs a rebuild and a version bump.
 - **Update (desktop fetch):** the main process now pulls the smallest audio-only stream with yt-dlp (opus, lowest bitrate, one at a time, lowest CPU priority, 12 MB and 30 s caps, never saved) and the page decodes it at 8 kHz mono into 64 peaks, kept on the device. It starts when a song becomes current and warms the next queue song 4 s later; once a song has its fetched peaks the live recording stops for it. Verified outside Electron with yt-dlp 2026.10.26: 1.58 MB in about 3 s for a 249 s song, decoded in 0.64 s in the page, bars draw. NOT verified inside the built desktop app (the IPC path). yt-dlp 2026.07.04 (3+ months old) got HTTP 403, so a bundled binary has to be refreshed often: needs a bundled yt-dlp in desktop/bin or resources/bin plus an update routine before shipping. Android still open (NewPipe Extractor route). A Settings switch is not built; a kill flag exists as localStorage ebbless:wave:off.
 - **Update (bundling and auto-update):** desktop/ytdlp-update.js keeps an unpacked yt-dlp (yt-dlp_macos.zip / yt-dlp_win.zip) in the app's data folder: newest official release, SHA-256 checked against the release's own SHA2-256SUMS, only from github.com/yt-dlp/yt-dlp release URLs, extracted with tar and swapped in atomically. Checks 30 s after launch then daily, and straight away (max every 6 h) after a failed fetch. After a new copy lands it is run once in the background so macOS's first-run check (about 20 s) never hits a song. The unpacked build starts in 0.27 s; the one-file build waited about 10 s every run, so it is not used. `npm run dist` / `dist:win` first run fetch-ytdlp.js to ship a copy in desktop/bin/ytdlp (gitignored). Verified in Node on this Mac: download plus checksum plus extract, then a real song fetched (1.58 MB in 8 s with the background load on this machine, at lowest priority). NOT verified: inside the built Electron app, the Windows zip layout (tar extraction and yt-dlp.exe location are assumed from the macOS layout), or a packaged build (electron-builder not run).
+- **Update (yt-dlp updater hardened, 2026-11-11):** a new yt-dlp is now installed only when its release's SHA2-256SUMS carries a valid signature from yt-dlp's own signing key (pinned in desktop/ytdlp-update.js, fingerprint AC0C...7581, checked with Node's RSA verify, no new dependency), the zip matches both that signed list and GitHub's own digest, every request and redirect stays on GitHub hosts over https with size caps, and the unpacked folder may not link outside itself. yt-dlp is run with --ignore-config and --no-plugin-dirs so a user's own yt-dlp config or plugins cannot change what runs, and a system yt-dlp (Homebrew) is only used outside the packaged app. Updates stay automatic. Verified: tests (genuine signature passes; changed file, damaged signature, other key, links outside, other hosts all refused) and a live run here (2026.10.26 signature verified, installed in 10 s, a real song fetched with the new flags). NOT run inside the built Electron app.
 - **Update (default on, faster first song):** the waveform look (A: card plus waveform seek bar, no tint) is now on for everyone; ?look=b|c still picks another, ?look=off restores the plain bar. The fetch starts the moment a song is chosen or resumed at launch (hooked in loadIndex and prewarmResumeDeck, before the player loads) and prefetches the next two queue songs; up to two fetches at once, and a song you just picked starts at once even if prefetches are running. Measured: YouTube takes about 3 s to hand over the stream address and about 5 s to deliver 1.5 MB (no yt-dlp setting I tried changed that), so a song picked cold still shows flat bars for about 8 s before the real shape fills in; songs already prefetched or played before show it instantly. No Settings toggle yet. Not run inside the built desktop app.
 - **Update (sound first):** a song's waveform fetch, and the next two, now wait until that song is actually playing (position past 0.3 s), or 4 s at most for a paused resume at launch. Audio never waits on the waveform and the fetch never competes with playback starting; the bars fill in a few seconds after sound.
 - **Update (cold song):** while a streamed song's shape is being fetched the flat bars sit low and a light sweeps across them; when the real peaks land the bars rise into the shape (transform and opacity only, paused under a full-screen view or the light show, off under reduced motion, auto-stops after 25 s). Seen in the preview with the class forced on; not seen with a real fetch.
@@ -12097,7 +12098,7 @@ Add entries in this shape:
 - **Description:** Idea, Geethub issue #689. Lock screen and notification player: buttons evenly distributed, player centered.
 - **Touches:** index.html.
 - **Branch:** 
-- **Notes:** OWNER SPEC 2026-10-29 (replaces the 'just space the buttons' reading): lock screen/notification player: full background is the song art scrolling top to bottom to top; progress bar with elapsed time left and full duration right, both just beneath it; big play button centered between big previous/next; slightly smaller heart/like left of previous; slightly smaller button right of next that cycles the background: art, then cymatics, then the app's lava-lamp color with the bouncing EBBLESS logo (as in the app with no track queued). Android limits: notification and lock-screen media controls are drawn by the system and cannot animate or take a custom background. Needs an owner decision on approach. Lane agent/lockscreen-buttons-689 (heart removed, 3 buttons) is superseded; do not merge as-is. Synced from Geethub #689, 2026-10-28. Android media notification / Media Session layout.
+- **Notes:** OWNER SPEC 2026-10-29 (replaces the 'just space the buttons' reading): lock screen/notification player: full background is the song art scrolling top to bottom to top; progress bar with elapsed time left and full duration right, both just beneath it; big play button centered between big previous/next; slightly smaller heart/like left of previous; slightly smaller button right of next that cycles the background: art, then cymatics, then the app's lava-lamp color with the bouncing EBBLESS logo (as in the app with no track queued). Android limits: notification and lock-screen media controls are drawn by the system and cannot animate or take a custom background. Needs an owner decision on approach. Lane agent/lockscreen-buttons-689 (heart removed, 3 buttons) is superseded; do not merge as-is. Synced from Geethub #689, 2026-10-28. Android media notification / Media Session layout. 2026-11-11: branch agent/lockscreen-buttons-689 (e4d6dbc) re-applied against main (merge commit, PlaybackService.java conflict). Main already has the owner-spec layout (heart, prev, play/pause, next, visual button; compact view prev/play/next at 1,2,3; session custom actions like + visual), so the old commit's heart removal was not applied and the file is unchanged by the merge; the merge only records the branch as merged. UNTESTED on a real device: lock screen and notification layout, Bluetooth headset buttons, Android 13+ media controls slot order, TECNO HiOS rendering.
 
 ### discover-min-queue-690: With Discover on, never fewer than 7 songs queued; load 28 songs (Geethub #690)
 - **Status:** merged
@@ -12393,7 +12394,7 @@ Add entries in this shape:
 - **Description:** Idea, Geethub issue #746. Shared or tapped open.spotify.com links on Android should show EBBLESS as an app to open them in.
 - **Touches:** android-webview/ (intent filters), index.html (link handling)
 - **Branch:** agent/spotify-links-746
-- **Notes:** Synced from Geethub #746. Related: open-music-links-in-ebbless and music-links-open-in-ebbless (both merged; share target exists). This asks for link-open, not share. Built: native app had no SEND/VIEW handling. Manifest VIEW filters for open.spotify.com (incl. /intl-*), music.apple.com, music.youtube.com plus SEND text/plain; MusicLinks.java allowlist; MainActivity.takeLink/deliverLink to window.__ebbOpenLink (held until startApp); JS allowlist recheck + tools/native-link.test.js. NOT compiled (no JDK), no device test. Android 12+: unverified domains need Settings > Open by default; share sheet works without setup. spotify.link short links unsupported. Follow-up idea: button to ACTION_APP_OPEN_BY_DEFAULT_SETTINGS.
+- **Notes:** Synced from Geethub #746. Related: open-music-links-in-ebbless and music-links-open-in-ebbless (both merged; share target exists). This asks for link-open, not share. Built: native app had no SEND/VIEW handling. Manifest VIEW filters for open.spotify.com (incl. /intl-*), music.apple.com, music.youtube.com plus SEND text/plain; MusicLinks.java allowlist; MainActivity.takeLink/deliverLink to window.__ebbOpenLink (held until startApp); JS allowlist recheck + tools/native-link.test.js. NOT compiled (no JDK), no device test. Android 12+: unverified domains need Settings > Open by default; share sheet works without setup. spotify.link short links unsupported. Follow-up idea: button to ACTION_APP_OPEN_BY_DEFAULT_SETTINGS. Follow-up built (branch agent/link-prompt-746): EbbNative.linkState() ("unsupported"/"all"/"some"/"none"/"unknown", via DomainVerificationManager on API 31+) and EbbNative.openLinkSettings() (Open by default page, falls back to app details); page shows a one-time "Open music links in EBBLESS" card (Android app only, state none/some, after the first song, not mid-load, Not now = 14 days, returning with all three on swaps it for "Links will open in EBBLESS" and ends it) plus a permanent App settings row showing On / Partly on / Off; decision logic in the LINK-PROMPT block with tools/link-prompt.test.js. Page logic browser-tested with a stubbed bridge; Java compiled by CI only. NOT tested: a real Android 12+ device, whether the intent opens the right page, how the TECNO HiOS shows that page, and whether DomainVerificationManager reports DOMAIN_STATE_SELECTED (and lists the hosts at all) for these unverified hosts after the user ticks them; if it reports nothing, the card never confirms and the row stays "Off". Second follow-up (branch agent/link-spotify-746): on Android 12+ the Add links page greys out open.spotify.com because Spotify's app owns that verified link, and the old all-three check reported "some" forever so the card never confirmed. Now EbbNative.linkHosts() lists which of the three hosts are on, spotifyInstalled() (manifest queries entry for com.spotify.music) and openSpotifyLinkSettings() (Spotify's Open by default page via package URI, falls back to its app details, then this app's link settings). Page: card 1 is only about Apple Music and YouTube Music (done when both are on, or one after a visit to the settings page; Spotify never counts); card 2 (Spotify) comes after card 1 is confirmed or dismissed, 10 songs started and 3 days after card 1 was first shown: step A "turn off Spotify's Open supported links" if Spotify is installed, then step B "tick open.spotify.com"; Not now = 14 / 30 days. Settings: one row with per-app on/off words plus a Spotify links row when it is off. An older app (linkState only) keeps the old single card. Pure logic in LINK-PROMPT with tools/link-prompt.test.js (23 tests); page browser-tested with a stubbed bridge. NOT tested: a real device, whether Spotify's Open by default page opens from the package URI, whether turning off Spotify's Open supported links makes open.spotify.com tickable, HiOS quirks, whether getHostToStateMap lists these hosts and reports SELECTED after ticking; Java compiled by CI only.
 
 ### skip-no-silence-745: Skipping keeps the current song playing until the next is ready, then fades (Geethub #745)
 - **Status:** merged
@@ -12506,3 +12507,404 @@ Add entries in this shape:
 - **Touches:** index.html (GPU budget: blurs, animations, custom cursor, liquid waves), sw.js cache bump
 - **Branch:**
 - **Notes:** Merged v507: cursor canvas now clears only its dirty box per frame (was full 2x viewport). Audit found the cursor, liquid-waves and ambient loops already idle/pause per GPU budget; no backdrop-filter over moving content. Not changed: ambient drift + veil still composite full screen while playing. Synced from Geethub #756. Related to mobile-moves-really-slow (in-progress, #635) and desktop-liquid-waves-698 and custom-cursor (the likely suspects). Check against the GPU budget rules in CLAUDE.md.
+
+### link-arrival-branding-746: A music link that opens in EBBLESS arrives with EBBLESS branding (follow-up to #746)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** When a Spotify, Apple Music or YouTube Music link opens in EBBLESS (tap or Share sheet), show a short EBBLESS-branded moment instead of dropping the user into a foreign link: logo and a line like "Playing from Apple Music in EBBLESS" while the song is matched, then the normal player. Android app only; no new animation beyond what the GPU budget allows (transform and opacity only, paused when hidden).
+- **Touches:** index.html (link arrival handler near the NATIVE-LINK block), no worker change.
+- **Branch:**
+- **Notes:** Owner asked 2026-11-11 after seeing the one-tap link prompt. Queue behind `link-spotify-746` (same area of index.html and same 2.19.0 Android build); claim its lane once that one is merged. Cannot change how Apple's or YouTube's own links look in other apps (Android gives no way, and faking them would be impersonation); this only brands the moment the link lands in EBBLESS.
+
+### branded-share-links: Songs shared from EBBLESS get their own link preview (EBBLESS logo, song art, title)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Today `buildShareUrl` makes an EBBLESS link but every link shows the same generic preview image (`og-image.png`). Add a small worker route that serves a page with per-song Open Graph tags (EBBLESS logo over the song's art, the title and artist) and then redirects into the app or site, so a link dropped in a chat looks like EBBLESS and not Apple Music or YouTube.
+- **Touches:** worker/ (new public route, additive), index.html (`buildShareUrl`, share paths), brand assets for the preview image.
+- **Branch:**
+- **Notes:** **Blocked on the owner getting a domain** (see `own-domain-app-links`). Owner said 2026-11-11: activate this and the domain item once the domain exists. Needs the security checklist when built: size caps and a per-IP throttle on the new anonymous route, escape every title and artist in the HTML, allowlist the art host, no storing anything, generic errors. Design with the domain in mind so the same links can open straight in the app.
+
+### own-domain-app-links: Own domain with verified app links, so EBBLESS links open in the app with no Settings step
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Point an owner-bought domain (for example ebbless.com) at the site, host `/.well-known/assetlinks.json` at its root with the Android app's package and signing-key fingerprint, and mark the matching intent filter `android:autoVerify="true"`. Links on that domain then open in the Android app on tap on Android 12+, with no "Add links" step.
+- **Touches:** DNS and GitHub Pages custom domain (CNAME), `.well-known/assetlinks.json`, android-webview manifest (new filter), a new versionName bump, update the PWA/site base URLs and share URLs, privacy/terms text if they name the old address.
+- **Branch:**
+- **Notes:** **Blocked on the owner buying and choosing the domain**; a domain is a recurring cost and a commitment, so the owner decides. Today the site is `malgriot.github.io/EBBLESS` (no custom domain, no CNAME), and the verification file must sit at a domain root, which a GitHub project page cannot provide. Moving the site's address has knock-on effects (service worker scope, existing installs, Google sign-in redirect origins, worker CORS allowlist): list and check each when activating. Activate together with `branded-share-links` when the owner has the domain.
+
+### link-album-actions-746: Album and playlist links opened in the app get the same actions as a single song (follow-up to #746)
+- **Status:** merged
+- **Priority:** high
+- **Description:** An Apple Music (or any) album or playlist link that opens in EBBLESS is matched, but with a queue already going it only filed the songs in the Library and showed a short "Added X to your library" toast, so the owner did not know where the album went and got none of the single-song actions. A collection link now ends on the same four-tile sheet a single song gets (Play now, Play next, Add to queue, Add to playlist), with a result line ("Matched 11 of 12 songs. Saved in your Library under Albums. Not found: ...").
+- **Touches:** index.html only (`beginImportNow`, new LINK-COLLECTION block with `showCollectionLanding`, `openAddCollectionToPlaylistPicker`, `queuePlayNextCollection`), `tools/link-collection.test.js`. No worker change.
+- **Branch:** agent/link-album-actions-746
+- **Notes:** Built: with a queue going, albums, playlists and artists (any source, pasted, shared or from search) show the sheet at the end of matching; with nothing playing they start playing as before and a toast says what matched and where it was filed, with an Add to playlist button. Single songs and podcasts are unchanged. Add to playlist puts every matched song on a playlist in one tap (or a new playlist named after the album). Untested: a real phone, real Apple Music albums and real matching results (browser-checked with a stubbed resolver only). Imported Spotify playlists as targets skip the "make an editable copy" prompt single songs show. Alternative not built: always show the sheet, even with nothing playing (one more tap to start music).
+
+### on-first-open-find-music-should-brin-761: On first open: "find music" should bring you to home page. home page should handle all import options and genr (Geethub #761)
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #761. See the issue for references.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #761.
+
+### h-should-toggle-between-home-and-pla-762: H should toggle between home and player (Geethub #762)
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #762. See the issue for references.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #762.
+
+### music-map-should-start-from-current-763: Music map should start from current artist or have an artist input box - not just starting from meltt automati (Geethub #763)
+- **Status:** merged
+- **Priority:** high
+- **Description:** Bug, Geethub issue #763. See the issue for references.
+- **Touches:** index.html (UI)
+- **Branch:** agent/music-map-763
+- **Notes:** Synced from Geethub #763.
+
+### lp-should-spin-slower-than-cd-764: Lp should spin slower than cd (Geethub #764)
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #764. See the issue for references.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #764.
+
+### recently-edited-playlists-should-go-765: Recently edited playlists should go to the top of the list below pinned unless the sorting is on alphabetical, (Geethub #765)
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #765. See the issue for references.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #765.
+
+### add-to-playlist-window-should-have-766: "add to playlist" window should have sorting options and a search function (Geethub #766)
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #766. See the issue for references.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #766.
+
+### even-if-a-playlist-is-updated-via-sp-767: Even if a playlist is updated via spotify, songs added on ebbless shouldn't be affected (Geethub #767)
+- **Status:** merged
+- **Priority:** high
+- **Description:** Bug, Geethub issue #767. See the issue for references.
+- **Touches:** index.html (UI)
+- **Branch:** agent/spotify-sync-767
+- **Notes:** Synced from Geethub #767. Fixed in withManualTracks: songs added mid-refresh, unmatched hand-adds, and hand-adds Spotify also lists now survive refreshes, no duplicates. Check: node scripts/test-manual-carry.js.
+
+### the-light-show-should-be-inside-the-768: The light show should be inside the same player section at first. how it is currently is what fullscreen mode  (Geethub #768)
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #768. See the issue for references.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #768.
+
+### switching-discovery-mode-shouldn-t-s-769: Switching discovery mode shouldn't switch the current song, just the upcoming queue (Geethub #769)
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #769. See the issue for references.
+- **Touches:** index.html (UI)
+- **Branch:** agent/discovery-queue
+- **Notes:** Synced from Geethub #769. Steer chip, Discover off and leaving shuffle+Discover keep a song already crossfading in (soundingQueuePos); before, it was cut and queuePos landed on another song. Verified in preview mid-crossfade.
+
+### if-the-queue-has-been-cleared-it-sho-770: If the queue has been cleared, it should immediately refresh with new music by the time the current song is ov (Geethub #770)
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #770. See the issue for references.
+- **Touches:** index.html (UI)
+- **Branch:** agent/discovery-queue
+- **Notes:** Synced from Geethub #770. Discover songs stream into the queue as each resolves (first in ~5s, was ~140s for the full 28-song batch); Clear resets the empty-cooldown and refills at once; a song ending on an empty queue moves on with the first new song; steer switches stash their songs per steer so switching back is instant. No new requests. Clear refills only while Discover is on for that queue.
+
+### library-scroll-bar-should-be-the-sam-771: Library scroll bar should be the same as the queue scroll bar (Geethub #771)
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #771. See the issue for references.
+- **Touches:** index.html (UI)
+- **Branch:** agent/queue-small-fixes
+- **Notes:** Synced from Geethub #771.
+
+### main-cymatics-should-be-ui-color-772: Main cymatics should be ui color (Geethub #772)
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #772. See the issue for references.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #772.
+
+### cymatics-rainbow-mode-773: Cymatics rainbow mode (Geethub #773)
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #773. See the issue for references.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #773.
+
+### desktop-library-when-podcasts-is-sel-774: Desktop: library: when podcasts is selected, a left chevron button appears and squeezes the other buttons. rem (Geethub #774)
+- **Status:** merged
+- **Priority:** high
+- **Description:** Bug, Geethub issue #774. See the issue for references.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #774.
+
+### bring-your-music-should-be-import-y-775: "bring your music" should be "import your music" (Geethub #775)
+- **Status:** merged
+- **Priority:** high
+- **Description:** Bug, Geethub issue #775. See the issue for references.
+- **Touches:** index.html (UI)
+- **Branch:** agent/queue-small-fixes
+- **Notes:** Synced from Geethub #775.
+
+### video-button-selecting-it-while-acti-776: Video button: selecting it while active should toggle cinema mode. the video button should turn into the cinem (Geethub #776)
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #776. See the issue for references.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #776.
+
+### i-wish-song-info-showed-more-info-li-777: I wish song info showed more info like the producer and trivia and had more interactivity like opening the alb (Geethub #777)
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #777. See the issue for references.
+- **Touches:** index.html (UI)
+- **Branch:** agent/song-info-777
+- **Notes:** Synced from Geethub #777.
+- **Built:** Song info already showed producer/writer credits (MusicBrainz) and trivia (Wikipedia, only when a real match exists). Added: album row opens the album (library copy, else artist catalog preview), credited names are buttons opening the artist page. No new data source; richer producer/trivia would need Genius (key plus proxy).
+
+### cd-mode-fullscreen-the-lines-look-to-778: Cd mode fullscreen: the lines look too cartoonish. make them beautiful (Geethub #778)
+- **Status:** merged
+- **Priority:** high
+- **Description:** Bug, Geethub issue #778. See the issue for references.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #778.
+
+### visualizer-should-be-called-cymatics-779: Visualizer should be called cymatics. fLUX is already a visualizer (Geethub #779)
+- **Status:** merged
+- **Priority:** high
+- **Description:** Bug, Geethub issue #779. See the issue for references.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #779.
+
+### on-mobile-when-i-go-to-the-splash-fr-780: On mobile when i go to the splash from inside the app, it doesn't show the buttons on the splash to return (Geethub #780)
+- **Status:** merged
+- **Priority:** high
+- **Description:** Bug, Geethub issue #780. See the issue for references.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #780.
+
+### when-video-is-selected-offer-to-watc-781: When video is selected, offer to watch the official video (only if there is an official video) (Geethub #781)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #781. See the issue for references.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #781.
+
+### on-mobile-the-top-nav-is-so-high-it-782: On mobile: the top nav is so high, it's blocked by the phone's clock and top icons (Geethub #782)
+- **Status:** merged
+- **Priority:** high
+- **Description:** Bug, Geethub issue #782. See the issue for references.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #782.
+
+### thumbs-down-button-missing-from-desk-784: Thumbs down button missing from desktop (Geethub #784)
+- **Status:** merged
+- **Priority:** high
+- **Description:** Bug, Geethub issue #784. See the issue for references.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #784.
+
+### dragging-a-song-from-anywhere-into-t-785: Dragging a song from anywhere into the unliked playlist unlikes it (Geethub #785)
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #785. See the issue for references.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #785.
+
+### fullscreen-cassette-animation-the-ma-786: Fullscreen cassette animation: the main cassette should be a bit larger. the other tapes can stay the same siz (Geethub #786)
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #786. See the issue for references.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #786.
+
+### small-icons-lowres-727: Small icons use the lowest-res image versions so they load fast (Geethub #727)
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #727. Small icons (library, queue, pills, etc) should load the smallest available image size so they appear fast.
+- **Touches:** index.html (image URL sizing)
+- **Branch:** agent/queue-small-fixes
+- **Notes:** Synced from Geethub #727. Not the waveform work: entry `waveform-real-peaks-727` reused the same number for a different idea.
+
+### mobile-when-volume-is-0-for-more-than-7-787: Mobile: when volume is 0 for more than 7 seconds, pause the music automatically (Geethub #787)
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Geethub issue #787. See the issue for the full text.
+- **Touches:** index.html (UI)
+- **Branch:** agent/mobile-vol0-pause
+- **Notes:** Synced from Geethub #787.
+
+### flux-player-controls-are-underneath-and-788: FLUX player controls are underneath and blocked by the player controls (Geethub #788)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Geethub issue #788. See the issue for the full text.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #788.
+
+### cinema-mode-the-video-button-disappears-789: Cinema mode, the video button disappears (Geethub #789)
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Geethub issue #789. See the issue for the full text.
+- **Touches:** index.html (UI)
+- **Branch:** agent/bugs-a
+- **Notes:** Synced from Geethub #789. Already shipped in v528 (#776): the Video button becomes the Cinema button while video is on. Not re-checked in a browser.
+
+### in-flux-mode-1-2-3-4-5-should-switch-to-790: In flux mode, 1 2 3 4 5 should switch to the other art modes (Geethub #790)
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Geethub issue #790. See the issue for the full text.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #790.
+
+### flux-mode-there-should-be-more-keyboard-791: Flux mode: there should be more keyboard shortcuts to affect the visualizer (Geethub #791)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Geethub issue #791. See the issue for the full text.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #791.
+
+### when-flux-is-fullscreen-and-another-albu-792: When flux is fullscreen and another album art style is selected, flux should be behind whatever is showing cur (Geethub #792)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Geethub issue #792. See the issue for the full text.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #792.
+
+### title-on-desktop-is-not-centered-with-th-793: Title on desktop is not centered with the album art (Geethub #793)
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Geethub issue #793. See the issue for the full text.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #793.
+
+### queue-scroll-bar-should-be-on-the-left-o-794: Queue scroll bar should be on the left of the window (Geethub #794)
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Geethub issue #794. See the issue for the full text.
+- **Touches:** index.html (UI)
+- **Branch:** agent/queue-ui
+- **Notes:** Synced from Geethub #794.
+
+### flux-should-use-the-colors-of-the-now-pl-795: Flux should use the colors of the now playing art (Geethub #795)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Geethub issue #795. See the issue for the full text.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #795.
+
+### remove-the-shape-chooser-button-from-def-796: Remove the shape chooser button from default miniplayer - the one next to the paint tablet button above the ti (Geethub #796)
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Geethub issue #796. See the issue for the full text.
+- **Touches:** index.html (UI)
+- **Branch:** agent/bugs-a
+- **Notes:** Synced from Geethub #796. Shape button removed from the desktop mini player header (v530).
+
+### matching-song-name-song-artist-notificat-797: "matching [song name] - [song artist]" notification freezes on first song and stays on screen long after songs (Geethub #797)
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Geethub issue #797. See the issue for the full text.
+- **Touches:** index.html (UI)
+- **Branch:** agent/bugs-a
+- **Notes:** Synced from Geethub #797. Footer matching bar names the song being matched, hides when matching ends, 45s idle failsafe (v530). Not reproduced live.
+
+### when-queue-is-being-reloaded-it-should-s-798: When queue is being reloaded, it should show a progress bar (Geethub #798)
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Geethub issue #798. See the issue for the full text.
+- **Touches:** index.html (UI)
+- **Branch:** agent/queue-ui
+- **Notes:** Synced from Geethub #798.
+
+### searching-you-should-be-able-to-tell-ebb-799: Searching: you should be able to tell ebbless if it's a song, artist, album, playlist, etc (Geethub #799)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Geethub issue #799. See the issue for the full text.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #799.
+
+### search-bar-in-home-screen-is-redundant-e-800: Search bar in home screen is redundant. either remove the bar from the top or remove it from search (Geethub #800)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Geethub issue #800. See the issue for the full text.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #800.
+
+### progress-bar-wav-form-doesn-t-appear-on-801: Progress bar wav form doesn't appear on fullscreen mode (Geethub #801)
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Geethub issue #801. See the issue for the full text.
+- **Touches:** index.html (UI)
+- **Branch:** agent/bugs-b
+- **Notes:** Synced from Geethub #801.
+
+### the-for-square-button-that-opens-the-fin-802: The for square button that opens the find music window should be removed and integrated into the home page (Geethub #802)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Geethub issue #802. See the issue for the full text.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #802.
+
+### ui-color-should-fade-to-the-next-color-n-803: Ui color should fade to the next color - now it just switches harshly. it should fade along with the art and c (Geethub #803)
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Geethub issue #803. See the issue for the full text.
+- **Touches:** index.html (UI)
+- **Branch:** agent/bugs-b
+- **Notes:** Synced from Geethub #803.
+
+### mid-fullscreen-mode-804: Mid-fullscreen mode (Geethub #804)
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Geethub issue #804. See the issue for the full text.
+- **Touches:** index.html (UI)
+- **Branch:** agent/bugs-c
+- **Notes:** Synced from Geethub #804. Already in main before this lane: the thumbs-down button (v525-v528) and the hover look of the art buttons. Changed here (v530): (a)-(c) the close, 3 dots, heart, thumbs-down and fullscreen buttons now flank the player controls in desktop fullscreen, all 32px, and 3 dots and thumbs-down fade out with the rest of the UI (they were missing from the fade list); (d) progress bar, player buttons and top nav turn the app color on hover in fullscreen; (e) the up-next strip zig-zags, shows as many songs as fit under the top nav, and shows the artist under each song. Checked by computed layout in the preview (real fullscreen needs a playing song); the 3 dots and fade need one look with a song playing. No gpu-watchdog warnings.
+
+### different-audio-crossfade-options-warp-s-805: Different audio crossfade options: warp, spikes, glitch (idk what i mean just see what you come up with) (Geethub #805)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Geethub issue #805. See the issue for the full text.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #805.
+
+### flux-left-and-right-change-the-song-good-806: FLux: left and right change the song (good) but up and down should change the pattern (Geethub #806)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Geethub issue #806. See the issue for the full text.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #806.

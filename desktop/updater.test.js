@@ -15,4 +15,13 @@ assert.strictEqual(evaluateRelease(r, '1.0.11', 'x64').asset.url, 'u/intel');
 assert.strictEqual(evaluateRelease(r, '1.0.12', 'x64').available, false);
 assert.throws(() => evaluateRelease({ tag_name: 'v1.0.12', assets: [] }, '1.0.11', 'arm64'));
 assert.throws(() => evaluateRelease({ tag_name: 'nightly' }, '1.0.11', 'arm64'));
+const wa = [
+  { name: 'EBBLESS-1.0.14.dmg', browser_download_url: 'https://github.com/MalGriot/EBBLESS/releases/download/v1.0.14/EBBLESS-1.0.14.dmg' },
+  { name: 'EBBLESS-Setup-1.0.14.exe.blockmap', browser_download_url: 'https://github.com/MalGriot/EBBLESS/releases/download/v1.0.14/x.blockmap' },
+  { name: 'EBBLESS-Setup-1.0.14.exe', browser_download_url: 'https://github.com/MalGriot/EBBLESS/releases/download/v1.0.14/EBBLESS-Setup-1.0.14.exe', size: 9, digest: 'sha256:ab' }];
+assert.strictEqual(pickAsset(wa, 'x64', 'win32').name, 'EBBLESS-Setup-1.0.14.exe');
+assert.strictEqual(pickAsset([{ name: 'EBBLESS-Setup-1.0.14.exe', browser_download_url: 'https://evil.example/EBBLESS-Setup-1.0.14.exe' }], 'x64', 'win32'), null);
+assert.strictEqual(evaluateRelease({ tag_name: 'v1.0.14', assets: wa }, '1.0.10', 'x64', 'win32').asset.digest, 'sha256:ab');
+assert.throws(() => evaluateRelease({ tag_name: 'v1.0.14', assets: wa.slice(0, 1) }, '1.0.10', 'x64', 'win32'), /not ready/);
+assert.strictEqual(evaluateRelease({ tag_name: 'v1.0.14', assets: wa }, '1.0.14', 'x64', 'win32').available, false);
 console.log('updater tests ok');

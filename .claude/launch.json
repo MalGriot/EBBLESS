@@ -4,15 +4,50 @@
     {
       "name": "ebbless",
       "runtimeExecutable": "sh",
-      "runtimeArgs": ["-c", "python3 -m http.server $PORT"],
+      "runtimeArgs": [
+        "-c",
+        "python3 -m http.server $PORT"
+      ],
       "port": 8934,
       "autoPort": true
     },
     {
       "name": "improvements-form",
       "runtimeExecutable": "node",
-      "runtimeArgs": ["tools/improvements-server.js"],
+      "runtimeArgs": [
+        "tools/improvements-server.js"
+      ],
       "port": 5820,
+      "autoPort": true
+    },
+    {
+      "name": "player-look",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "cd ../ebbless-worktrees/player-look && python3 -m http.server $PORT"
+      ],
+      "port": 8941,
+      "autoPort": true
+    },
+    {
+      "name": "ambient-breathe",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "cd ../ebbless-worktrees/ambient-breathe && python3 -m http.server $PORT"
+      ],
+      "port": 8952,
+      "autoPort": true
+    },
+    {
+      "name": "discovery-queue",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "cd ../ebbless-worktrees/discovery-queue && python3 -m http.server $PORT"
+      ],
+      "port": 8963,
       "autoPort": true
     }
   ]

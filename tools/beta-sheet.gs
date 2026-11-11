@@ -217,7 +217,10 @@ const FROM_EMAIL = 'ebbless.music@gmail.com';
 function sendMail_(to, subject, text, html) {
   try {
     const opts = { to: to, subject: subject, body: text, htmlBody: html || undefined, name: SENDER_NAME };
-    const me = String(Session.getEffectiveUser().getEmail() || '').toLowerCase();
+    // Asking who we run as needs the userinfo.email permission, which a deployed web app may not have: then
+    // skip the check and send as the running account with Reply-To set (still works, replies land in FROM_EMAIL).
+    let me = '';
+    try { me = String(Session.getEffectiveUser().getEmail() || '').toLowerCase(); } catch (err) {}
     if (me === FROM_EMAIL) { MailApp.sendEmail(opts); return ''; }
     let alias = false;
     try { alias = GmailApp.getAliases().map(function (x) { return x.toLowerCase(); }).indexOf(FROM_EMAIL) >= 0; } catch (err) {}
@@ -444,6 +447,27 @@ function sendInactivityReminders_() {
   });
 }
 
+// ---------- Patreon thank-you (called by the worker on each paid month) ----------
+// Fixed template on purpose: the worker only supplies the address, tier, code and app URL, so
+// the shared secret can't be used to send arbitrary mail. Mail quota applies (about 100 a day
+// on a free Google account, 1500 on Workspace).
+function patronThanks_(b) {
+  const to = String(b.to || '').trim(), tier = String(b.tier || ''), code = String(b.code || ''), app = String(b.app || '');
+  if (!/^[^\s@]{1,64}@[^\s@]{1,190}\.[^\s@]{2,}$/.test(to)) return { ok: false, error: 'bad address' };
+  if (['flow', 'deep', 'horizon'].indexOf(tier) < 0) return { ok: false, error: 'bad tier' };
+  if (!/^[A-Z0-9-]{8,24}$/.test(code)) return { ok: false, error: 'bad code' };
+  if (!/^https:\/\/[^\s?#]+$/.test(app)) return { ok: false, error: 'bad app url' };
+  const base = app + (app.indexOf('?') >= 0 ? '&' : '?');
+  const text = 'Peace and love,\n\n' +
+    'Thank you for backing EBBLESS this month. Your ' + ({ flow: 'flowwww', deep: 'deeeep', horizon: 'horizonnn' }[tier]) + ' plan is yours.\n\n' +
+    'Tap to activate it (sign in first if asked):\n' + base + 'redeem=' + code + '\n\n' +
+    'Or type this code in EBBLESS: ' + code + '\n' +
+    'It works once and is just for you. If you already connected Patreon inside EBBLESS you do not need it.\n\n' +
+    'MAL GRIOT';
+  const err = sendMail_(to, 'Thank you for backing EBBLESS', text, '');
+  return err ? { ok: false, error: err } : { ok: true };
+}
+
 // ---------- web app (called by the worker) ----------
 
 function doPost(e) {
@@ -462,6 +486,7 @@ function doPost(e) {
     if (b.action === 'admin_list') return out_(adminList_());
     if (b.action === 'admin_update') return out_(adminUpdate_(b));
     if (b.action === 'testimonials') return out_(testimonials_());
+    if (b.action === 'patron_thanks') return out_(patronThanks_(b));
     return out_({ ok: false, error: 'unknown action' });
   } catch (err) {
     return out_({ ok: false, error: String(err) });
