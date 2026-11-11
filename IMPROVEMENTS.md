@@ -12747,3 +12747,163 @@ Add entries in this shape:
 - **Touches:** index.html (image URL sizing)
 - **Branch:** agent/queue-small-fixes
 - **Notes:** Synced from Geethub #727. Not the waveform work: entry `waveform-real-peaks-727` reused the same number for a different idea.
+
+### mobile-when-volume-is-0-for-more-than-7-787: Mobile: when volume is 0 for more than 7 seconds, pause the music automatically (Geethub #787)
+- **Status:** review
+- **Priority:** medium
+- **Description:** Geethub issue #787. See the issue for the full text.
+- **Touches:** index.html (UI)
+- **Branch:** agent/mobile-vol0-pause
+- **Notes:** Synced from Geethub #787.
+
+### flux-player-controls-are-underneath-and-788: FLUX player controls are underneath and blocked by the player controls (Geethub #788)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Geethub issue #788. See the issue for the full text.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #788.
+
+### cinema-mode-the-video-button-disappears-789: Cinema mode, the video button disappears (Geethub #789)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Geethub issue #789. See the issue for the full text.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #789.
+
+### in-flux-mode-1-2-3-4-5-should-switch-to-790: In flux mode, 1 2 3 4 5 should switch to the other art modes (Geethub #790)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Geethub issue #790. See the issue for the full text.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #790.
+
+### flux-mode-there-should-be-more-keyboard-791: Flux mode: there should be more keyboard shortcuts to affect the visualizer (Geethub #791)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Geethub issue #791. See the issue for the full text.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #791.
+
+### when-flux-is-fullscreen-and-another-albu-792: When flux is fullscreen and another album art style is selected, flux should be behind whatever is showing cur (Geethub #792)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Geethub issue #792. See the issue for the full text.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #792.
+
+### title-on-desktop-is-not-centered-with-th-793: Title on desktop is not centered with the album art (Geethub #793)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Geethub issue #793. See the issue for the full text.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #793.
+
+### queue-scroll-bar-should-be-on-the-left-o-794: Queue scroll bar should be on the left of the window (Geethub #794)
+- **Status:** review
+- **Priority:** medium
+- **Description:** Geethub issue #794. See the issue for the full text.
+- **Touches:** index.html (UI)
+- **Branch:** agent/queue-ui
+- **Notes:** Synced from Geethub #794.
+
+### flux-should-use-the-colors-of-the-now-pl-795: Flux should use the colors of the now playing art (Geethub #795)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Geethub issue #795. See the issue for the full text.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #795.
+
+### remove-the-shape-chooser-button-from-def-796: Remove the shape chooser button from default miniplayer - the one next to the paint tablet button above the ti (Geethub #796)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Geethub issue #796. See the issue for the full text.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #796.
+
+### matching-song-name-song-artist-notificat-797: "matching [song name] - [song artist]" notification freezes on first song and stays on screen long after songs (Geethub #797)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Geethub issue #797. See the issue for the full text.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #797.
+
+### when-queue-is-being-reloaded-it-should-s-798: When queue is being reloaded, it should show a progress bar (Geethub #798)
+- **Status:** review
+- **Priority:** medium
+- **Description:** Geethub issue #798. See the issue for the full text.
+- **Touches:** index.html (UI)
+- **Branch:** agent/queue-ui
+- **Notes:** Synced from Geethub #798.
+
+### searching-you-should-be-able-to-tell-ebb-799: Searching: you should be able to tell ebbless if it's a song, artist, album, playlist, etc (Geethub #799)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Geethub issue #799. See the issue for the full text.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #799.
+
+### search-bar-in-home-screen-is-redundant-e-800: Search bar in home screen is redundant. either remove the bar from the top or remove it from search (Geethub #800)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Geethub issue #800. See the issue for the full text.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #800.
+
+### progress-bar-wav-form-doesn-t-appear-on-801: Progress bar wav form doesn't appear on fullscreen mode (Geethub #801)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Geethub issue #801. See the issue for the full text.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #801.
+
+### the-for-square-button-that-opens-the-fin-802: The for square button that opens the find music window should be removed and integrated into the home page (Geethub #802)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Geethub issue #802. See the issue for the full text.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #802.
+
+### ui-color-should-fade-to-the-next-color-n-803: Ui color should fade to the next color - now it just switches harshly. it should fade along with the art and c (Geethub #803)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Geethub issue #803. See the issue for the full text.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #803.
+
+### mid-fullscreen-mode-804: Mid-fullscreen mode (Geethub #804)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Geethub issue #804. See the issue for the full text.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #804.
+
+### different-audio-crossfade-options-warp-s-805: Different audio crossfade options: warp, spikes, glitch (idk what i mean just see what you come up with) (Geethub #805)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Geethub issue #805. See the issue for the full text.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #805.
+
+### flux-left-and-right-change-the-song-good-806: FLux: left and right change the song (good) but up and down should change the pattern (Geethub #806)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Geethub issue #806. See the issue for the full text.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #806.
