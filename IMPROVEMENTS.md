@@ -12774,7 +12774,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #789.
 
 ### in-flux-mode-1-2-3-4-5-should-switch-to-790: In flux mode, 1 2 3 4 5 should switch to the other art modes (Geethub #790)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Geethub issue #790. See the issue for the full text.
 - **Touches:** index.html (UI)
