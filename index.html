@@ -635,6 +635,10 @@ body.split-desktop #view-search .st-chips{grid-template-columns:repeat(auto-fill
 #view-search .st-chip.is-prompt .st-chip-art{width:72px;height:72px;right:10px;bottom:-14px}
 #view-search .st-chip{padding-right:60px}
 #view-search .st-form{margin:0 0 24px}
+#view-search .st-types{display:flex;flex-wrap:wrap;gap:8px;margin:-8px 0 20px}
+#view-search .st-type{padding:8px 14px;border-radius:999px;background:var(--panel-2);border:1px solid var(--border);color:var(--faint);font:inherit;font-size:13.5px;cursor:pointer}
+#view-search .st-type:hover{color:var(--text)}
+#view-search .st-type.is-active{background:var(--accent);border-color:var(--accent);color:var(--on-accent);font-weight:600}
 @media (min-width:860px){#view-search .st-form{display:none}}
 #view-search .st-field input{padding:16px 16px 16px 50px;border-radius:16px;font-size:16px;background:color-mix(in srgb,var(--panel-2) 80%,transparent);border-color:color-mix(in srgb,var(--text) 10%,transparent)}
 #view-search .st-go{left:6px;width:44px;height:44px;color:var(--accent)}
@@ -5426,6 +5430,8 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
         </span>
         <div class="st-err" id="searchTabErr" role="alert"></div>
       </form>
+      <!-- #799: tell search what you are looking for -->
+      <div class="st-types" id="stTypes" role="group" aria-label="Search for"><button type="button" class="st-type" data-stype="all">All</button><button type="button" class="st-type" data-stype="songs">Songs</button><button type="button" class="st-type" data-stype="artists">Artists</button><button type="button" class="st-type" data-stype="albums">Albums</button><button type="button" class="st-type" data-stype="playlists">Playlists</button></div>
       <section class="st-sec" id="stPicks" hidden>
         <h2>Picked for you</h2>
         <div class="st-grid" id="stGrid"></div>
@@ -18803,7 +18809,7 @@ function stageSearchResults(results, query, seq){
   const seqAttr = seq ? ' data-search-seq="' + seq + '"' : '';
   if (!results.length){
     importStage.innerHTML =
-      '<div class="step"' + seqAttr + '>No playlists found for &ldquo;' + escapeHtml(query) + '&rdquo;</div>' +
+      '<div class="step"' + seqAttr + '>No ' + (searchType === 'all' ? 'playlists' : searchType) + ' found for &ldquo;' + escapeHtml(query) + '&rdquo;</div>' +
       '<div class="msg" style="color:var(--faint-2);font-size:13px;margin:0 0 18px">Try a different word, or paste a direct link instead.</div>' +
       '<button class="btn-ghost" id="searchBackBtn" style="width:100%">Back</button>';
     $('searchBackBtn').addEventListener('click', closeImportOverlay);
@@ -18862,6 +18868,31 @@ function looksLikeUrl(input){
 // whichever lands second slots in. A late artist match re-renders the list
 // with the artist on top, but only if the overlay is still on this search.
 let vibeSearchSeq = 0;
+// #799: what kind of thing a search looks for. 'all' is the old behavior; the others filter the same results.
+const SEARCH_TYPES = { all: 'All', songs: 'Songs', artists: 'Artists', albums: 'Albums', playlists: 'Playlists' };
+let searchType = 'all';
+try{ const t = sessionStorage.getItem('ebbless:searchType'); if (t && SEARCH_TYPES[t]) searchType = t; }catch(e){}
+function setSearchType(t){
+  if (!SEARCH_TYPES[t]) t = 'all';
+  searchType = t;
+  try{ sessionStorage.setItem('ebbless:searchType', t); }catch(e){}
+  document.querySelectorAll('.st-type').forEach(b => { const on = b.dataset.stype === t; b.classList.toggle('is-active', on); b.setAttribute('aria-pressed', on ? 'true' : 'false'); });
+}
+// Albums: the playlist search never marks albums, so this asks iTunes directly (keyless, like searchArtistProfile) and
+// answers in the shape a pasted Apple Music album link parses to, so a pick imports through the existing album path.
+async function searchAlbumsByQuery(query){
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), 6000);
+  try{
+    const r = await fetch('https://itunes.apple.com/search?' + new URLSearchParams({ term: query, entity: 'album', limit: '12' }), { signal: ctl.signal });
+    const d = r.ok ? await r.json() : { results: [] };
+    return (d.results || []).filter(a => a && a.collectionId && a.collectionName).map(a => ({
+      source: 'applemusic', type: 'album', id: String(a.collectionId), storefront: 'us',
+      name: a.collectionName, subtitle: a.artistName || '', trackCount: a.trackCount,
+      image: a.artworkUrl100 ? a.artworkUrl100.replace(/\/\d+x\d+bb\./, '/300x300bb.') : '',
+    }));
+  } catch(e){ return []; } finally { clearTimeout(timer); }
+}
 async function beginVibeSearch(query){
   awardMilestone('search');
   statsFeature('vibe_search');
@@ -18872,17 +18903,22 @@ async function beginVibeSearch(query){
   let artist = null, shown = null, songs = [];
   // Song rows sit under the artist and above playlists. They never hold the
   // list up: a late arrival re-renders it, like the artist match does.
-  const compose = () => (artist ? [artist] : []).concat(songs, shown || []);
+  const st = searchType;
+  let songsP = null;
+  const compose = () => (st === 'all' || st === 'artists' ? (artist ? [artist] : []) : []).concat(st === 'all' || st === 'songs' ? songs : [], shown || []);
   const repaint = () => { if (seq === vibeSearchSeq && importStage.querySelector('[data-search-seq="' + seq + '"], [data-searching]')) stageSearchResults(compose(), query, seq); };
-  const artistP = searchArtistProfile(query).then(a => { artist = a; if (a) repaint(); return a; });
-  if (query.trim().split(/\s+/).length <= 8){
-    searchSongCandidates(query).then(c => { const yt = (c || []).filter(x => x.source === 'youtube').slice(0, 4), sc = (c || []).filter(x => x.source !== 'youtube').slice(0, 2);
+  const artistP = (st === 'all' || st === 'artists') ? searchArtistProfile(query).then(a => { artist = a; if (a) repaint(); return a; }) : Promise.resolve(null);
+  if ((st === 'all' || st === 'songs') && (st === 'songs' || query.trim().split(/\s+/).length <= 8)){
+    const yn = st === 'songs' ? 10 : 4, sn = st === 'songs' ? 4 : 2;
+    songsP = searchSongCandidates(query).then(c => { const yt = (c || []).filter(x => x.source === 'youtube').slice(0, yn), sc = (c || []).filter(x => x.source !== 'youtube').slice(0, sn);
       songs = yt.concat(sc).map(x => Object.assign({ isSong: true }, x)); // YouTube's own order leads, like youtube.com (#625)
       if (songs.length) repaint(); }).catch(() => {});
   }
   try{
-    const results = await searchPlaylistsByVibe(query);
+    const results = (st === 'songs' || st === 'artists') ? [] : (st === 'albums' ? await searchAlbumsByQuery(query) : await searchPlaylistsByVibe(query));
     if (seq !== vibeSearchSeq) return; // a newer search replaced this one
+    if (st === 'songs' && songsP) await songsP;
+    if (st === 'artists') await artistP;
     shown = results;
     stageSearchResults(compose(), query, seq);
     if (!artist && !songs.length && !results.length){
@@ -20070,7 +20106,7 @@ importForm.addEventListener('submit', (e) => {
   // conversational-vibe-search: a sentence ("rainy sunday morning, want
   // something warm and slow") goes to the interpreter and comes back as a
   // playlist of songs; a short keyword query keeps the playlist picker.
-  if (looksConversational(val)) beginConversationalVibe(val);
+  if (searchType === 'all' && looksConversational(val)) beginConversationalVibe(val);
   else beginVibeSearch(val);
 });
 
@@ -20497,6 +20533,8 @@ function renderSearchTab(){
   }));
   applyUiLang($('view-search'));
 }
+document.querySelectorAll('.st-type').forEach(b => b.addEventListener('click', () => setSearchType(b.dataset.stype)));
+setSearchType(searchType);
 $('searchTabForm').addEventListener('submit', (e) => { e.preventDefault(); searchTabSubmit(); });
 // #722 desktop: clicking the top search bar puts the search page in the middle pane (the footer player comes back, like Settings); Esc or the X goes back
 function openDesktopSearch(){
@@ -23340,6 +23378,7 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 const WHATS_NEW = [
   { version: 538, date: '2026-11-12', items: [
     'On a computer there is now one search field, the one at the top: opening Search no longer shows a second copy of it.',
+    'Search now lets you pick what you are looking for: All, Songs, Artists, Albums or Playlists. Your pick stays until you close the app.',
     'The four-square browse button next to the search bar is gone. Home now has four cards: import your music, browse by genre, browse by region, browse by vibe.'
   ]},
   { version: 537, date: '2026-11-12', items: [
