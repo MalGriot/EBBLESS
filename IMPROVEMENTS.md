@@ -12758,7 +12758,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #787.
 
 ### flux-player-controls-are-underneath-and-788: FLUX player controls are underneath and blocked by the player controls (Geethub #788)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Geethub issue #788. See the issue for the full text.
 - **Touches:** index.html (UI)
@@ -12782,7 +12782,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #790.
 
 ### flux-mode-there-should-be-more-keyboard-791: Flux mode: there should be more keyboard shortcuts to affect the visualizer (Geethub #791)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Geethub issue #791. See the issue for the full text.
 - **Touches:** index.html (UI)
@@ -12790,7 +12790,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #791.
 
 ### when-flux-is-fullscreen-and-another-albu-792: When flux is fullscreen and another album art style is selected, flux should be behind whatever is showing cur (Geethub #792)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Geethub issue #792. See the issue for the full text.
 - **Touches:** index.html (UI)
@@ -12814,7 +12814,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #794.
 
 ### flux-should-use-the-colors-of-the-now-pl-795: Flux should use the colors of the now playing art (Geethub #795)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Geethub issue #795. See the issue for the full text.
 - **Touches:** index.html (UI)
@@ -12902,7 +12902,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #805.
 
 ### flux-left-and-right-change-the-song-good-806: FLux: left and right change the song (good) but up and down should change the pattern (Geethub #806)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Geethub issue #806. See the issue for the full text.
 - **Touches:** index.html (UI)
