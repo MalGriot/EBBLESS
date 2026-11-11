@@ -12661,7 +12661,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #775.
 
 ### video-button-selecting-it-while-acti-776: Video button: selecting it while active should toggle cinema mode. the video button should turn into the cinem (Geethub #776)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #776. See the issue for references.
 - **Touches:** index.html (UI)
@@ -12749,7 +12749,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #727. Not the waveform work: entry `waveform-real-peaks-727` reused the same number for a different idea.
 
 ### mobile-when-volume-is-0-for-more-than-7-787: Mobile: when volume is 0 for more than 7 seconds, pause the music automatically (Geethub #787)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Geethub issue #787. See the issue for the full text.
 - **Touches:** index.html (UI)
@@ -12805,7 +12805,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #793.
 
 ### queue-scroll-bar-should-be-on-the-left-o-794: Queue scroll bar should be on the left of the window (Geethub #794)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Geethub issue #794. See the issue for the full text.
 - **Touches:** index.html (UI)
@@ -12837,7 +12837,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #797.
 
 ### when-queue-is-being-reloaded-it-should-s-798: When queue is being reloaded, it should show a progress bar (Geethub #798)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Geethub issue #798. See the issue for the full text.
 - **Touches:** index.html (UI)
