@@ -12541,7 +12541,7 @@ Add entries in this shape:
 - **Notes:** Built: with a queue going, albums, playlists and artists (any source, pasted, shared or from search) show the sheet at the end of matching; with nothing playing they start playing as before and a toast says what matched and where it was filed, with an Add to playlist button. Single songs and podcasts are unchanged. Add to playlist puts every matched song on a playlist in one tap (or a new playlist named after the album). Untested: a real phone, real Apple Music albums and real matching results (browser-checked with a stubbed resolver only). Imported Spotify playlists as targets skip the "make an editable copy" prompt single songs show. Alternative not built: always show the sheet, even with nothing playing (one more tap to start music).
 
 ### on-first-open-find-music-should-brin-761: On first open: "find music" should bring you to home page. home page should handle all import options and genr (Geethub #761)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #761. See the issue for references.
 - **Touches:** index.html (UI)
@@ -12549,7 +12549,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #761.
 
 ### h-should-toggle-between-home-and-pla-762: H should toggle between home and player (Geethub #762)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #762. See the issue for references.
 - **Touches:** index.html (UI)
@@ -12565,7 +12565,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #763.
 
 ### lp-should-spin-slower-than-cd-764: Lp should spin slower than cd (Geethub #764)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #764. See the issue for references.
 - **Touches:** index.html (UI)
@@ -12573,7 +12573,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #764.
 
 ### recently-edited-playlists-should-go-765: Recently edited playlists should go to the top of the list below pinned unless the sorting is on alphabetical, (Geethub #765)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #765. See the issue for references.
 - **Touches:** index.html (UI)
@@ -12581,7 +12581,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #765.
 
 ### add-to-playlist-window-should-have-766: "add to playlist" window should have sorting options and a search function (Geethub #766)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #766. See the issue for references.
 - **Touches:** index.html (UI)
@@ -12645,7 +12645,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #773.
 
 ### desktop-library-when-podcasts-is-sel-774: Desktop: library: when podcasts is selected, a left chevron button appears and squeezes the other buttons. rem (Geethub #774)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** high
 - **Description:** Bug, Geethub issue #774. See the issue for references.
 - **Touches:** index.html (UI)
@@ -12685,7 +12685,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #778.
 
 ### visualizer-should-be-called-cymatics-779: Visualizer should be called cymatics. fLUX is already a visualizer (Geethub #779)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** high
 - **Description:** Bug, Geethub issue #779. See the issue for references.
 - **Touches:** index.html (UI)
@@ -12693,7 +12693,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #779.
 
 ### on-mobile-when-i-go-to-the-splash-fr-780: On mobile when i go to the splash from inside the app, it doesn't show the buttons on the splash to return (Geethub #780)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** high
 - **Description:** Bug, Geethub issue #780. See the issue for references.
 - **Touches:** index.html (UI)
@@ -12709,7 +12709,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #781.
 
 ### on-mobile-the-top-nav-is-so-high-it-782: On mobile: the top nav is so high, it's blocked by the phone's clock and top icons (Geethub #782)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** high
 - **Description:** Bug, Geethub issue #782. See the issue for references.
 - **Touches:** index.html (UI)
@@ -12717,7 +12717,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #782.
 
 ### thumbs-down-button-missing-from-desk-784: Thumbs down button missing from desktop (Geethub #784)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** high
 - **Description:** Bug, Geethub issue #784. See the issue for references.
 - **Touches:** index.html (UI)
@@ -12725,7 +12725,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #784.
 
 ### dragging-a-song-from-anywhere-into-t-785: Dragging a song from anywhere into the unliked playlist unlikes it (Geethub #785)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #785. See the issue for references.
 - **Touches:** index.html (UI)
@@ -12733,7 +12733,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #785.
 
 ### fullscreen-cassette-animation-the-ma-786: Fullscreen cassette animation: the main cassette should be a bit larger. the other tapes can stay the same siz (Geethub #786)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #786. See the issue for references.
 - **Touches:** index.html (UI)
