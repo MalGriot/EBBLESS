@@ -2024,7 +2024,9 @@ text.cs-pen{font:600 17px 'Bradley Hand','Segoe Print','Marker Felt','Comic Sans
 .track-meta .title-row{display:flex;align-items:center;justify-content:center;gap:6px}
 .track-meta .title-row .title{flex:1;min-width:0}
 /* balances the like + options buttons on the right so the title stays centered */
-.track-meta .title-row::before{content:'';flex:none;width:calc(50px + var(--tr-decline,0px) + var(--tr-addpl,0px) + var(--tr-speed,0px))}
+.track-meta .title-row::before{content:'';flex:none;display:none;width:calc(var(--tr-addpl,0px) + var(--tr-speed,0px) - 6px)}
+/* desktop: heart, options and thumbs-down live on the art, so only the opt-in addpl/speed buttons sit beside the title; no spacer when none show */
+@media (min-width:860px){html:is(.adv-show-addpl,.adv-show-speed,.now-podcast) .track-meta .title-row::before{display:block}}
 /* #728: the spacer is as wide as the buttons on the right - like + options (22px + 6px gap each, less the gap the spacer shares with the title),
    plus each extra that is showing: the CuRRentSSsss thumbs-down (Geethub #358), add to playlist and speed (Advanced settings) */
 .track-meta .title-row:has(.player-decline-btn:not([hidden])){--tr-decline:28px}
@@ -22910,6 +22912,9 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
+  { version: 529, date: '2026-11-12', items: [
+    'The song title on the player is now centered.'
+  ]},
   { version: 528, date: '2026-11-12', items: [
     'The queue scroll bar is now on the left side of the window.',
     'A progress bar shows at the top of the queue while it is reloading.',
