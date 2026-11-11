@@ -1,7 +1,8 @@
-// Mac self-update helpers (no Electron imports, so they can be tested in Node).
+// Mac and Windows self-update helpers (no Electron imports, so they can be tested in Node).
 // The app is unsigned, so Squirrel's autoUpdater cannot be used: main.js finds
-// the newest GitHub release, downloads the dmg for this CPU, and (after the
-// person confirms) hands the swap to a detached shell script.
+// the newest GitHub release, downloads the dmg for this CPU (Windows: the
+// installer exe), and (after the person confirms) hands the swap to a detached
+// shell script (Windows: runs the installer silently).
 const http = require('http');
 const https = require('https');
 const fs = require('fs');
@@ -21,21 +22,26 @@ function isNewer(a, b){
   }
   return false;
 }
-// arm64 dmg has "-arm64" in its name, the Intel dmg does not
-function pickAsset(assets, arch){
+const WIN_ASSET_PREFIX = 'https://github.com/MalGriot/EBBLESS/releases/download/';
+// Mac: the arm64 dmg has "-arm64" in its name, the Intel dmg does not.
+// Windows: the one NSIS installer, EBBLESS-Setup-<version>.exe, and only from this repo's release path.
+function pickAsset(assets, arch, platform){
+  if (platform === 'win32'){
+    return (assets || []).find(a => a && /^EBBLESS-Setup-\d+(\.\d+)*\.exe$/.test(a.name || '') && String(a.browser_download_url || '').startsWith(WIN_ASSET_PREFIX)) || null;
+  }
   const dmgs = (assets || []).filter(a => a && /\.dmg$/i.test(a.name || '') && a.browser_download_url);
   const arm = dmgs.filter(a => /arm64/i.test(a.name));
   const intel = dmgs.filter(a => !/arm64/i.test(a.name));
   return (arch === 'arm64' ? arm : intel)[0] || null;
 }
 // release JSON + this app's version/arch -> what the page shows
-function evaluateRelease(release, current, arch){
+function evaluateRelease(release, current, arch, platform){
   const latest = String((release && release.tag_name) || '').replace(/^v/, '');
   if (!parseVersion(latest)) throw new Error('Could not read the latest version');
   const available = isNewer(latest, current);
-  const asset = available ? pickAsset(release.assets, arch) : null;
-  if (available && !asset) throw new Error('No Mac download for ' + latest + ' (' + arch + ')');
-  return { current, latest, available, asset: asset && { name: asset.name, url: asset.browser_download_url, size: asset.size || 0 } };
+  const asset = available ? pickAsset(release.assets, arch, platform) : null;
+  if (available && !asset) throw new Error(platform === 'win32' ? 'The Windows download for ' + latest + ' is not ready yet' : 'No Mac download for ' + latest + ' (' + arch + ')');
+  return { current, latest, available, asset: asset && { name: asset.name, url: asset.browser_download_url, size: asset.size || 0, digest: asset.digest || '' } };
 }
 
 function get(url, cb, hops){
