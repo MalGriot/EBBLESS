@@ -12918,7 +12918,7 @@ Add entries in this shape:
 - **Notes:** Verified at phone width: no overlaps at start, wheel zoom in/out 20-60 steps, drag and pinch pan, tap still recenters, no console errors or gpu-watchdog warnings. Cache v535.
 
 ### music-map-infinite: Music map: infinite expanding artist map
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Owner: "the music map should be infinite". The map is now one growing graph in world space. Tapping a name focuses it (it gets Play songs / Radio / ...) and grows the map around it from the existing /artistmap call, keeping everything already placed; an artist seen twice is one node with links. Zooming out or dragging toward empty space auto-grows outward from the nearest unexpanded names, and zooming in on an unexpanded name grows it. New names are placed by a collision-free ring search (spatial hash), so nothing overlaps. Only names inside the view are in the DOM (max 120, biggest first, label-collision decluttered); the rest stay as data.
 - **Touches:** index.html (music map)
