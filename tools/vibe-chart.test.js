@@ -10,7 +10,7 @@ const m = /\/\* VIBE-CHART:BEGIN[^*]*\*\/([\s\S]*?)\/\* VIBE-CHART:END \*\//.exe
 assert.ok(m, 'VIBE-CHART block not found in index.html');
 const ctx = {};
 vm.createContext(ctx);
-vm.runInContext(m[1] + '\nthis.api = { VC_MAX, VC_NODES, VC_GRID, VC_BY_ID, vcClean, vcToggle, vcFill, vcCompose, vcNeighbor, vcHeat, vcPathPoints, vcNear };', ctx);
+vm.runInContext(m[1] + '\nthis.api = { VC_MAX, VC_NODES, VC_GRID, VC_BY_ID, vcClean, vcToggle, vcFill, vcCompose, vcNeighbor, vcHeat, vcPathPoints, vcNear, VC_COMPACT };', ctx);
 const A = ctx.api;
 const arr = (x) => [...x];
 
@@ -32,6 +32,9 @@ test('heat goes from cool (heavy, calm) to warm (bright, intense)', () => {
 test('path points follow pick order; near cells exclude picks', () => {
   assert.strictEqual(A.vcPathPoints(['calm', 'furious']), '4.5,6.5 0.5,0.5');
   assert.strictEqual(A.vcPathPoints([]), '');
+  // compact 5 x 5: calm (col 4,row 6) is not a cell there, furious and numb are; picks without a cell are skipped
+  assert.strictEqual(A.vcPathPoints(['furious', 'calm', 'numb'], A.VC_COMPACT), '0.5,0.5 0.5,4.5');
+  assert.strictEqual(A.vcPathPoints(['sad', 'joyful'], A.VC_COMPACT), '4.5,1.5');
   const near = A.vcNear(['calm']);
   assert.ok(near.has('serene') && near.has('relaxed') && !near.has('calm') && !near.has('furious'));
   assert.strictEqual(near.size, 5);
@@ -78,4 +81,12 @@ test('arrow keys move one cell and stop at the edge', () => {
   assert.strictEqual(A.vcNeighbor('calm', 'up'), 'relaxed');
   assert.strictEqual(A.vcNeighbor('calm', 'down'), null);
   assert.strictEqual(A.vcNeighbor('furious', 'left'), null);
+});
+
+test('compact layout is a 5 x 5 subset made of real cells with short words', () => {
+  const C = A.VC_COMPACT, words = [];
+  C.rows.forEach(r => C.cols.forEach(c => words.push(A.VC_GRID[r][c])));
+  assert.strictEqual(words.length, 25);
+  assert.ok(words.every(w => w.length <= 10));
+  assert.deepStrictEqual(arr(C.cols), [...C.cols].sort((a, b) => a - b));
 });
