@@ -14881,6 +14881,7 @@ function mmBuild(){
     if (!t) return;
     const k = t.dataset.mm, v = t.dataset.v;
     if (k === 'go') mmGo(v, t.closest('.mm-node'));
+    else if ((k === 'play' || k === 'radio') && Date.now() < mmTapGuard) return;   // the 2nd tap of a double-tap lands on the new center's buttons: explore only, never play
     else if (k === 'play') mmPlay(v, t);
     else if (k === 'radio') mmRadio(v);
     else if (k === 'more'){ e.stopPropagation(); mmOpenMenu(v, t, !!t.closest('.mm-center')); }
@@ -14911,7 +14912,7 @@ function mmBuild(){
 // gesture step, nothing runs while the map is closed.
 const MM_SMIN = 0.05, MM_SMAX = 200;
 const MM_MAX = 400, MM_DOM = 120, MM_CONC = 2;   // data cap, nodes in the DOM at once, parallel /artistmap calls
-let mmG = null, mmAutoT = 0, mmGlideRaf = 0;
+let mmG = null, mmAutoT = 0, mmGlideRaf = 0, mmTapGuard = 0;
 // Render only what is on screen: nodes inside the viewport (plus a margin) are
 // sorted by prominence and kept if their label doesn't land on one already
 // kept, so zoomed out you see the big names, zoomed in you see everything. The
@@ -15403,6 +15404,7 @@ function mmGo(name, fromNode, keepTrail){
   const st = $('mmStage');
   ++mmToken;
   mmCloseMenu();
+  if (fromNode) mmTapGuard = Date.now() + 700;
   if (!keepTrail && mmTrail[mmTrail.length - 1] !== name) mmTrail.push(name);
   mmRenderTrail();
   let g = mmG, fresh = false;
