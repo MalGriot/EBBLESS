@@ -12886,12 +12886,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #803.
 
 ### mid-fullscreen-mode-804: Mid-fullscreen mode (Geethub #804)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Geethub issue #804. See the issue for the full text.
 - **Touches:** index.html (UI)
-- **Branch:**
-- **Notes:** Synced from Geethub #804.
+- **Branch:** agent/bugs-c
+- **Notes:** Synced from Geethub #804. Already in main before this lane: the thumbs-down button (v525-v528) and the hover look of the art buttons. Changed here (v530): (a)-(c) the close, 3 dots, heart, thumbs-down and fullscreen buttons now flank the player controls in desktop fullscreen, all 32px, and 3 dots and thumbs-down fade out with the rest of the UI (they were missing from the fade list); (d) progress bar, player buttons and top nav turn the app color on hover in fullscreen; (e) the up-next strip zig-zags, shows as many songs as fit under the top nav, and shows the artist under each song. Checked by computed layout in the preview (real fullscreen needs a playing song); the 3 dots and fade need one look with a song playing. No gpu-watchdog warnings.
 
 ### different-audio-crossfade-options-warp-s-805: Different audio crossfade options: warp, spikes, glitch (idk what i mean just see what you come up with) (Geethub #805)
 - **Status:** ready
