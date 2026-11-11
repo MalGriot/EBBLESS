@@ -12802,8 +12802,8 @@ Add entries in this shape:
 - **Priority:** medium
 - **Description:** Geethub issue #793. See the issue for the full text.
 - **Touches:** index.html (UI)
-- **Branch:** agent/bugs-a
-- **Notes:** Synced from Geethub #793. Already shipped in v529 (commit 191265c): title centered.
+- **Branch:**
+- **Notes:** Synced from Geethub #793.
 
 ### queue-scroll-bar-should-be-on-the-left-o-794: Queue scroll bar should be on the left of the window (Geethub #794)
 - **Status:** merged
