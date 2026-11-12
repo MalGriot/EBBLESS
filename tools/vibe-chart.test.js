@@ -10,7 +10,7 @@ const m = /\/\* VIBE-CHART:BEGIN[^*]*\*\/([\s\S]*?)\/\* VIBE-CHART:END \*\//.exe
 assert.ok(m, 'VIBE-CHART block not found in index.html');
 const ctx = {};
 vm.createContext(ctx);
-vm.runInContext(m[1] + '\nthis.api = { VC_MAX, VC_NODES, VC_GRID, VC_BY_ID, vcClean, vcToggle, vcFill, vcCompose, vcNeighbor, vcHeat, vcPathPoints, vcNear, vcFlowCell, VC_JOURNEYS, VC_HAPPY };', ctx);
+vm.runInContext(m[1] + '\nthis.api = { VC_MAX, VC_NODES, VC_GRID, VC_EMOJI_GRID, VC_BY_ID, vcClean, vcToggle, vcFill, vcCompose, vcNeighbor, vcHeat, vcPathPoints, vcNear, vcFlowCell, VC_JOURNEYS, VC_HAPPY };', ctx);
 const A = ctx.api;
 const arr = (x) => [...x];
 
@@ -105,4 +105,13 @@ test('journeys use real feelings and fit the cap', () => {
 test('happy chips are real, light-side feelings', () => {
   assert.ok(A.VC_HAPPY.length >= 5);
   A.VC_HAPPY.forEach(id => { assert.ok(A.VC_BY_ID[id] && A.VC_BY_ID[id].c >= 6, id); });
+});
+
+test('every feeling has its own emoji', () => {
+  const all = arr(A.VC_NODES).map(n => n.emoji);
+  assert.strictEqual(all.length, 100);
+  assert.ok(all.every(e => typeof e === 'string' && e.length >= 1));
+  assert.strictEqual(new Set(all).size, 100);
+  assert.strictEqual(A.VC_EMOJI_GRID.length, 10);
+  A.VC_EMOJI_GRID.forEach(row => assert.strictEqual(row.length, 10));
 });
