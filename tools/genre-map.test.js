@@ -11,7 +11,7 @@ const m = /\/\* GENRE-MAP:BEGIN[^*]*\*\/([\s\S]*?)\/\* GENRE-MAP:END \*\//.exec(
 assert.ok(m, 'GENRE-MAP block not found in index.html');
 const ctx = {};
 vm.createContext(ctx);
-vm.runInContext(m[1] + '\nthis.api = { gmLabelW, gmMinProm, gmFit, gmDeclutter, gmSearch, gmTicks, GM_LABEL_H, GM_SMAX };', ctx);
+vm.runInContext(m[1] + '\nthis.api = { gmLabelW, gmMinProm, gmFit, gmDeclutter, gmSearch, gmTicks, gmRing, gmGrow, gmReveal, gmPlaceNear, GM_LABEL_H, GM_SMAX };', ctx);
 const A = ctx.api;
 const D = JSON.parse(fs.readFileSync(path.join(__dirname, 'genre-map.json'), 'utf8'));
 const nodes = D.n.map(r => ({ name: r[0], fam: r[1], x: r[2], y: r[3], prom: r[4], root: !!r[5], dec: r[6], w: A.gmLabelW(r[0]), h: A.GM_LABEL_H }));
@@ -136,4 +136,58 @@ test('decade axis: ticks never crowd, prefer round decades when thin, show every
   const thin = Array.from(A.gmTicks(D.cols, fit, 52)).map(i => D.cols[i][0]);
   assert.ok(thin.length <= 8 && thin.some(l => /^(1920|1960|2000)s$/.test(l)), 'thin ticks keep round decades: ' + thin);
   assert.strictEqual(A.gmTicks(D.cols, 2.5, 52).length, D.cols.length - 1);
+});
+
+// web view: the map grows from the family ring as genres are tapped
+const webNodes = () => {
+  const ns = D.n.map(r => ({ name: r[0], fam: r[1], x: 0, y: 0, prom: r[4], root: !!r[5], w: A.gmLabelW(r[0]), h: A.GM_LABEL_H, from: [], to: [], placed: false }));
+  D.e.forEach(([a, b]) => { ns[a].to.push(b); ns[b].from.push(a); });
+  A.gmRing(ns, 1000, 560);
+  return ns;
+};
+const noOverlap = (ns) => {
+  const p = ns.filter(n => n.placed);
+  for (let i = 0; i < p.length; i++) for (let j = i + 1; j < p.length; j++) {
+    const a = p[i], b = p[j];
+    assert.ok(Math.abs(a.x - b.x) >= (a.w + b.w) / 2 || Math.abs(a.y - b.y) >= (a.h + b.h) / 2, a.name + ' overlaps ' + b.name);
+  }
+};
+test('web: opens as a ring of the family names, none overlapping', () => {
+  const ns = webNodes(), roots = ns.filter(n => n.root);
+  assert.strictEqual(roots.length, D.fam.length);
+  assert.ok(roots.every(n => n.placed) && ns.filter(n => !n.root).every(n => !n.placed));
+  noOverlap(ns);
+});
+test('web: tapping genres grows the map deterministically and never overlaps labels at zoom 1', () => {
+  const run = () => {
+    const ns = webNodes(), idx2 = (nm) => ns.findIndex(n => n.name === nm);
+    ['Hip-Hop', 'Old school hip-hop', 'Classic soul', 'R&B / Soul', 'Disco', 'House', 'Techno', 'Electronic', 'Rock', 'Punk'].forEach(nm => { const i = idx2(nm); A.gmReveal(ns, i); A.gmGrow(ns, i); noOverlap(ns); });
+    return ns;
+  };
+  const a = run(), b = run();
+  assert.strictEqual(JSON.stringify(a.map(n => [n.x, n.y, n.placed])), JSON.stringify(b.map(n => [n.x, n.y, n.placed])));
+  const placed = a.filter(n => n.placed).length;
+  assert.ok(placed > 40, 'map grew: ' + placed);
+});
+test('web: a family root brings its 10 biggest styles, a genre brings what it came from and led to, to its left and right', () => {
+  const ns = webNodes(), i = ns.findIndex(n => n.name === 'Hip-Hop');
+  const added = A.gmGrow(ns, i);
+  assert.ok(added.length >= 10, 'styles placed: ' + added.length);
+  assert.ok(added.every(k => ns[k].placed));
+  const d = ns.findIndex(n => n.name === 'Disco'); A.gmReveal(ns, d); A.gmGrow(ns, d);
+  ns[d].from.forEach(k => assert.ok(ns[k].x < ns[d].x + 1, ns[k].name + ' came from, sits left'));
+  ns[d].to.forEach(k => assert.ok(ns[k].x > ns[d].x - 1 || ns[k].placed, ns[k].name));
+});
+test('web: any genre can be revealed next to something already on the map (search, chips) and everything can be reached', () => {
+  const ns = webNodes();
+  ns.forEach((n, i) => { A.gmReveal(ns, i); });
+  assert.ok(ns.every(n => n.placed));
+  noOverlap(ns);
+});
+
+test('web: at the opening fit on a desktop stage every family name is shown', () => {
+  const ns = webNodes(), roots = ns.map((n, i) => i).filter(i => ns[i].root), W = 898, H = 498;
+  const x0 = Math.min(...roots.map(i => ns[i].x - ns[i].w / 2)), x1 = Math.max(...roots.map(i => ns[i].x + ns[i].w / 2)), y0 = Math.min(...roots.map(i => ns[i].y - 15)), y1 = Math.max(...roots.map(i => ns[i].y + 15));
+  const f = A.gmFit(x1 - x0, y1 - y0, W, H, 48), v = { s: f.s, tx: f.tx - x0 * f.s, ty: f.ty - y0 * f.s };
+  assert.strictEqual(A.gmDeclutter(ns, roots, v, W, H, { floor: 0 }).length, roots.length);
 });

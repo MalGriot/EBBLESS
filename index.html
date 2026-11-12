@@ -1424,6 +1424,9 @@ html.reduce-motion .lib-grid:not(.is-list) .lib-card .info .name{display:block;w
 .gm-axis{position:absolute;left:0;right:0;top:0;height:26px;z-index:1;overflow:hidden;pointer-events:none;background:color-mix(in srgb,var(--panel-2) 92%,transparent);border-bottom:1px solid var(--border)}
 .gm-lane{position:absolute;left:8px;top:0;z-index:1;height:18px;padding:0 9px;display:flex;align-items:center;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap;pointer-events:none;color:hsl(var(--gm-h) var(--gm-s) 78%);background:hsl(var(--gm-h) var(--gm-s) 40% / .55)}
 .gm-dec{position:absolute;left:0;top:0;width:44px;height:26px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;letter-spacing:.02em;color:var(--faint)}
+.gm-wrap.is-web .gm-axis,.gm-wrap.is-web .gm-lane,.gm-wrap.is-web .gm-bg{display:none}
+.gm-zoomctl .gm-zstart{font-size:12px;font-weight:700;padding:0 12px}
+.gm-zstart[hidden]{display:none}
 .gm-hint{position:absolute;left:50%;bottom:12px;z-index:2;transform:translateX(-50%);padding:7px 14px;border-radius:999px;background:var(--panel-2);border:1px solid var(--border-2);color:var(--text);font-size:12.5px;font-weight:600;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .4s var(--ease-out)}
 .gm-hint.is-on{opacity:1}
 .gm-zoomctl{position:absolute;right:10px;top:34px;display:flex;gap:4px;z-index:2}
@@ -1456,7 +1459,7 @@ html.reduce-motion .lib-grid:not(.is-list) .lib-card .info .name{display:block;w
 .gm-foot{margin:14px 2px 0;font-size:13px}
 .gm-foot a{color:var(--faint);text-decoration:underline;text-underline-offset:3px}
 .gm-foot a:hover{color:var(--accent)}
-@media (max-width:639px){.gm-panel.is-min .gm-pbody{display:none}}
+@media (max-width:639px){.gm-panel.is-min .gm-pbody{display:none}.gm-wrap.is-web .gm-zoomctl{top:10px}}
 @media (min-width:640px){
   .gm-panel{left:auto;top:10px;right:10px;bottom:10px;width:300px;max-height:none;transform:translateX(24px)}
   .gm-pbody{max-height:none}
@@ -10440,7 +10443,7 @@ function gmFit(w, h, W, H, pad){
 // Returns the labels to draw, each with its screen position; no two label boxes overlap.
 function gmDeclutter(nodes, order, v, W, H, o){
   o = o || {};
-  const M = 40, floor = gmMinProm(v.s), cap = o.cap || GM_CAP, forced = o.forced || 0, top = o.top || 0;
+  const M = 40, floor = o.floor != null ? o.floor : gmMinProm(v.s), cap = o.cap || GM_CAP, forced = o.forced || 0, top = o.top || 0;
   const grid = new Map(), keep = [];
   for (let k = 0; k < order.length && keep.length < cap; k++){
     const i = order[k], p = nodes[i];
@@ -10483,6 +10486,53 @@ function gmTicks(cols, s, gap){
   const out = [];
   idx.forEach(i => { if (out.every(j => Math.abs(cols[i][1] - cols[j][1]) * s >= gap)) out.push(i); });
   return out;
+}
+// Web view: the 15 family names sit on a ring and the map grows as you tap. Placement is deterministic: a new genre takes the first free
+// spot around the one that was tapped (came-from to the left, led-to to the right, a family's styles fanned outward), so labels never overlap at zoom 1.
+// nodes: [{ x, y, w, h, placed, root, fam, prom, from: [], to: [] }]
+function gmRing(nodes, Rx, Ry){
+  const roots = nodes.map((n, i) => i).filter(i => nodes[i].root);
+  roots.forEach((i, k) => { const a = -Math.PI / 2 + k * 2 * Math.PI / roots.length; nodes[i].x = Math.round(Math.cos(a) * (Rx || 620)); nodes[i].y = Math.round(Math.sin(a) * (Ry || Rx || 620)); nodes[i].placed = true; });
+}
+function gmBoxHit(nodes, x, y, w, h){
+  for (let k = 0; k < nodes.length; k++){
+    const q = nodes[k];
+    if (q.placed && Math.abs(q.x - x) < (q.w + w) / 2 + 14 && Math.abs(q.y - y) < (q.h + h) / 2 + 8) return true;
+  }
+  return false;
+}
+function gmPlaceNear(nodes, anchor, i, a0){
+  const A = nodes[anchor], n = nodes[i], OFF = [0, 1, -1, 2, -2, 3, -3, 4, -4];
+  for (let ring = 0; ring < 14; ring++){
+    const r = 230 + ring * 150;
+    for (let k = 0; k < OFF.length; k++){
+      const a = a0 + OFF[k] * 40 * Math.PI / 180, x = Math.round(A.x + Math.cos(a) * r), y = Math.round(A.y + Math.sin(a) * r);
+      if (!gmBoxHit(nodes, x, y, n.w, n.h)){ n.x = x; n.y = y; n.placed = true; return; }
+    }
+  }
+  n.x = Math.round(A.x + 3000); n.y = A.y; n.placed = true;   // unreachable in practice
+}
+// grows the map around genre i: a family root brings its 10 biggest styles, any genre brings what it came from and what it led to. Returns the newly placed indices.
+function gmGrow(nodes, i){
+  const X = nodes[i], added = [], byProm = (a, b) => nodes[b].prom - nodes[a].prom || a - b;
+  if (X.root){
+    const kids = nodes.map((n, k) => k).filter(k => !nodes[k].placed && !nodes[k].root && nodes[k].fam === X.fam).sort(byProm).slice(0, 10);
+    const out = Math.atan2(X.y, X.x);
+    kids.forEach(k => { gmPlaceNear(nodes, i, k, out); added.push(k); });
+  }
+  X.from.filter(k => !nodes[k].placed).sort(byProm).forEach(k => { gmPlaceNear(nodes, i, k, Math.PI); added.push(k); });
+  X.to.filter(k => !nodes[k].placed).sort(byProm).forEach(k => { gmPlaceNear(nodes, i, k, 0); added.push(k); });
+  return added;
+}
+// puts one genre on the map next to something already there (a search hit, or a chip)
+function gmReveal(nodes, i){
+  const n = nodes[i];
+  if (n.placed) return false;
+  const pa = n.from.find(k => nodes[k].placed), ch = n.to.find(k => nodes[k].placed);
+  if (pa != null) gmPlaceNear(nodes, pa, i, 0);
+  else if (ch != null) gmPlaceNear(nodes, ch, i, Math.PI);
+  else { const r = nodes.findIndex(q => q.root && q.fam === n.fam); gmPlaceNear(nodes, r, i, Math.atan2(nodes[r].y, nodes[r].x)); }
+  return true;
 }
 /* GENRE-MAP:END */
 /* GENRE-MAP-DATA:BEGIN (generated by tools/genre-map-layout.js, do not edit by hand) */
@@ -10557,13 +10607,14 @@ const LS_GENRE_VIEW = 'ebbless:genreView';
 const GM_EVERYNOISE = 'https://everynoise.com/engenremap.html';
 let gm = null, gmFailed = false;
 function gmViewIsMap(){ return !gmFailed && lsGet(LS_GENRE_VIEW, 'map') !== 'list'; }
+function gmViewNow(){ const v = lsGet(LS_GENRE_VIEW, 'map'); return v === 'list' || v === 'years' ? v : 'map'; }
 function gmReduced(){ try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch(e){ return false; } }
 
 const GM_HEADER = 26;   // px of decade axis along the top of the stage
 function gmInit(){
   const D = GM_DATA;
   if (!D || D.v !== 2 || !Array.isArray(D.n) || !D.n.length || !Array.isArray(D.fam) || !Array.isArray(D.cols)) throw new Error('no genre map data');
-  const nodes = D.n.map((r) => ({ name: r[0], fam: r[1], x: r[2], y: r[3], prom: r[4], root: !!r[5], dec: r[6], w: gmLabelW(r[0]), h: GM_LABEL_H, from: [], to: [], inE: [], outE: [], el: null }));
+  const nodes = D.n.map((r) => ({ name: r[0], fam: r[1], x: r[2], y: r[3], prom: r[4], root: !!r[5], dec: r[6], w: gmLabelW(r[0]), h: GM_LABEL_H, from: [], to: [], inE: [], outE: [], el: null, tx: r[2], ty: r[3], placed: true, open: false }));
   const edges = [];
   D.e.forEach(([a, b]) => {
     if (!nodes[a] || !nodes[b]) return;
@@ -10575,18 +10626,23 @@ function gmInit(){
   const el = document.createElement('div');
   el.className = 'gm-wrap';
   el.innerHTML =
-    '<div class="gm-stage" tabindex="0" role="group" aria-label="Genre flow chart. Time runs left to right, each family has its own row, arrows point from a genre to the styles it led to. Plus and minus zoom, arrow keys move, zero fits the whole chart. The list view has every genre."><div class="gm-note" role="status">Drawing the chart&hellip;</div></div>' +
-    '<div class="gm-zoomctl"><button type="button" data-z="in" aria-label="Zoom in">+</button><button type="button" data-z="out" aria-label="Zoom out">&minus;</button><button type="button" class="gm-zreset" data-z="reset" aria-label="Show the whole chart">Fit</button></div>' +
+    '<div class="gm-stage" tabindex="0" role="group" aria-label="Genre map. Arrows point from a genre to the styles it led to. Tap a genre to grow the map around it. Plus and minus zoom, arrow keys move, zero fits everything shown. The list view has every genre."><div class="gm-note" role="status">Drawing the map&hellip;</div></div>' +
+    '<div class="gm-zoomctl"><button type="button" data-z="in" aria-label="Zoom in">+</button><button type="button" data-z="out" aria-label="Zoom out">&minus;</button><button type="button" class="gm-zreset" data-z="reset" aria-label="Show everything on the map">Fit</button><button type="button" class="gm-zstart" data-z="start" aria-label="Start over from the genre families" hidden>Reset</button></div>' +
     '<div class="gm-sugg" role="listbox" aria-label="Matching genres" hidden></div>' +
     '<div class="gm-panel" role="region" aria-label="Selected genre" hidden></div>' +
     '<div class="gm-hint" aria-hidden="true">Swipe to travel through time</div>';
   const g = gm = { hint: el.querySelector('.gm-hint'), D, nodes, edges, sorted, el, stage: el.querySelector('.gm-stage'), panel: el.querySelector('.gm-panel'), sugg: el.querySelector('.gm-sugg'),
-    view: { s: 1, tx: 0, ty: 0 }, sMin: 0.1, shown: new Set(), raf: 0, glide: 0, sel: -1, touched: false, ro: null, kbd: false, floor: -1, mk: 0, decs: [] };
+    view: { s: 1, tx: 0, ty: 0 }, sMin: 0.1, shown: new Set(), raf: 0, glide: 0, sel: -1, touched: false, ro: null, kbd: false, floor: -1, mk: 0, decs: [], mode: 'years', smax: GM_SMAX };
   gmBuildSvg(g);
+  // web view starts as the ring of family names; remember it, then start in the timeline layout the data came with
+  const tall = (window.innerWidth || 1024) < 640;   // a portrait ring on phones, a wide one elsewhere
+  gmRing(nodes, tall ? 480 : 1000, tall ? 900 : 560); nodes.forEach(n => { n.wx = n.x; n.wy = n.y; n.wplaced = !!n.root; n.x = n.tx; n.y = n.ty; n.placed = true; });
+  gmLayoutSvg(g);
   g.stage.addEventListener('click', (e) => { const b = e.target.closest('[data-gm]'); if (b) gmSelect(+b.dataset.gm, { kbd: e.detail === 0 }); });
   el.querySelector('.gm-zoomctl').addEventListener('click', (e) => {
     const b = e.target.closest('[data-z]'); if (!b) return;
     if (b.dataset.z === 'reset'){ gmFitView(true); return; }
+    if (b.dataset.z === 'start'){ gmWebReset(g); return; }
     gmZoomAt(b.dataset.z === 'in' ? 1.5 : 1 / 1.5, g.stage.clientWidth / 2, g.stage.clientHeight / 2);
   });
   zmGestures(g.stage, {
@@ -10627,19 +10683,11 @@ function gmBuildSvg(g){
   const svg = mk('svg', { class: 'gm-svg', 'aria-hidden': 'true', focusable: 'false', preserveAspectRatio: 'none' });
   const defs = mk('defs', {}, svg);
   g.markers = ['gmA0', 'gmA1', 'gmA2'].map((id) => { const m = mk('marker', { id, viewBox: '0 0 10 10', refX: '5', refY: '5', markerUnits: 'userSpaceOnUse', markerWidth: '9', markerHeight: '9', orient: 'auto' }, defs); mk('path', { d: 'M1 1L9 5L1 9z', class: 'gm-ah gm-ah' + id.slice(-1) }, m); return m; });
-  const bands = mk('g', {}, svg);
+  const bands = mk('g', { class: 'gm-bg' }, svg);
   D.lanes.forEach(([fi, y0, y1]) => { const f = D.fam[fi]; mk('rect', { x: 0, y: y0, width: D.w, height: y1 - y0, rx: 10, class: 'gm-band', style: '--gm-h:' + f[2] + ';--gm-s:' + f[3] + '%' }, bands); });
   D.cols.forEach((c, i) => { if (i > 0){ const x = c[1] - (i < D.cols.length - 1 ? (D.cols[i][1] - D.cols[i - 1][1]) / 2 : 0); if (i > 1) mk('line', { x1: x, x2: x, y1: 0, y2: D.h, class: 'gm-col' }, bands); } });
   const eg = mk('g', {}, svg);
-  g.edges.forEach((e) => {
-    const A = g.nodes[e.a], B = g.nodes[e.b], dx = B.x - A.x;
-    const c = dx > 1 ? Math.max(30, dx * 0.5) : 70, p1 = [A.x + c, A.y], p2 = [dx > 1 ? B.x - c : B.x + c, B.y];
-    const mx = (A.x + 3 * p1[0] + 3 * p2[0] + B.x) / 8, my = (A.y + 3 * p1[1] + 3 * p2[1] + B.y) / 8;
-    const r = (n) => Math.round(n * 10) / 10;
-    const d = 'M' + r(A.x) + ' ' + r(A.y) + 'C' + r((A.x + p1[0]) / 2) + ' ' + r((A.y + p1[1]) / 2) + ' ' + r((A.x + 2 * p1[0] + p2[0]) / 4) + ' ' + r((A.y + 2 * p1[1] + p2[1]) / 4) + ' ' + r(mx) + ' ' + r(my) +
-      'C' + r((p1[0] + 2 * p2[0] + B.x) / 4) + ' ' + r((p1[1] + 2 * p2[1] + B.y) / 4) + ' ' + r((p2[0] + B.x) / 2) + ' ' + r((p2[1] + B.y) / 2) + ' ' + r(B.x) + ' ' + r(B.y);
-    e.el = mk('path', { d, class: 'gm-e' + (e.cross ? ' is-x' : '') }, eg);
-  });
+  g.edges.forEach((e) => { e.el = mk('path', { class: 'gm-e' + (e.cross ? ' is-x' : '') }, eg); });
   // every genre is a dot, so arrows always end somewhere even when its label is thinned out
   const dg = mk('g', {}, svg);
   g.dots = g.nodes.map((n) => { const f = D.fam[n.fam]; return mk('path', { d: 'M' + n.x + ' ' + n.y + 'h0', class: 'gm-dot', style: '--gm-h:' + f[2] + ';--gm-s:' + f[3] + '%' }, dg); });
@@ -10654,6 +10702,55 @@ function gmBuildSvg(g){
     s.style.setProperty('--gm-h', D.fam[fi][2]); s.style.setProperty('--gm-s', D.fam[fi][3] + '%'); ax.after(s);
     return { s, y0, y1, root: g.nodes.findIndex(n => n.root && n.fam === fi), hid: false };
   });
+}
+function gmBounds(g){
+  if (g.mode === 'years'){ g.bx0 = 0; g.by0 = 0; g.bx1 = g.D.w; g.by1 = g.D.h; return; }
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  g.nodes.forEach(n => { if (n.placed){ x0 = Math.min(x0, n.x - n.w / 2); y0 = Math.min(y0, n.y - n.h / 2); x1 = Math.max(x1, n.x + n.w / 2); y1 = Math.max(y1, n.y + n.h / 2); } });
+  g.bx0 = x0; g.by0 = y0; g.bx1 = x1; g.by1 = y1;
+}
+// one arrow: an S curve across the timeline, a gentle arc on the web; the head sits on the curve's midpoint (marker-mid), clear of the labels
+function gmEdgePath(g, e){
+  const A = g.nodes[e.a], B = g.nodes[e.b];
+  if (!A.placed || !B.placed) return;
+  const r = (n) => Math.round(n * 10) / 10;
+  let p1, p2;
+  if (g.mode === 'years'){ const dx = B.x - A.x, c = dx > 1 ? Math.max(30, dx * 0.5) : 70; p1 = [A.x + c, A.y]; p2 = [dx > 1 ? B.x - c : B.x + c, B.y]; }
+  else {
+    const dx = B.x - A.x, dy = B.y - A.y, len = Math.hypot(dx, dy) || 1, k = len * 0.12, px = -dy / len * k, py = dx / len * k;
+    p1 = [A.x + dx / 3 + px, A.y + dy / 3 + py]; p2 = [A.x + dx * 2 / 3 + px, A.y + dy * 2 / 3 + py];
+  }
+  const mx = (A.x + 3 * p1[0] + 3 * p2[0] + B.x) / 8, my = (A.y + 3 * p1[1] + 3 * p2[1] + B.y) / 8;
+  e.el.setAttribute('d', 'M' + r(A.x) + ' ' + r(A.y) + 'C' + r((A.x + p1[0]) / 2) + ' ' + r((A.y + p1[1]) / 2) + ' ' + r((A.x + 2 * p1[0] + p2[0]) / 4) + ' ' + r((A.y + 2 * p1[1] + p2[1]) / 4) + ' ' + r(mx) + ' ' + r(my) +
+    'C' + r((p1[0] + 2 * p2[0] + B.x) / 4) + ' ' + r((p1[1] + 2 * p2[1] + B.y) / 4) + ' ' + r((p2[0] + B.x) / 2) + ' ' + r((p2[1] + B.y) / 2) + ' ' + r(B.x) + ' ' + r(B.y));
+}
+function gmLayoutSvg(g){
+  gmBounds(g);
+  g.edges.forEach(e => gmEdgePath(g, e));
+  g.nodes.forEach((n, i) => g.dots[i].setAttribute('d', 'M' + n.x + ' ' + n.y + 'h0'));
+}
+function gmTop(g){ return g.mode === 'years' ? GM_HEADER : 0; }
+function gmSetMode(g, mode){
+  if (g.mode === mode) return;
+  if (g.mode === 'web') g.nodes.forEach(n => { n.wx = n.x; n.wy = n.y; n.wplaced = n.placed; });
+  g.mode = mode;
+  g.nodes.forEach(n => { if (mode === 'web'){ n.x = n.wx; n.y = n.wy; n.placed = n.wplaced; } else { n.x = n.tx; n.y = n.ty; n.placed = true; } });
+  g.el.classList.toggle('is-web', mode === 'web');
+  g.smax = mode === 'web' ? 8 : GM_SMAX;
+  if (g.sel >= 0){ g.sel = -1; g.panel.hidden = true; g.panel.classList.remove('is-open'); gmMarkEdges(g); }
+  g.shown.forEach(i => { const e = g.nodes[i].el; if (e && e.parentNode) e.remove(); }); g.shown.clear();
+  gmLayoutSvg(g);
+  g.floor = -1; g.visDirty = true; g.touched = false; g.fitted = false;
+  g.hint.textContent = mode === 'web' ? 'Tap a genre to grow the map' : 'Swipe to travel through time';
+  gmZoomBtn(g);
+}
+function gmZoomBtn(g){ const b = g.el.querySelector('.gm-zstart'); if (b) b.hidden = !(g.mode === 'web' && g.nodes.some(n => n.placed && !n.root)); }
+// back to just the family names
+function gmWebReset(g){
+  g.nodes.forEach(n => { if (!n.root) n.placed = false; n.open = false; });
+  if (g.sel >= 0) gmDeselect();
+  gmLayoutSvg(g); g.visDirty = true; gmZoomBtn(g);
+  gmFitView(true);
 }
 function gmEl(g, i){
   const n = g.nodes[i];
@@ -10674,13 +10771,14 @@ function gmDecade(n){ return n.root ? '' : n.dec < 1900 ? 'before 1900' : n.dec 
 // Zoomed out, only the important genres get a dot and only arrows between them are drawn, so the lanes stay readable;
 // the selected genre always keeps its own arrows and its neighbours' dots. Runs when the zoom tier or the selection changes.
 function gmVis(g){
-  const keep = g.floor - 1, sel = g.sel >= 0 ? g.nodes[g.sel] : null;
+  const web = g.mode === 'web', keep = web ? -1 : g.floor - 1, sel = g.sel >= 0 ? g.nodes[g.sel] : null;
   g.edges.forEach((e) => {
-    const off = !(sel && (e.a === g.sel || e.b === g.sel)) && (g.nodes[e.a].prom < keep || g.nodes[e.b].prom < keep);
+    const A = g.nodes[e.a], B = g.nodes[e.b];
+    const off = web ? !(A.placed && B.placed) : !(sel && (e.a === g.sel || e.b === g.sel)) && (A.prom < keep || B.prom < keep);
     if (off !== e.off){ e.off = off; e.el.classList.toggle('is-off', off); }
   });
   g.nodes.forEach((n, i) => {
-    const off = !(sel && (i === g.sel || sel.from.includes(i) || sel.to.includes(i))) && n.prom < keep;
+    const off = web ? !n.placed : !(sel && (i === g.sel || sel.from.includes(i) || sel.to.includes(i))) && n.prom < keep;
     if (off !== n.dotOff){ n.dotOff = off; g.dots[i].classList.toggle('is-off', off); }
   });
 }
@@ -10689,23 +10787,23 @@ function gmApply(){
   g.raf = 0;
   const W = g.stage.clientWidth, H = g.stage.clientHeight, v = g.view;
   if (!W || !H) return;
-  const floor = gmMinProm(v.s);
+  const web = g.mode === 'web', top = gmTop(g), floor = web ? 0 : gmMinProm(v.s);
   if (floor !== g.floor || g.visDirty){ g.floor = floor; g.visDirty = false; gmVis(g); }
   const lo = v.s < 0.3, mid = !lo && v.s < 0.5;   // zoomed out: arrows fade, then lose their heads
   if (lo !== g.lo || mid !== g.mid){ g.lo = lo; g.mid = mid; g.svg.classList.toggle('lo', lo); g.svg.classList.toggle('mid', mid); g.svg.classList.toggle('no-ah', lo || mid); }
   g.svg.setAttribute('viewBox', (-v.tx / v.s).toFixed(2) + ' ' + (-v.ty / v.s).toFixed(2) + ' ' + (W / v.s).toFixed(2) + ' ' + (H / v.s).toFixed(2));
   const ms = 9 / v.s;   // arrowheads stay about 9 px whatever the zoom
   if (Math.abs(ms - g.mk) > g.mk * 0.04){ g.mk = ms; g.markers.forEach(m => { m.setAttribute('markerWidth', ms.toFixed(2)); m.setAttribute('markerHeight', ms.toFixed(2)); }); }
-  const cols = g.D.cols, ticks = new Set(gmTicks(cols, v.s, 52));
-  cols.forEach((c, i) => {
+  const cols = g.D.cols, ticks = new Set(web ? [] : gmTicks(cols, v.s, 52));
+  if (!web) cols.forEach((c, i) => {
     const sx = c[1] * v.s + v.tx, d = g.decs[i], show = ticks.has(i) && sx > -30 && sx < W + 30;
     if (show){ d.style.transform = 'translateX(' + Math.round(sx - 22) + 'px)'; if (d.dataset.h) { d.dataset.h = ''; d.style.visibility = ''; } }
     else if (!d.dataset.h){ d.dataset.h = '1'; d.style.visibility = 'hidden'; }
   });
   const sel = g.sel >= 0 ? g.nodes[g.sel] : null;
-  let order = g.sorted, forced = 0;
-  if (sel){ const pins = [g.sel].concat(sel.from, sel.to); forced = pins.length; const ps = new Set(pins); order = pins.concat(g.sorted.filter(i => !ps.has(i))); }
-  const keep = gmDeclutter(g.nodes, order, v, W, H, { forced, top: GM_HEADER });
+  let order = g.sorted.filter(i => g.nodes[i].placed), forced = 0;
+  if (sel){ const pins = [g.sel].concat(sel.from, sel.to).filter(i => g.nodes[i].placed); forced = pins.length; const ps = new Set(pins); order = pins.concat(order.filter(i => !ps.has(i))); }
+  const keep = gmDeclutter(g.nodes, order, v, W, H, { forced, top, floor: web ? 0 : null });
   const want = new Set(keep.map(k => k.i));
   g.shown.forEach(i => { if (!want.has(i)){ const e = g.nodes[i].el; if (e && e.parentNode) e.remove(); g.shown.delete(i); } });
   const fresh = [], st = g.stage;
@@ -10718,8 +10816,8 @@ function gmApply(){
     const rel = !!sel && (sel.from.includes(k.i) || sel.to.includes(k.i));
     if (e.classList.contains('is-nb') !== rel) e.classList.toggle('is-nb', rel);
   });
-  g.lanes.forEach((l) => {
-    const t = Math.max(l.y0 * v.s + v.ty, GM_HEADER), b = Math.min(l.y1 * v.s + v.ty, H), ty = Math.round((t + b) / 2 - 9);
+  if (!web) g.lanes.forEach((l) => {
+    const t = Math.max(l.y0 * v.s + v.ty, top), b = Math.min(l.y1 * v.s + v.ty, H), ty = Math.round((t + b) / 2 - 9);
     if (!l.w) l.w = l.s.offsetWidth || 70;
     // the pinned family name steps aside rather than sit on top of a genre label
     const hit = keep.some(k => { const n = g.nodes[k.i]; return k.sx - n.w / 2 < 8 + l.w + 4 && k.sx + n.w / 2 > 4 && k.sy - n.h / 2 < ty + 22 && k.sy + n.h / 2 > ty - 4; });
@@ -10733,8 +10831,8 @@ function gmApply(){
   st.setAttribute('data-shown', String(keep.length));
 }
 function gmClamp(){
-  const g = gm, v = g.view, W = g.stage.clientWidth, H = g.stage.clientHeight, w = g.D.w * v.s, h = g.D.h * v.s, m = 90;
-  v.tx = Math.min(W - m, Math.max(m - w, v.tx)); v.ty = Math.min(H - m, Math.max(m - h + GM_HEADER, v.ty));
+  const g = gm, v = g.view, W = g.stage.clientWidth, H = g.stage.clientHeight, m = 90, top = gmTop(g);
+  v.tx = Math.min(W - m - g.bx0 * v.s, Math.max(m - g.bx1 * v.s, v.tx)); v.ty = Math.min(H - m - g.by0 * v.s, Math.max(m + top - g.by1 * v.s, v.ty));
 }
 function gmDirty(){
   const g = gm; if (!g) return;
@@ -10745,7 +10843,7 @@ function gmDirty(){
 function gmGlideStop(){ if (gm && gm.glide){ cancelAnimationFrame(gm.glide); gm.glide = 0; } }
 function gmZoomAt(f, px, py){
   const g = gm; if (!g) return;
-  const v = g.view, s2 = Math.max(g.sMin, Math.min(GM_SMAX, v.s * f));
+  const v = g.view, s2 = Math.max(g.sMin, Math.min(g.smax, v.s * f));
   if (!isFinite(s2)) return;
   gmGlideStop(); g.touched = true;
   const k = s2 / v.s;
@@ -10768,37 +10866,39 @@ function gmGlideTo(s1, tx1, ty1){
   g.glide = requestAnimationFrame(step);
 }
 function gmFitTarget(){
-  const g = gm, W = g.stage.clientWidth, H = g.stage.clientHeight;
-  const f = gmFit(g.D.w, g.D.h, W, H - GM_HEADER, 48);   // room for the half label that hangs over each edge
-  f.ty += GM_HEADER;
+  const g = gm, W = g.stage.clientWidth, H = g.stage.clientHeight, top = gmTop(g);
+  gmBounds(g);
+  const bw = Math.max(1, g.bx1 - g.bx0), bh = Math.max(1, g.by1 - g.by0);
+  const f = gmFit(bw, bh, W, H - top, 48);   // room for the half label that hangs over each edge
+  f.tx -= g.bx0 * f.s; f.ty += top - g.by0 * f.s;
   return f;
 }
-function gmSMin(){ return Math.min(0.5, gmFitTarget().s * 0.8); }
-// whole chart on open; on a phone that is too small to read, start at the beginning of the story instead (Fit still shows it all)
+function gmSMin(){ const f = gmFitTarget().s; return gm.mode === 'web' ? Math.max(0.02, Math.min(0.5, f * 0.5)) : Math.min(0.5, f * 0.8); }
+// everything shown on open. Timeline on a phone is too small to read whole, so it starts at the 1960s instead (Fit still shows it all)
 function gmFitView(animate){
   const g = gm, W = g.stage.clientWidth, H = g.stage.clientHeight;
   if (!W || !H) return;
-  const f = gmFitTarget();
-  g.sMin = Math.min(0.5, f.s * 0.8);
+  const f = gmFitTarget(), web = g.mode === 'web';
+  g.sMin = gmSMin();
   g.touched = false;
-  // phones: whole-chart width is too small to read, so open on the 1960s with the story visible on both sides, and say how to travel
-  const phone = !animate && W < 500 && f.s < 0.5;
+  const phone = !web && !animate && W < 500 && f.s < 0.5;
   if (phone){
     const c = g.D.cols.find(x => x[0] === '1960s') || g.D.cols[Math.floor(g.D.cols.length / 2)];
     f.s = 0.5; f.tx = W / 2 - c[1] * f.s; f.ty = GM_HEADER + 4 - 24 * f.s;
   }
-  g.hint.classList.toggle('is-on', phone);
+  g.hint.classList.toggle('is-on', phone || (web && g.sel < 0 && !g.nodes.some(n => n.placed && !n.root)));
   if (animate) gmGlideTo(f.s, f.tx, f.ty);
   else { gmGlideStop(); g.view.s = f.s; g.view.tx = f.tx; g.view.ty = f.ty; gmApply(); }
 }
 // where on the stage a selected genre should sit: left of the side panel on desktop, above the sheet on phones
 function gmFocusPoint(){
   const g = gm, W = g.stage.clientWidth, H = g.stage.clientHeight;
-  return W >= 640 ? { x: (W - 330) / 2, y: (H + GM_HEADER) / 2 } : { x: W / 2, y: GM_HEADER + (H - GM_HEADER) * (g.min === false ? 0.2 : 0.4) };
+  const top = gmTop(g);
+  return W >= 640 ? { x: (W - 330) / 2, y: (H + top) / 2 } : { x: W / 2, y: top + (H - top) * (g.min === false ? 0.2 : 0.4) };
 }
 function gmFlyTo(i){
   const g = gm, n = g.nodes[i], p = gmFocusPoint();
-  const s1 = Math.max(Math.min(g.view.s, GM_SMAX), 1);
+  const s1 = Math.max(Math.min(g.view.s, g.smax), 1);
   g.touched = true;
   gmGlideTo(s1, p.x - n.x * s1, p.y - n.y * s1);
 }
@@ -10813,6 +10913,11 @@ function gmMarkEdges(g){
 function gmSelect(i, o){
   const g = gm; if (!g || !g.nodes[i]) return;
   o = o || {};
+  if (g.mode === 'web'){   // the map grows around what was tapped, once
+    const added = gmReveal(g.nodes, i) ? [i] : [];
+    if (!g.nodes[i].open){ g.nodes[i].open = true; gmGrow(g.nodes, i).forEach(k => added.push(k)); }
+    if (added.length){ gmLayoutSvg(g); gmZoomBtn(g); }
+  }
   g.sel = i; g.kbd = !!o.kbd; g.hint.classList.remove('is-on');
   gmHideSugg();
   gmMarkEdges(g); g.visDirty = true;
@@ -10846,7 +10951,7 @@ function gmPanel(){
     (from.length ? '<div class="gm-plab">Came from</div><div class="gm-chips">' + from.map(chip).join('') + '</div>' : '') +
     (to.length ? '<div class="gm-plab">Led to</div><div class="gm-chips">' + to.map(chip).join('') + '</div>' : '') +
     (styles.length ? '<div class="gm-plab">Styles</div><div class="gm-chips">' + styles.map(chip).join('') + '</div>' : '') +
-    (!from.length && !to.length && !styles.length ? '<div class="gm-plab">No arrows on the chart for this one yet.</div>' : '') + '</div>';
+    (!from.length && !to.length && !styles.length ? '<div class="gm-plab">No arrows on the map for this one yet.</div>' : '') + '</div>';
   p.hidden = false; p.offsetWidth; p.classList.add('is-open');
 }
 // the same call a style button on the list view makes (see bpRender); styles the list does not have get a plain search
@@ -10875,11 +10980,11 @@ function gmTopControls(top){
   const seg = bpMk('div', 'bp-seg'); seg.setAttribute('role', 'group'); seg.setAttribute('aria-label', 'Genre view');
   const mk = (v, label) => {
     const b = bpMk('button', '', label); b.type = 'button'; b.dataset.v = v;
-    b.setAttribute('aria-pressed', String((v === 'map') === gmViewIsMap()));
+    b.setAttribute('aria-pressed', String(v === gmViewNow()));
     b.addEventListener('click', () => { gmFailed = false; lsSet(LS_GENRE_VIEW, v); bpFilter = ''; if (bpFilterEl) bpFilterEl.value = ''; seg.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); bpRender(); });
     return b;
   };
-  seg.appendChild(mk('map', 'Map')); seg.appendChild(mk('list', 'List'));
+  seg.appendChild(mk('map', 'Map')); seg.appendChild(mk('years', 'Timeline')); seg.appendChild(mk('list', 'List'));
   top.insertBefore(seg, top.firstChild);
   if (bpFilterEl) bpFilterEl.addEventListener('keydown', (e) => {
     if (e.key !== 'Enter' || !gm || !gmViewIsMap()) return;
@@ -10897,6 +11002,7 @@ function gmMount(list){
   try {
     if (!gm) gmInit();
     const g = gm;
+    gmSetMode(g, lsGet(LS_GENRE_VIEW, 'map') === 'years' ? 'years' : 'web');
     list.appendChild(g.el);
     gmFootLink(list);
     if (bpFilterEl) gmSuggest(bpFilter); else gmHideSugg();
@@ -24119,10 +24225,10 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
-  { version: 542, date: '2026-11-12', items: [
-    'Browse by genre now opens a genre flow chart: time runs left to right, each family has its own row, and arrows show which genres led to which. Zoom in to find smaller styles, tap one to hear it, or jump to what it came from and led to.',
-    'On a phone the chart opens in the middle of the story with a hint to swipe through time, the zoomed-out view is much cleaner, and a tapped genre shows a slim strip you can open for the full lists.',
-    'The old genre cards are still there under List, and there is a link to more genres on EveryNoise.',
+  { version: 543, date: '2026-11-12', items: [
+    'Browse by genre now opens a genre map that starts with the main genres. Tap one and the map grows around it with arrows showing which genres led to which, and you can keep zooming and tapping as far as you like.',
+    'Tap a genre to hear it, or tap what it came from or led to to keep exploring. Reset takes you back to the start.',
+    'Want it by year? Timeline lays the same genres out by decade, and List still has the old genre cards.',
   ]},
   { version: 539, date: '2026-11-12', items: [
     'Browse by genre, region and vibe on Home each open their own page now, with a filter for genres and regions, and the same colorful cards as Search.',
