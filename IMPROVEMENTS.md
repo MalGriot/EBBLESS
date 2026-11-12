@@ -12958,3 +12958,10 @@ Add entries in this shape:
 - **Touches:** index.html (Browse pages, Vibe), sw.js
 - **Branch:** agent/vibe-chart
 - **Notes:** Test: node --test tools/vibe-chart.test.js. No worker change; the order is expressed in the sentence (the vibe feature's energy arc is chosen from words in the text, so a blend). Under about 620 px the map shows a 5 x 5 compact version (25 of the 49 feelings, with a visible note and a Show all 49 button that makes the full grid pan sideways inside its own box (the music map's zoom code is tied to its own state, so not reused). Picks are kept for the session (sessionStorage). Cache v551 (on top of agent/browse-pages v539, which must merge first).
+### add-songs-page: Add songs block on Home and a See all page
+- **Status:** review
+- **Priority:** medium
+- **Description:** Owner: "the add songs section/page should be well designed and inviting." Home's Add songs is now a gradient block: Import your music as the hero (with Spotify, YouTube Music, Apple Music, SoundCloud), then genre, region and vibe cards each with an icon and a one-line benefit, then genre pills and a See all link. A new user (no plays yet) sees "Start your library" with a welcome line; a returning user sees a compact version. See all opens its own page (#addSongsPage) grouped as Bring your music (import, add from this device), Discover (genre, region, vibe, music map) and Quick start (all genre pills).
+- **Touches:** index.html (Home, new Add songs page), sw.js
+- **Branch:** agent/add-songs-page
+- **Notes:** Built on agent/browse-pages (merged in); only calls openBrowsePage, openBring, openMusicMap and the existing upload button. No network calls, one-shot transform/opacity entrance only. "Returning" means songs played or listening history, because every profile is seeded with starter playlists. No Surprise me or This is playlists exist, so none added. Cache v540.

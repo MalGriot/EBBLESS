@@ -590,15 +590,6 @@ video.lib-bg-video.is-playing{opacity:1}
 #view-home .hm-vibe-pic:hover,#view-home .hm-vibe-pic:focus-visible{background:rgba(255,255,255,.18)}
 #view-home .hm-vibe-pic svg{width:22px;height:22px}
 #view-home .hm-vibe-note{margin:8px 4px 0;font-size:12px;line-height:1.4;color:var(--faint)}
-/* #761: Home's add-music block: two big taps plus a few genre chips (static, no motion) */
-#view-home .hm-add-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-#view-home .hm-add-btn{display:flex;flex-direction:column;gap:3px;text-align:left;padding:14px 16px;border-radius:16px;background:var(--panel-2);border:1px solid var(--border);color:var(--text);cursor:pointer;font:inherit}
-#view-home .hm-add-btn:hover,#view-home .hm-add-btn:focus-visible{background:var(--panel-3)}
-#view-home .hm-add-btn b{font-size:15.5px}
-#view-home .hm-add-btn span{font-size:12.5px;color:var(--faint)}
-#view-home .hm-add-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
-#view-home .hm-add-chip{font:inherit;font-size:13.5px;font-weight:600;padding:8px 14px;border-radius:999px;background:var(--panel-2);border:1px solid var(--border);color:var(--text);cursor:pointer}
-#view-home .hm-add-chip:hover,#view-home .hm-add-chip:focus-visible{background:var(--panel-3)}
 #view-home .hm-vibe-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
 #view-home .hm-vibe-chip{display:inline-flex;align-items:baseline;gap:6px;font:inherit;font-size:13.5px;font-weight:600;padding:8px 14px;border-radius:999px;background:rgba(255,255,255,.10);color:var(--text);cursor:pointer;text-align:left}
 #view-home .hm-vibe-chip:hover{background:rgba(255,255,255,.18)}
@@ -1622,6 +1613,51 @@ body.split-desktop:has(#mini-bar:not([hidden])) :is(#browsePage,#findMusic){bott
 body.is-live-radio .seek-row>.t,body.is-live-radio .seek-row>.seek-track{display:none}
 body.is-live-radio .seek-row>.live-tag{display:block;flex:1;text-align:center;font-size:13px;font-weight:700;letter-spacing:.4px;color:var(--accent)}
 .rm-act .rm-live{background:transparent}
+/* Add songs: Home block and its own page. Static fills; only a one-shot transform/opacity entrance on the page and press feedback on cards.
+   The page is display:none when closed, nothing here loops or blurs (GPU budget). */
+#addSongsPage{position:fixed;inset:0;z-index:53;background:var(--bg);display:flex;flex-direction:column}
+#addSongsPage[hidden]{display:none}
+#addSongsPage.as-in .bp-inner{animation:asIn .26s ease-out both}
+@keyframes asIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.as-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 4px}
+#view-home .as-head h2{margin:0;font-size:22px;font-weight:800;letter-spacing:-.3px}
+.as-sub{margin:0 0 14px;font-size:14px;line-height:1.45;color:var(--faint)}
+.as-home .as-head{margin-bottom:12px}
+.as-home:not(.is-compact) .as-head{margin-bottom:4px}
+.as-all{flex:none;min-height:36px;padding:6px 14px;border-radius:999px;border:1px solid var(--border);background:var(--panel-2);color:var(--text);font:inherit;font-size:13px;font-weight:600;cursor:pointer}
+.as-all:hover,.as-more:hover{background:var(--panel-3)}
+.as-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,220px),1fr));gap:12px;margin:12px 0 0}
+.as-card{position:relative;overflow:hidden;display:flex;align-items:center;gap:14px;min-height:88px;padding:16px;border-radius:18px;border:0;text-align:left;color:#fff;font:inherit;cursor:pointer;background:linear-gradient(130deg,var(--c1),var(--c2))}
+.as-card::after{content:'';position:absolute;right:-22px;bottom:-30px;width:96px;height:96px;border-radius:50%;background:rgba(255,255,255,.13);pointer-events:none}
+.as-card:active{transform:scale(.97)}
+.as-card:focus-visible,.as-all:focus-visible,.as-more:focus-visible,.as-pill:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.as-ic{flex:none;width:30px;height:30px;padding:9px;box-sizing:content-box;border-radius:14px;background:rgba(0,0,0,.22)}
+.as-tx{position:relative;z-index:1;display:flex;flex-direction:column;gap:3px;min-width:0}
+.as-tx b{font-size:17px;font-weight:800;letter-spacing:-.2px;line-height:1.15;overflow-wrap:anywhere}
+.as-l{font-size:13px;line-height:1.35;opacity:.9;overflow-wrap:anywhere}
+.as-c1{--c1:#d9622b;--c2:#7a1f3d}.as-c2{--c1:#2e8f8a;--c2:#12365a}.as-c3{--c1:#7b4fd1;--c2:#2a1d5c}
+.as-c4{--c1:#c9a227;--c2:#7a4a12}.as-c5{--c1:#c2417a;--c2:#4e1536}.as-c6{--c1:#3a8f4f;--c2:#15432c}
+.as-hero{flex-wrap:wrap;min-height:128px;padding:20px 18px;margin-top:12px}
+.as-grid .as-hero{margin-top:0;grid-column:1/-1}
+.as-hero .as-ic{width:34px;height:34px;padding:11px}
+.as-hero .as-tx b{font-size:21px}
+.as-src{position:relative;z-index:1;flex:1 0 100%;display:flex;flex-wrap:wrap;gap:6px}
+.as-chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;background:rgba(0,0,0,.28);font-size:12px;font-weight:600;line-height:1.3}
+.as-chip::before{content:'';flex:none;width:8px;height:8px;border-radius:50%;background:var(--dot,#fff)}
+.as-pills{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.as-pill{font:inherit;font-size:13.5px;font-weight:600;padding:8px 14px;min-height:36px;border-radius:999px;background:var(--panel-2);border:1px solid var(--border);color:var(--text);cursor:pointer}
+.as-pill:hover{background:var(--panel-3)}
+.as-more{display:block;width:100%;margin-top:14px;min-height:44px;padding:10px 16px;border-radius:14px;border:1px dashed var(--border-2);background:transparent;color:var(--text);font:inherit;font-size:14px;font-weight:600;cursor:pointer}
+.as-home.is-compact .as-hero{min-height:0;padding:14px 16px}
+.as-home.is-compact .as-hero .as-tx b{font-size:17px}
+.as-home.is-compact .as-card{min-height:72px;padding:12px 14px}
+.as-home.is-compact .as-hero .as-src{display:none}
+.as-group{margin:0 0 26px}
+.as-group h2{font-size:18px;font-weight:700;margin:0 0 2px;color:var(--text)}
+.as-gsub{margin:0;font-size:13.5px;color:var(--faint)}
+.as-group .as-grid{margin-top:12px}
+@media (min-width:1100px){.as-group .as-grid{grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}}
+@media (prefers-reduced-motion:reduce){#addSongsPage.as-in .bp-inner{animation:none}.as-card:active{transform:none}}
 /* Music map (Geethub #597): same layer as Find music. Static by default; a recenter is one
    finite transform/opacity glide, nothing runs while it sits still or is hidden (#487). */
 #musicMap{position:fixed;inset:0;z-index:55;background:radial-gradient(circle at 50% 50%,var(--panel-2) 0,transparent 62%),var(--bg);display:flex;flex-direction:column}
@@ -12180,6 +12216,115 @@ function liveStop(quiet){
 }
 
 /* =========================================================================
+   ADD SONGS: the Home block and its own page list every way to bring songs in.
+   Every tile calls the function its old equivalent called (openBring, the
+   upload button, openBrowsePage, openMusicMap): no new behavior, no network.
+   ========================================================================= */
+const AS_IC = {
+  import: '<path d="M12 4v11M7.5 10.5L12 15l4.5-4.5M4 19h16"/>',
+  device: '<path d="M12 16V4M7 9l5-5 5 5M5 20h14"/>',
+  genre: '<path d="M9 18V6l10-2v12"/><circle cx="6" cy="18" r="3"/><circle cx="16" cy="16" r="3"/>',
+  region: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3.5 3.2 3.5 14.8 0 18M12 3c-3.5 3.2-3.5 14.8 0 18"/>',
+  vibe: '<path d="M4 14v-4M8 18V6M12 15V9M16 20V4M20 14v-4"/>',
+  map: '<circle cx="12" cy="12" r="3"/><circle cx="4.5" cy="6" r="2"/><circle cx="19.5" cy="6" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="18" r="2"/><path d="M10 10.5L6 7.5M14 10.5l4-3M10.2 13.8L6.4 17.6M14 13.5l3.6 3.2"/>'
+};
+const AS_SOURCES = ['Spotify', 'YouTube Music', 'Apple Music', 'SoundCloud'];
+const AS_TILES = {
+  import: { t: 'Import your music', l: 'Playlists and liked songs from the apps you use.', c: 'as-c1', go: () => openBring() },
+  device: { t: 'Add songs from this device', l: 'Songs you own. They play with no ads.', c: 'as-c4', go: () => { const b = $('uploadSongsBtn'); if (b) b.click(); } },
+  genre: { t: 'Browse by genre', l: 'Hip-Hop, Soul, Funk and more.', c: 'as-c2', go: () => openBrowsePage('genre') },
+  region: { t: 'Browse by region', l: 'West Africa, Brazil, India, Korea and more.', c: 'as-c3', go: () => openBrowsePage('region') },
+  vibe: { t: 'Browse by vibe', l: 'Chill, workout, focus. Pick a mood, get songs.', c: 'as-c5', go: () => openBrowsePage('vibe') },
+  map: { t: 'Music map', l: 'Follow who sounds like who, from any artist.', c: 'as-c6', go: () => { const n = currentTrack(), a = n && n.artist && splitArtistNames(n.artist)[0]; openMusicMap(a || ''); } }
+};
+function asTile(key, cls){
+  const d = AS_TILES[key], b = bpMk('button', 'as-card ' + d.c + (cls ? ' ' + cls : '')); b.type = 'button';
+  const ic = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  ic.setAttribute('viewBox', '0 0 24 24'); ic.setAttribute('fill', 'none'); ic.setAttribute('stroke', 'currentColor'); ic.setAttribute('stroke-width', '1.8');
+  ic.setAttribute('stroke-linecap', 'round'); ic.setAttribute('stroke-linejoin', 'round'); ic.setAttribute('aria-hidden', 'true'); ic.setAttribute('class', 'as-ic');
+  ic.innerHTML = AS_IC[key];
+  const tx = bpMk('span', 'as-tx'); tx.appendChild(bpMk('b', '', d.t)); tx.appendChild(bpMk('span', 'as-l', d.l));
+  b.appendChild(ic); b.appendChild(tx);
+  b.addEventListener('click', () => { asLastEl = b; d.go(); });
+  return b;
+}
+function asSources(){
+  const r = bpMk('span', 'as-src'); r.setAttribute('aria-label', 'Works with ' + AS_SOURCES.join(', '));
+  AS_SOURCES.forEach(n => { const s = bpMk('span', 'as-chip', n); s.style.setProperty('--dot', BRING_COLORS[n] || '#fff'); r.appendChild(s); });
+  return r;
+}
+function asPills(max){
+  const w = bpMk('div', 'as-pills');
+  let names = []; try { names = Object.keys(FM_GENRES); } catch(e){}
+  names.slice(0, max || names.length).forEach(g => {
+    const c = bpMk('button', 'as-pill', g); c.type = 'button';
+    c.addEventListener('click', () => { asLastEl = c; openBrowsePage('genre', g); });
+    w.appendChild(c);
+  });
+  return w;
+}
+// the Home block: a new user (nothing saved yet) gets the big welcome, a returning user a compact one
+function renderAddSongsBlock(body, mk, hasLibrary){
+  const sec = mk('section', 'hm-sec as-home' + (hasLibrary ? ' is-compact' : ''));
+  sec.setAttribute('aria-labelledby', 'asHomeH');
+  const head = mk('div', 'as-head');
+  const h = mk('h2', '', hasLibrary ? 'Add songs' : 'Start your library'); h.id = 'asHomeH';
+  head.appendChild(h);
+  const all = mk('button', 'as-all', 'See all'); all.type = 'button'; all.setAttribute('aria-label', 'See all ways to add songs');
+  all.addEventListener('click', () => openAddSongsPage());
+  head.appendChild(all);
+  sec.appendChild(head);
+  if (!hasLibrary) sec.appendChild(mk('p', 'as-sub', 'Bring songs from the apps you already use, or find new ones to add.'));
+  const hero = asTile('import', 'as-hero'); hero.appendChild(asSources()); sec.appendChild(hero);
+  const trio = mk('div', 'as-grid'); ['genre', 'region', 'vibe'].forEach(k => trio.appendChild(asTile(k))); sec.appendChild(trio);
+  sec.appendChild(asPills(6));
+  const more = mk('button', 'as-more', 'See all ways to add songs'); more.type = 'button';
+  more.addEventListener('click', () => openAddSongsPage());
+  sec.appendChild(more);
+  body.appendChild(sec);
+}
+let asEl = null, asOpener = null, asLastEl = null;
+function asBuild(){
+  asEl = document.createElement('div');
+  asEl.id = 'addSongsPage'; asEl.hidden = true;
+  asEl.setAttribute('role', 'dialog'); asEl.setAttribute('aria-modal', 'true'); asEl.setAttribute('aria-labelledby', 'asTitle');
+  asEl.innerHTML =
+    '<div class="bp-head"><button type="button" class="fm-back" id="asBack" aria-label="Back"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20z"/></svg></button><h1 class="bp-title" id="asTitle" tabindex="-1">Add songs</h1></div>' +
+    '<div class="bp-scroll" id="asScroll"><div class="bp-inner"><p class="bp-lead">Every way to get songs into EBBLESS, in one place.</p><div id="asList"></div></div></div>';
+  document.body.appendChild(asEl);
+  $('asBack').addEventListener('click', closeAddSongsPage);
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape' || asEl.hidden || (fmEl && !fmEl.hidden) || (bpEl && !bpEl.hidden) || (bringEl && !bringEl.hidden) || importOverlay.classList.contains('is-open')) return;
+    e.preventDefault(); closeAddSongsPage();
+  });
+  const list = $('asList');
+  const group = (title, sub, nodes, pills) => {
+    const s = bpMk('section', 'as-group'); s.appendChild(bpMk('h2', '', title)); if (sub) s.appendChild(bpMk('p', 'as-gsub', sub));
+    if (pills) s.appendChild(pills); else { const g = bpMk('div', 'as-grid'); nodes.forEach(n => g.appendChild(n)); s.appendChild(g); }
+    list.appendChild(s);
+  };
+  const imp = asTile('import', 'as-hero'); imp.appendChild(asSources());
+  group('Bring your music', 'Songs you already have somewhere else.', [imp, asTile('device')]);
+  group('Discover', 'Find artists and songs you have not met yet.', ['genre', 'region', 'vibe', 'map'].map(k => asTile(k)));
+  group('Quick start', 'Tap a genre to see artists you can add.', null, asPills());
+}
+function openAddSongsPage(){
+  if (!asEl) asBuild();
+  if (asEl.hidden) asOpener = document.activeElement;
+  asEl.hidden = false;
+  asEl.classList.remove('as-in'); void asEl.offsetWidth; asEl.classList.add('as-in');
+  $('asScroll').scrollTop = 0;
+  $('asTitle').focus({ preventScroll: true });
+  statsFeature('add_songs_page');
+}
+function closeAddSongsPage(){
+  if (!asEl || asEl.hidden) return;
+  asEl.hidden = true; asEl.classList.remove('as-in');
+  const o = asOpener; asOpener = null;
+  if (o && o.isConnected) try { o.focus({ preventScroll: true }); } catch(e){}
+}
+
+/* =========================================================================
    BRING YOUR MUSIC: its own page (not Find music's genre/region/vibe page).
    Sign-in services hand off to the Find music picker (fmOpenForPicker);
    everything else goes through Last.fm. Also the periodic nudge.
@@ -12515,7 +12660,7 @@ function bringNudgeBuild(kind){
 }
 function bringNudgeBusy(){
   const sp = $('splash');
-  return document.body.classList.contains('onb-active') || (sp && !sp.classList.contains('is-hidden')) || (fmEl && !fmEl.hidden) || (bpEl && !bpEl.hidden) || (bringEl && !bringEl.hidden);
+  return document.body.classList.contains('onb-active') || (sp && !sp.classList.contains('is-hidden')) || (fmEl && !fmEl.hidden) || (bpEl && !bpEl.hidden) || (asEl && !asEl.hidden) || (bringEl && !bringEl.hidden);
 }
 // Asked for the Spotify file: remind every 2 days from day 3 until it is added or they stop it.
 function bringFileRemindMaybe(tries){
@@ -13483,6 +13628,7 @@ function closeTopOverlay(){
     [() => !!fmEl && !fmEl.hidden, closeFindMusic],
     [() => rmSheetOpen(), rmCloseSheet],
     [() => !!bpEl && !bpEl.hidden, closeBrowsePage],
+    [() => !!asEl && !asEl.hidden, closeAddSongsPage],
   ];
   for (const [isOpen, close] of steps){
     try { if (isOpen()){ close(); return true; } } catch(e){}
@@ -22203,24 +22349,11 @@ function renderHome(){
   };
   const row = (sec, cards) => { const r = mk('div', 'hm-row'); cards.forEach(c => r.appendChild(c)); sec.appendChild(r); };
   renderHomeVibe(body, mk);
-  // #761: every way to get songs in lives here: import, or pick a genre
-  {
-    const sec = section('Add songs');
-    const r = mk('div', 'hm-add-row');
-    const big = (t, sub, fn) => { const b = mk('button', 'hm-add-btn'); b.type = 'button'; b.appendChild(mk('b', '', t)); b.appendChild(mk('span', '', sub)); b.addEventListener('click', fn); return b; };
-    r.appendChild(big('Import your music', 'Spotify, YouTube Music and more', () => openBring()));
-    r.appendChild(big('Browse by genre', 'Hip-Hop, Soul, Funk and more', () => openBrowsePage('genre')));
-    r.appendChild(big('Browse by region', 'West Africa, Brazil, India, Korea and more', () => openBrowsePage('region')));
-    r.appendChild(big('Browse by vibe', 'Chill, workout, focus, by tempo', () => openBrowsePage('vibe')));
-    sec.appendChild(r);
-    const chips = mk('div', 'hm-add-chips');
-    Object.keys(FM_GENRES).slice(0, 6).forEach(g => {
-      const c = mk('button', 'hm-add-chip', g); c.type = 'button';
-      c.addEventListener('click', () => openBrowsePage('genre', g));
-      chips.appendChild(c);
-    });
-    sec.appendChild(chips);
-  }
+  // #761: every way to get songs in lives here (Add songs block; its own page is one tap away)
+  // "returning": the app seeds a few starter playlists for everyone, so count what you did instead: songs played or songs you saved
+  let returning = false;
+  try { returning = lib.some(x => totalPlaylistPlays(x.pl) > 0) || listenSeedHistory().length > 0; } catch(e){}
+  renderAddSongsBlock(body, mk, returning);
   const coverOf = (pl) => pl.image ? { art: pl.image } : (pl.tracks.find(t => t && (t.videoId || t.art)) || null);
   const plays = (pl) => totalPlaylistPlays(pl);
   // recently played: playlists and albums you played last, newest first (one tap plays)
@@ -25419,6 +25552,9 @@ const WHATS_NEW = [
   ]},
   { version: 551, date: '2026-11-12', items: [
     'Browse by vibe now has a rainbow map of 100 feelings, each with its own emoji, cool and calm to warm and intense. Tap up to 14 in the order you want the mix to move, watch the line trace your path, then Play this mix. On a small screen all 100 feelings flow top to bottom in one continuous rainbow, violet to red, so there is no sideways scrolling. On a computer your picks are listed beside the map; on a phone they fill a heart you can open.',
+  ]},
+  { version: 540, date: '2026-11-12', items: [
+    'Add songs on Home is easier to read now: import your music first, then browse by genre, region or vibe, with a See all page that lists every way to add songs.',
   ]},
   { version: 539, date: '2026-11-12', items: [
     'Browse by genre, region and vibe on Home each open their own page now, with a filter for genres and regions, and the same colorful cards as Search.',
