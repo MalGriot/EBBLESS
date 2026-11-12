@@ -10,7 +10,7 @@ const m = /\/\* VIBE-CHART:BEGIN[^*]*\*\/([\s\S]*?)\/\* VIBE-CHART:END \*\//.exe
 assert.ok(m, 'VIBE-CHART block not found in index.html');
 const ctx = {};
 vm.createContext(ctx);
-vm.runInContext(m[1] + '\nthis.api = { VC_MAX, VC_NODES, VC_GRID, VC_EMOJI_GRID, VC_BY_ID, vcClean, vcToggle, vcFill, vcCompose, vcNeighbor, vcHeat, vcPathPoints, vcNear, vcFlowCell, VC_JOURNEYS, VC_HAPPY };', ctx);
+vm.runInContext(m[1] + '\nthis.api = { VC_MAX, VC_NODES, VC_GRID, VC_EMOJI_GRID, vcBeatMs, vcGrow, VC_BY_ID, vcClean, vcToggle, vcFill, vcCompose, vcNeighbor, vcHeat, vcPathPoints, vcNear, vcFlowCell, VC_JOURNEYS, VC_HAPPY };', ctx);
 const A = ctx.api;
 const arr = (x) => [...x];
 
@@ -114,4 +114,11 @@ test('every feeling has its own emoji', () => {
   assert.strictEqual(new Set(all).size, 100);
   assert.strictEqual(A.VC_EMOJI_GRID.length, 10);
   A.VC_EMOJI_GRID.forEach(row => assert.strictEqual(row.length, 10));
+});
+
+test('heart beats faster and grows with every pick, and rests at zero', () => {
+  assert.strictEqual(A.vcBeatMs(0), 0);
+  assert.strictEqual(A.vcBeatMs(1), 1500); assert.strictEqual(A.vcBeatMs(7), 500); assert.strictEqual(A.vcBeatMs(12), 500);
+  for (let n = 1; n < 7; n++){ assert.ok(A.vcBeatMs(n + 1) < A.vcBeatMs(n)); assert.ok(A.vcGrow(n + 1) > A.vcGrow(n)); }
+  assert.strictEqual(A.vcGrow(0), 1); assert.strictEqual(A.vcGrow(7), 1.42);
 });

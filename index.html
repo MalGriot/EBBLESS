@@ -1446,9 +1446,11 @@ html.reduce-motion .lib-grid:not(.is-list) .lib-card .info .name{display:block;w
 .vc-heart[hidden]{display:none}
 .vc-hwrap{display:block;width:30px;height:30px}
 .vc-hwrap svg{display:block;width:100%;height:100%}
-.vc-hwrap.is-pop{animation:vcPop .32s ease-out}
+.vc-heart{transform:scale(var(--g,1));transform-origin:100% 100%;transition:transform .3s var(--ease-out,ease-out)}
+.vc-hwrap.is-beat{animation:vcBeat var(--bd,1s) ease-in-out infinite;will-change:transform}
+.vc-heart.is-paused .vc-hwrap{animation-play-state:paused}
 .vc-hcount{position:absolute;top:-4px;right:-4px;min-width:22px;height:22px;padding:0 5px;border-radius:999px;background:var(--text);color:var(--bg);font-size:12px;font-weight:800;line-height:22px;text-align:center;box-sizing:border-box}
-@keyframes vcPop{0%{transform:scale(1)}40%{transform:scale(1.25)}100%{transform:scale(1)}}
+@keyframes vcBeat{0%,60%,100%{transform:scale(1)}12%{transform:scale(1.22)}24%{transform:scale(1.02)}36%{transform:scale(1.16)}}
 .vc-back{position:fixed;inset:0;z-index:4;background:rgba(0,0,0,.55);opacity:0;visibility:hidden;transition:opacity .2s,visibility 0s .2s}
 .vc-back.is-open{opacity:1;visibility:visible;transition:opacity .2s}
 .vc-sheet{position:fixed;left:0;right:0;bottom:0;z-index:5;max-height:80vh;display:flex;flex-direction:column;box-sizing:border-box;padding:14px 16px calc(16px + var(--safe-b));border-radius:20px 20px 0 0;background:var(--panel);border-top:1px solid var(--border-2);transform:translateY(100%);visibility:hidden;transition:transform .24s var(--ease-out,ease-out),visibility 0s .24s}
@@ -1464,7 +1466,8 @@ html.reduce-motion .lib-grid:not(.is-list) .lib-card .info .name{display:block;w
   .vc-heart,.vc-back,.vc-sheet{display:none!important}
 }
 @media (prefers-reduced-motion:reduce){
-  .vc-hwrap.is-pop{animation:none}
+  .vc-hwrap.is-beat{animation:none}
+  .vc-heart{transition:none}
   .vc-back,.vc-sheet,.vc-sheet.is-open,.vc-back.is-open{transition:none}
 }
 @media (min-width:860px){.bp-grid{grid-template-columns:repeat(auto-fill,minmax(180px,1fr))}.bp-card{min-height:112px}}
@@ -10480,6 +10483,9 @@ function vcToggle(sel, id){
   if (cur.length >= VC_MAX) return { sel: cur, change: 'full' };
   return { sel: cur.concat(id), change: 'added' };
 }
+// heart cart: it beats faster (1.5 s a beat at 1 pick down to 0.5 s at 7; 0 means still) and grows a little with every pick
+function vcBeatMs(n){ n = Math.max(0, Math.min(VC_MAX, Math.round(n) || 0)); return n ? Math.round(1500 - (n - 1) * (1000 / (VC_MAX - 1))) : 0; }
+function vcGrow(n){ return Math.round((1 + 0.06 * Math.max(0, Math.min(VC_MAX, n))) * 100) / 100; }
 function vcFill(n){ return Math.max(0, Math.min(1, n / VC_MAX)); }
 function vcJoin(a){ return a.length < 2 ? a.join('') : a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1]; }
 // the picks, in order, as one sentence for the vibe feature (labels come from the fixed grid, never typed text)
@@ -10558,7 +10564,11 @@ function vcSyncHeart(pop){
   vcHeart.querySelectorAll('stop').forEach(s => s.setAttribute('offset', off));
   vcHeart.querySelector('.vc-hcount').textContent = String(n);
   vcHeart.setAttribute('aria-label', n ? 'Your picks: ' + n + ' of ' + VC_MAX + '. Open the list' : 'Your picks: none yet');
-  if (pop){ const w = vcHeart.querySelector('.vc-hwrap'); w.classList.remove('is-pop'); void w.offsetWidth; w.classList.add('is-pop'); }
+  const w = vcHeart.querySelector('.vc-hwrap'), ms = vcBeatMs(n);
+  vcHeart.style.setProperty('--g', String(vcGrow(n)));
+  w.style.setProperty('--bd', ms + 'ms');
+  if (!ms) w.classList.remove('is-beat');
+  else if (pop || !w.classList.contains('is-beat')){ w.classList.remove('is-beat'); void w.offsetWidth; w.classList.add('is-beat'); }   // a new pick restarts the beat at once
 }
 function vcSync(pop){
   const n = vcSel.length, full = n >= VC_MAX, near = vcNear(vcSel);
@@ -10633,14 +10643,16 @@ function vcCartBuild(){
     if (e.key === 'Escape' && vcSheetOpen){ e.preventDefault(); e.stopImmediatePropagation(); vcCloseSheet(); }
   }, true);
 }
+function vcHeartPause(){ if (vcHeart) vcHeart.classList.toggle('is-paused', vcSheetOpen || document.hidden); }
+document.addEventListener('visibilitychange', vcHeartPause);
 function vcOpenSheet(){
   if (!vcSheet) return;
-  vcSheetOpen = true; vcSheet.classList.add('is-open'); vcSheet._back.classList.add('is-open');
+  vcSheetOpen = true; vcSheet.classList.add('is-open'); vcSheet._back.classList.add('is-open'); vcHeartPause();
   vcSheet.querySelector('.vc-close').focus({ preventScroll: true });
 }
 function vcCloseSheet(noFocus){
   if (!vcSheet || !vcSheetOpen) return;
-  vcSheetOpen = false; vcSheet.classList.remove('is-open'); vcSheet._back.classList.remove('is-open');
+  vcSheetOpen = false; vcSheet.classList.remove('is-open'); vcSheet._back.classList.remove('is-open'); vcHeartPause();
   if (noFocus !== true && vcHeart && !vcHeart.hidden) try { vcHeart.focus({ preventScroll: true }); } catch(e){}
 }
 // lay the cells out for the current width: all 100 in the plane when there is room, else a four-per-line flow
@@ -23980,7 +23992,7 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
-  { version: 548, date: '2026-11-12', items: [
+  { version: 549, date: '2026-11-12', items: [
     'Browse by vibe now has a rainbow map of 100 feelings, each with its own emoji, cool and calm to warm and intense. Tap up to 7 in the order you want the mix to move, watch the line trace your path, then Play this mix. On a small screen all 100 feelings flow top to bottom in one continuous rainbow, violet to red, so there is no sideways scrolling. On a computer your picks are listed beside the map; on a phone they fill a heart you can open.',
   ]},
   { version: 539, date: '2026-11-12', items: [
