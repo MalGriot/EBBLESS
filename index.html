@@ -10077,7 +10077,7 @@ function fmBuild(){
     if (!t) return;
     const k = t.dataset.fm, v = t.dataset.v;
     if (k === 'retry' && fmArtists && fmArtists.args) fmShowArtists.apply(null, fmArtists.args);
-    else if (k === 'more' && fmArtists){ fmArtists.shown = (fmArtists.shown || 48) + 48; fmRender(); }
+    else if (k === 'more') fmMore();
     else if (k === 'ck'){ const it = fmPicker && fmPicker.items.find(x => x.key === v); if (it){ it.on = !it.on; if (it.songs) it.songs.forEach(t => { t.on = it.on; }); fmRender(); } }
     else if (k === 'all'){ if (fmPicker){ const to = !fmPicker.items.every(x => x.on); fmPicker.items.forEach(x => { x.on = to; if (x.songs) x.songs.forEach(t => { t.on = to; }); }); fmRender(); } }
     else if (k === 'exp') spotifyPickerOpen(v);
@@ -10101,8 +10101,10 @@ function fmBuild(){
     }
   });
 }
+let fmMoreIO = null;
 function fmRender(){
   const sc = $('fmScroll');
+  if (fmMoreIO){ fmMoreIO.disconnect(); fmMoreIO = null; }
   $('fmTitle').textContent = fmPicker ? 'Your ' + (fmPicker.svc === 'youtube' ? 'YouTube' : fmPicker.svc === 'lastfm' ? 'Last.fm' : 'Spotify') + ' music' : fmArtists ? fmArtists.title : 'Find music';
   if (fmPicker && fmPicker.ask){
     sc.innerHTML = '<div class="fm-note" style="padding:24px 0 12px">Your Last.fm username (your profile must be public)</div>' +
@@ -10151,10 +10153,57 @@ function fmRender(){
       '<div class="fm-artist"><button type="button" class="fm-artist-open" data-fm="artist" data-v="' + escapeHtml(a.name) + '">' +
       '<img src="' + escapeHtml(a.image || '') + '" alt="" loading="lazy"><span class="fm-artist-name">' + escapeHtml(a.name) + (a.bpm ? ' <small>' + escapeHtml(a.bpm) + '</small>' : '') + '</span></button>' +
       '<button type="button" class="fm-add" data-fm="add" data-v="' + escapeHtml(a.id) + '" aria-label="Add ' + escapeHtml(a.name) + ' to your library">+</button></div>').join('') + '</div>' +
-      (fmArtists.list.length > shownN ? '<button type="button" class="fm-load" data-fm="more" style="margin:16px auto 24px;display:block">Show more artists</button>' : '');
+      (fmArtists.list.length > shownN || (fmArtists.endless && !fmArtists.end)
+        ? '<div id="fmMore" style="padding:16px 0 28px;text-align:center">' + (fmArtists.growing ? '<div class="fm-note" role="status">Finding more artists&hellip;</div>' : '<button type="button" class="fm-load" data-fm="more" style="margin:0 auto;display:block">Show more artists</button>') + '</div>'
+        : (fmArtists.endless ? '<div class="fm-note" role="status" style="padding:16px 0 28px">That is every artist we could find for this pick. Try another one.</div>' : ''));
+    // scrolling near the end asks for more, so the list keeps going
+    const sent = $('fmMore');
+    if (sent && 'IntersectionObserver' in window && !fmArtists.growing){
+      fmMoreIO = new IntersectionObserver((en) => { if (en.some(x => x.isIntersecting)) fmMore(); }, { root: sc, rootMargin: '700px 0px' });
+      fmMoreIO.observe(sent);
+    }
     return;
   }
   sc.textContent = '';
+}
+// the artist list never ends: past what the searches found, artists similar to the ones already shown are added
+function fmMore(){
+  const t = fmArtists;
+  if (!t || t.loading || t.growing) return;
+  if ((t.shown || 48) < t.list.length){ t.shown = (t.shown || 48) + 48; fmRender(); return; }
+  if (t.endless && !t.end) fmGrow(t);
+}
+async function fmGrow(t){
+  t.growing = true; fmRender();
+  const before = t.list.length;
+  try {
+    for (let guard = 0; guard < 6 && t.list.length === before && !t.end; guard++){
+      if (t.pending.length < 12){
+        const seeds = [];
+        while (seeds.length < 4 && t.seedAt < t.list.length) seeds.push(t.list[t.seedAt++]);
+        const sims = await Promise.all(seeds.map(a => mmFetch(splitArtistNames(a.name)[0] || a.name, true).catch(() => null)));
+        if (fmArtists !== t) return;
+        sims.forEach(d => ((d && d.artists) || []).forEach(a => { const k = artistNameKey(a.name); if (k && !t.keys.has(k)){ t.keys.add(k); t.pending.push(a.name); } }));
+        if (!seeds.length && !t.pending.length){ t.end = true; break; }
+      }
+      const batch = t.pending.splice(0, 12);
+      for (let i = 0; i < batch.length; i += 6){
+        const part = await Promise.all(batch.slice(i, i + 6).map(n => mmArtistSongs(n).catch(() => [])));
+        if (fmArtists !== t) return;
+        part.forEach(songs => {
+          if (!songs || !songs.artistId || t.ids.has(songs.artistId)) return;
+          t.ids.add(songs.artistId);
+          const img = (songs.find(x => x.image && !t.usedArt.has(x.image)) || songs.find(x => x.image) || {}).image || '';
+          if (img) t.usedArt.add(img);
+          t.list.push({ song: (songs[0] || {}).title || '', id: songs.artistId, name: songs.artistName, image: img });
+        });
+      }
+    }
+  } catch(e){}
+  if (fmArtists !== t) return;
+  t.growing = false;
+  if (t.list.length > before) t.shown = Math.max(t.shown || 48, before) + 48;
+  fmRender();
 }
 async function fmShowArtists(term, title, genre, bpmRange, cc){
   const token = fmArtists = { args: [term, title, genre, bpmRange, cc], title: bpmRange ? title + ' \u00b7 ' + bpmRange[0] + (bpmRange[1] > 150 ? '+' : '-' + bpmRange[1]) + ' bpm' : title, loading: true, list: [], note: bpmRange ? 'Matching tempo' : '' };
@@ -10211,7 +10260,10 @@ async function fmShowArtists(term, title, genre, bpmRange, cc){
         }
       }
       token.list = hit;
-    } else token.list = list.slice(0, many ? 400 : 30);
+    } else {
+      token.list = list.slice(0, many ? 400 : 30);
+      if (!genre){ token.endless = true; token.seedAt = 0; token.pending = []; token.keys = new Set(token.list.map(a => artistNameKey(a.name))); token.ids = new Set(token.list.map(a => a.id)); token.usedArt = usedArt; }
+    }
   } catch(e){ if (fmArtists !== token) return; token.list = []; token.error = true; }
   token.loading = false;
   fmRender();
@@ -24165,7 +24217,7 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
   { version: 551, date: '2026-11-12', items: [
-    'On the region map you can search any radio station by name. Region cards and station songs now search that country\'s music store across many languages and styles, so the artist list is long (with Show more), mixed, and unrelated artists stop showing up. Artists on a shared soundtrack get their own cover when they have one.'
+    'On the region map you can search any radio station by name. Region cards and station songs now search that country\'s music store across many languages and styles, so the artist list is long and mixed, and unrelated artists stop showing up. The list never ends: scroll to the bottom and it adds artists similar to the ones shown. Artists on a shared soundtrack get their own cover when they have one.'
   ]},
   { version: 541, date: '2026-11-12', items: [
     'On the region map, a station now has a Listen live button that plays its real radio stream. Live radio can include ads and talk, so songs from that place stay the default.',
