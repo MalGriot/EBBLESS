@@ -10,7 +10,7 @@ const m = /\/\* REGION-MAP:BEGIN[^*]*\*\/([\s\S]*?)\/\* REGION-MAP:END \*\//.exe
 assert.ok(m, 'REGION-MAP block not found in index.html');
 const ctx = { URL };
 vm.createContext(ctx);
-vm.runInContext(m[1] + '\nthis.api = { rmHttps, rmPublicHost, rmTileOf, rmTileLngLat, rmTilesFor, rmTileCircle, rmNormalize, rmSongsTerm, rmSongsTerms, rmGeo, rmToRow, rmFromRow };', ctx);
+vm.runInContext(m[1] + '\nthis.api = { rmHttps, rmPublicHost, rmTileOf, rmTileLngLat, rmTilesFor, rmTileCircle, rmNormalize, rmSongsTerm, rmSongsTerms, rmGeo, rmToRow, rmFromRow, rmInitials, rmTileUrl, rmBuildPlaces, rmPlaceSearch, rmGeoPlace };', ctx);
 const A = ctx.api;
 const row = (o) => Object.assign({ stationuuid: 'abc-123', name: 'Radio Test', url_resolved: 'https://stream.example.com/live', geo_lat: 40.7, geo_long: -74, lastcheckok: 1, ssl_error: 0, hls: 0, tags: 'jazz,Soul,jazz,music', country: 'The United States Of America', state: 'New York', bitrate: 128, votes: 5 }, o || {});
 
@@ -83,4 +83,37 @@ test('snapshot rows round-trip and bad rows are refused', () => {
   const r = A.rmToRow(s);
   for (const bad of [null, [], r.slice(0, 5), Object.assign(r.slice(), { 2: 'http://x.com/a' }), Object.assign(r.slice(), { 2: 'https://192.168.0.2/a' }), Object.assign(r.slice(), { 3: 999 }), Object.assign(r.slice(), { 0: '<b>' })])
     assert.strictEqual(A.rmFromRow(bad), null);
+});
+test('a saved station without a map pin keeps working', () => {
+  const s = A.rmNormalize(row({ geo_lat: null, geo_long: null, favicon: 'https://x.com/i.png', language: 'Hindi', codec: 'MP3' }), true);
+  const back = A.rmFromRow(A.rmToRow(s, true));
+  assert.strictEqual(back.lat, null);
+  assert.strictEqual(back.favicon, 'https://x.com/i.png');
+  assert.strictEqual(back.lang, 'Hindi');
+  assert.strictEqual(A.rmFromRow(A.rmToRow(s)).favicon, '');
+});
+test('station logos: initials are safe and a tile is drawn', () => {
+  assert.strictEqual(A.rmInitials('Radio <b>City</b>'), 'RB');
+  assert.strictEqual(A.rmInitials('Jazz'), 'JA');
+  assert.strictEqual(A.rmInitials('***'), '?');
+  const u = A.rmTileUrl('Radio <script>');
+  assert.ok(u.startsWith('data:image/svg+xml'));
+  assert.ok(!decodeURIComponent(u).includes('<script'));
+});
+test('places are built from stations and searched by name', () => {
+  const st = (o) => A.rmNormalize(row(o));
+  const places = A.rmBuildPlaces([st({ stationuuid: 'a1', geo_lat: 10, geo_long: 76, state: 'Kerala', country: 'India', countrycode: 'IN' }), st({ stationuuid: 'a2', geo_lat: 12, geo_long: 77, state: 'Karnataka', country: 'India', countrycode: 'IN' }), st({ stationuuid: 'a3', geo_lat: 48, geo_long: 2, state: 'Paris', country: 'France', countrycode: 'FR' })]);
+  assert.strictEqual(places.filter(p => p.kind === 'country').length, 2);
+  const india = places.find(p => p.name === 'India');
+  assert.strictEqual(india.n, 2);
+  assert.deepStrictEqual([...A.rmPlaceSearch(places, 'kera').map(p => p.name)], ['Kerala']);
+  assert.strictEqual(A.rmPlaceSearch(places, 'IND')[0].name, 'India');
+  assert.strictEqual(A.rmPlaceSearch(places, 'x').length, 0);
+});
+test('geocoder rows become places, bad ones are dropped', () => {
+  const p = A.rmGeoPlace({ lat: '19.07', lon: '72.87', name: 'Mumbai', display_name: 'Mumbai, Maharashtra, India', boundingbox: ['18.8', '19.3', '72.7', '73.0'] });
+  assert.strictEqual(p.name, 'Mumbai');
+  assert.deepStrictEqual([...p.box], [72.7, 18.8, 73, 19.3]);
+  assert.strictEqual(A.rmGeoPlace({ lat: 'x', lon: 1 }), null);
+  assert.strictEqual(A.rmGeoPlace(null), null);
 });

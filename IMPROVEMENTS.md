@@ -12965,3 +12965,11 @@ Add entries in this shape:
 - **Touches:** index.html (Home, new Add songs page), sw.js
 - **Branch:** agent/add-songs-page
 - **Notes:** Built on agent/browse-pages (merged in); only calls openBrowsePage, openBring, openMusicMap and the existing upload button. No network calls, one-shot transform/opacity entrance only. "Returning" means songs played or listening history, because every profile is seeded with starter playlists. No Surprise me or This is playlists exist, so none added. Cache v540.
+
+### station-page: radio station page, saved stations, player branding, place search
+- **Status:** review
+- **Priority:** medium
+- **Description:** Owner: clicking a radio station should open its own page with robust info and a play-instantly button; stations should show (with their branding) in the player and footer player and be savable to the library; the map search should also find locations. Station page (full page, footer stays visible): logo (or a drawn initials tile), place, genres, a big Play live now button, Save, Songs from here, Show on map, and facts from the directory (language, codec and bitrate, votes, listens, last stream check, website) plus stations nearby. Saved stations show as a Radio row at the top of Library. Live radio now shows the station logo in the player, flow view, footer player and lock screen, and the footer player appears while a station plays. Search finds places from the map's own index (countries and regions built from the station snapshot) and, on Enter or "Find on the map", any place through OpenStreetMap Nominatim.
+- **Touches:** index.html (region map, Library, player), sw.js
+- **Branch:** agent/station-page
+- **Notes:** Test: node --test tools/region-map.test.js. Saved stations are in localStorage only (ebbless:radio:saved), not in the cloud profile sync, so they do not follow a signed-in user to another device yet. Nominatim is called only on an explicit search (never while typing), no key; its public policy limits heavy use, and the query text goes to OpenStreetMap, so it is credited in Settings. The places index is built from the 2,500-station snapshot plus loaded stations, so small regions can show few stations until the map loads that area. Not run on a phone or in the native apps; stream playback was seen working in the desktop preview only.
