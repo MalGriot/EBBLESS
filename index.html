@@ -10205,9 +10205,34 @@ async function fmGrow(t){
   if (t.list.length > before) t.shown = Math.max(t.shown || 48, before) + 48;
   fmRender();
 }
-async function fmShowArtists(term, title, genre, bpmRange, cc){
-  const token = fmArtists = { args: [term, title, genre, bpmRange, cc], title: bpmRange ? title + ' \u00b7 ' + bpmRange[0] + (bpmRange[1] > 150 ? '+' : '-' + bpmRange[1]) + ' bpm' : title, loading: true, list: [], note: bpmRange ? 'Matching tempo' : '' };
+// ready-made artist lists (data/radio/artists/, refreshed on a schedule by scripts/refresh-radio.js): a region card or a station opens instantly with no iTunes search
+let fmSnapIdx = null;
+async function fmSnapArtists(key){
+  try {
+    if (!fmSnapIdx) fmSnapIdx = fetch('data/radio/artists/index.json', { credentials: 'omit' }).then(r => r.ok ? r.json() : null).catch(() => null);
+    const idx = await fmSnapIdx;
+    if (!idx || !Array.isArray(idx.keys) || idx.keys.indexOf(key) < 0 || !/^[a-z0-9-]+$/.test(key)) return null;
+    if (idx.updated && Date.now() - Date.parse(idx.updated) > 45 * 864e5) return null;   // too old: ask iTunes live instead
+    const r = await fetch('data/radio/artists/' + key + '.json', { credentials: 'omit' });
+    if (!r.ok) return null;
+    const d = await r.json();
+    const out = (Array.isArray(d) ? d : []).map(a => ({ song: '', id: String(a[0]), name: String(a[1] || '').slice(0, 120), image: /^https:\/\//.test(String(a[2] || '')) ? String(a[2]) : '' })).filter(a => /^\d+$/.test(a.id) && a.name);
+    return out.length >= 30 ? out : null;
+  } catch(e){ return null; }
+}
+function fmEndless(token, usedArt){
+  token.endless = true; token.seedAt = 0; token.pending = [];
+  token.keys = new Set(token.list.map(a => artistNameKey(a.name))); token.ids = new Set(token.list.map(a => a.id));
+  token.usedArt = usedArt || new Set(token.list.map(a => a.image).filter(Boolean));
+}
+async function fmShowArtists(term, title, genre, bpmRange, cc, snap){
+  const token = fmArtists = { args: [term, title, genre, bpmRange, cc, snap], title: bpmRange ? title + ' \u00b7 ' + bpmRange[0] + (bpmRange[1] > 150 ? '+' : '-' + bpmRange[1]) + ' bpm' : title, loading: true, list: [], note: bpmRange ? 'Matching tempo' : '' };
   fmRender();
+  if (snap && !bpmRange && !genre){
+    const pre = await fmSnapArtists(snap);
+    if (fmArtists !== token) return;
+    if (pre){ token.list = pre; fmEndless(token); token.loading = false; fmRender(); return; }
+  }
   try{
     // a list of terms (a region's languages and styles) is searched side by side and interleaved, so one big place fills a long list
     const terms = [].concat(term).slice(0, 10), many = terms.length > 1;
@@ -10262,7 +10287,7 @@ async function fmShowArtists(term, title, genre, bpmRange, cc){
       token.list = hit;
     } else {
       token.list = list.slice(0, many ? 400 : 30);
-      if (!genre){ token.endless = true; token.seedAt = 0; token.pending = []; token.keys = new Set(token.list.map(a => artistNameKey(a.name))); token.ids = new Set(token.list.map(a => a.id)); token.usedArt = usedArt; }
+      if (!genre) fmEndless(token, usedArt);
     }
   } catch(e){ if (fmArtists !== token) return; token.list = []; token.error = true; }
   token.loading = false;
@@ -10270,11 +10295,11 @@ async function fmShowArtists(term, title, genre, bpmRange, cc){
 }
 // Find music is now only the results window (artists for a pick) and the sign-in picker; browsing lives on the Browse pages
 function openFindMusic(){ openBrowsePage('genre'); }
-function fmOpenResults(term, title, genre, bpmRange, cc){
+function fmOpenResults(term, title, genre, bpmRange, cc, snap){
   if (!fmEl) fmBuild();
   fmEl.hidden = false;
   statsFeature('find_music');
-  fmShowArtists(term, title, genre, bpmRange, cc);
+  fmShowArtists(term, title, genre, bpmRange, cc, snap);
 }
 function closeFindMusic(){
   if (fmEl) fmEl.hidden = true;
@@ -10341,9 +10366,9 @@ function bpCard(label, artTerm, onClick, cls){
   if (artTerm) stGenreArt(artTerm).then(u => { if (u && b.isConnected && !b.querySelector('.bp-art')){ const im = document.createElement('img'); im.className = 'bp-art'; im.alt = ''; im.src = u; im.onerror = () => im.remove(); b.appendChild(im); } }).catch(() => {});
   return b;
 }
-function bpPick(term, title, genre, range, from, cc){
+function bpPick(term, title, genre, range, from, cc, snap){
   bpLastEl = from || bpLastEl;
-  fmOpenResults(term, title, genre, range, cc);
+  fmOpenResults(term, title, genre, range, cc, snap);
 }
 function bpEmpty(list, what){
   const d = bpMk('div', 'bp-empty'); d.setAttribute('role', 'status');
@@ -10415,7 +10440,7 @@ function bpRender(){
     const keys = bpFilterKeys(Object.keys(FM_REGIONS), bpFilter);
     if (!keys.length){ bpEmpty(list, 'regions'); return; }
     const grid = bpMk('div', 'bp-grid'); grid.setAttribute('role', 'group'); grid.setAttribute('aria-label', 'Regions');
-    keys.forEach(k => grid.appendChild(bpCard(k, FM_REGIONS[k], (b) => bpPick(FM_REGION_TERMS[k] || FM_REGIONS[k], k, null, null, b, FM_REGION_CC[k]))));
+    keys.forEach(k => grid.appendChild(bpCard(k, FM_REGIONS[k], (b) => bpPick(FM_REGION_TERMS[k] || FM_REGIONS[k], k, null, null, b, FM_REGION_CC[k], 'region-' + k.toLowerCase().replace(/[^a-z0-9]+/g, '-')))));
     list.appendChild(grid);
     return;
   }
@@ -10572,6 +10597,15 @@ function rmSongsTerms(st){
   add(st.country && st.country + ' hip hop');
   return out.slice(0, 6);
 }
+// the shared snapshot (data/radio/stations.json) stores one station as a short array; read it back defensively
+function rmToRow(s){ return [s.id, s.name, s.url, +s.lat.toFixed(4), +s.lng.toFixed(4), s.state, s.country, s.cc, s.tags.join('|'), s.bitrate, s.votes]; }
+function rmFromRow(a){
+  if (!Array.isArray(a) || a.length < 11) return null;
+  const url = rmHttps(a[2]), lat = Number(a[3]), lng = Number(a[4]), id = String(a[0] || '').slice(0, 64), name = String(a[1] || '').replace(/\s+/g, ' ').trim().slice(0, 80);
+  if (!url || !name || !/^[\w-]+$/.test(id) || !isFinite(lat) || !isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) return null;
+  return { id, name, url, lat, lng, state: String(a[5] || '').slice(0, 60), country: String(a[6] || '').slice(0, 60), cc: /^[A-Z]{2}$/.test(String(a[7] || '')) ? a[7] : '',
+    tags: String(a[8] || '').split('|').filter(Boolean).slice(0, 6).map(t => t.slice(0, 24)), bitrate: Math.max(0, Math.min(2000, Math.round(Number(a[9]) || 0))), votes: Math.max(0, Number(a[10]) || 0), home: '' };
+}
 function rmGeo(list){
   const f = [];
   list.forEach(s => f.push({ type: 'Feature', properties: { id: s.id }, geometry: { type: 'Point', coordinates: [s.lng, s.lat] } }));
@@ -10586,10 +10620,22 @@ const RM_JS_SRI = 'sha512-loK2evXrGC2/16BApXtmvl72eiC/kOzEOoWepMcx8SZe/Z2wiEM8jB
 const RM_CSS_SRI = 'sha512-A+upg1UEqFAoCJJ4P5OFl2JXKybtcKh4qyhvPxTcusRMWf55btrRVY/1pOTE83R/oXzrRzwh1FakAtXfta62rg==';
 const RM_STYLE = 'https://tiles.openfreemap.org/styles/dark';
 const RM_FALLBACK_HOSTS = ['de1', 'de2', 'fi1'].map(h => 'https://' + h + '.api.radio-browser.info');
-const RM_LIMIT = 120, RM_MAX_STATIONS = 8000, RM_PARALLEL = 2;
+const RM_LIMIT = 120, RM_MAX_STATIONS = 14000, RM_PARALLEL = 2;
 let rmMap = null, rmWrap = null, rmLoadP = null, rmGen = 0, rmView = null, rmSel = null, rmServersP = null, rmServerAt = 0;
 let rmQT = 0, rmQSeq = 0, rmMoveT = 0, rmPushT = 0, rmQueue = [], rmBusy = 0, rmFail = false, rmVisBound = false;
 const rmSt = new Map(), rmDone = new Set(), rmFlight = new Set();
+// Shared snapshot of the world's stations, refreshed by scripts/refresh-radio.js on a schedule (data/radio/). The map shows it at once and only
+// asks the live directory for detail when zoomed in, so opening the map does not hit Radio Browser (or iTunes, for the artist lists) every time.
+let rmSnapP = null, rmSnapOk = false;
+function rmSnapshot(){
+  if (rmSnapP) return rmSnapP;
+  rmSnapP = fetch('data/radio/stations.json', { credentials: 'omit' }).then(r => r.ok ? r.json() : null).then(d => {
+    const rows = d && Array.isArray(d.stations) ? d.stations : [];
+    rows.forEach(a => { const st = rmFromRow(a); if (st && !rmSt.has(st.id)) rmSt.set(st.id, st); });
+    rmSnapOk = rows.length > 100;
+  }).catch(() => {});
+  return rmSnapP;
+}
 
 function rmLoadLib(){
   if (window.maplibregl) return Promise.resolve();
@@ -10645,6 +10691,7 @@ function rmBounds(){
 }
 function rmFetchView(){
   if (!rmMap || document.hidden) return;
+  if (rmSnapOk && rmMap.getZoom() < 3.5){ rmPushSoon(); rmSettle(); return; }   // whole-world views come from the snapshot
   const { tiles } = rmTilesFor(rmBounds(), rmMap.getZoom(), 9);
   rmQueue = tiles.filter(t => !rmDone.has(t.key) && !rmFlight.has(t.key));
   rmPump();
@@ -10740,7 +10787,7 @@ function rmSelect(st, from){
   const x = bpMk('button', 'rm-x', '×'); x.type = 'button'; x.setAttribute('aria-label', 'Close station'); x.addEventListener('click', rmCloseSheet); sh.appendChild(x);
   const act = bpMk('div', 'rm-act');
   const go = bpMk('button', 'rm-go', 'Play songs from here'); go.type = 'button';
-  go.addEventListener('click', () => { bpLastEl = go; fmOpenResults(rmSongsTerms(st), st.state || st.country || st.name, null, null, st.cc); });
+  go.addEventListener('click', () => { bpLastEl = go; fmOpenResults(rmSongsTerms(st), st.state || st.country || st.name, null, null, st.cc, st.cc ? 'cc-' + st.cc.toLowerCase() : ''); });
   act.appendChild(go);
   const lv = bpMk('button', 'rm-live', 'Listen live'); lv.type = 'button';
   lv.addEventListener('click', () => { if (liveSt && liveSt.id === st.id && liveIsPlaying()) liveStop(); else liveStart(st); });
@@ -10818,7 +10865,7 @@ function rmInit(gen){
   if (!rmWrap || document.hidden) return;
   statsFeature('region_map');
   rmStatus('Loading map…');
-  rmLoadLib().then(() => {
+  Promise.all([rmLoadLib(), rmSnapshot()]).then(() => {
     if (gen !== rmGen || !rmWrap || rmMap || document.hidden) return;
     const el = rmWrap.querySelector('.rm-map');
     try {
@@ -24216,6 +24263,9 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
+  { version: 552, date: '2026-11-12', items: [
+    'The region map opens instantly from a world list of radio stations that is refreshed every day, and region cards open from ready-made artist lists refreshed every week, so the app no longer searches Radio Browser or iTunes every time you open one.'
+  ]},
   { version: 551, date: '2026-11-12', items: [
     'On the region map you can search any radio station by name. Region cards and station songs now search that country\'s music store across many languages and styles, so the artist list is long and mixed, and unrelated artists stop showing up. The list never ends: scroll to the bottom and it adds artists similar to the ones shown. Artists on a shared soundtrack get their own cover when they have one.'
   ]},
