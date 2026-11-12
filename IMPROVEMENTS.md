@@ -12965,3 +12965,11 @@ Add entries in this shape:
 - **Touches:** index.html (Home, new Add songs page), sw.js
 - **Branch:** agent/add-songs-page
 - **Notes:** Built on agent/browse-pages (merged in); only calls openBrowsePage, openBring, openMusicMap and the existing upload button. No network calls, one-shot transform/opacity entrance only. "Returning" means songs played or listening history, because every profile is seeded with starter playlists. No Surprise me or This is playlists exist, so none added. Cache v540.
+
+### home-search-merge: Search and Home are one page, ordered for Spotify users
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Owner: "there's a search page and a home page. they should be the same page. merge any redundancies and order the sections by priority of what's most interesting to spotify users". Home now starts with the search field and type chips (and the link help line), then: Recently played, Top artists, albums, playlists, songs, Top genres, Made for you (CuRRentSSsss, SwiiiRrrLL), the vibe box (today's period mood is one of its chips), the Add songs block (Import your music first, then browse by genre/region/vibe), Music map. A new user gets Add songs, Made for you, the vibe box, Music map. Sections with nothing in them are not built. The logo, the Home button and the Search tab open the same page (Search focuses the field; on desktop the top bar is the field). The separate Search page, its Picked for you row and its Right now mood and genre cards are gone.
+- **Touches:** index.html (Home, setView, search code), sw.js, scripts/test-home-order.js, scripts/check.sh
+- **Branch:** agent/home-search-merge
+- **Notes:** Test: node scripts/test-home-order.js. setView('search') still works and means Home with the field focused. Esc leaves the page on desktop widths. Not verified: real phone keyboard, Hindi UI strings for the new Made for you subtitles (English only for now), a user with many playlists at 768 px.

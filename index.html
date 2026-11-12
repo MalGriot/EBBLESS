@@ -519,37 +519,25 @@ video.lib-bg-video.is-playing{opacity:1}
   #testerBanner{order:3;position:static;margin:0 0 0 2px;flex:none}
 }
 /* Search tab (#608): on phones the top-bar search field becomes a button in the
-   bottom nav that opens #view-search. The field stays in the DOM (every search
+   bottom nav that opens Home (the one page: search on top). The field stays in the DOM (every search
    path still reads #urlInput) and is only shown during onboarding. */
 @media (max-width:859.98px){body:not(.onb-active) #importForm.import-row{display:none}}
-/* #722: the 3-pane desktop shows the search page in the middle pane when the top search bar is clicked; tablet widths get a Search button in the top nav (and the same click on the bar) */
-#view-search .st-form{position:relative;margin:8px 0 18px}
-#view-search .st-field{display:flex;position:relative}
-#view-search .st-field input{flex:1;min-width:0;width:100%;background:var(--panel-2);border:1px solid var(--border);border-radius:var(--r-md);
-  padding:12px 14px 12px 46px;color:var(--text);font-size:16px;transition:border-color var(--dur-ui) var(--ease-out)}
-#view-search .st-field input::placeholder{color:var(--faint-2)}
-#view-search .st-field input:focus{outline:none;border-color:var(--accent)}
-#view-search .st-go{position:absolute;left:4px;top:50%;transform:translateY(-50%);width:40px;height:40px;padding:0;display:flex;align-items:center;justify-content:center;
-  background:transparent;border:0;color:var(--faint);cursor:pointer}
-#view-search .st-go svg{width:20px;height:20px}
-#view-search .st-err{font-size:12.5px;color:var(--bad);margin:6px 2px 0;min-height:0}
-#view-search .st-sec{margin:0 0 22px}
-#view-search .st-sec h2{font-size:12px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--faint-2);margin:0 0 10px}
-#view-search .st-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-#view-search .st-tile{display:flex;align-items:center;gap:10px;min-width:0;padding:8px;text-align:left;cursor:pointer;
-  background:var(--panel-2);border:1px solid var(--border);border-radius:var(--r-md);color:var(--text)}
-#view-search .st-tile .st-art{flex:none;width:44px;height:44px;border-radius:8px;object-fit:cover;background:var(--panel-3)}
-#view-search .st-tile .st-ph{flex:none;width:44px;height:44px;border-radius:8px;background:var(--panel-3);color:var(--faint);display:flex;align-items:center;justify-content:center;font-weight:700}
-#view-search .st-tile .st-t{min-width:0;display:flex;flex-direction:column;gap:2px}
-#view-search .st-tile .st-n{font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-#view-search .st-tile .st-s{font-size:11.5px;color:var(--faint-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-#view-search .st-chips{display:flex;flex-wrap:wrap;gap:8px}
-#view-search .st-chip{padding:8px 14px;border-radius:999px;background:var(--panel-2);border:1px solid var(--border);color:var(--text);font-size:13px;cursor:pointer}
-#view-search .st-chip.is-prompt{border-color:var(--accent)}
-#view-search .st-help{font-size:12.5px;color:var(--faint-2);line-height:1.5;margin:0}
-/* #722 search page (refs: Resonance search, AI assistant search): big title, roomy field, a swipeable row of cover cards,
-   and the "right now" prompts and genres as large gradient cards in two columns instead of pills. Static fills only (GPU budget). */
-#view-search .st-head{display:flex;align-items:center;justify-content:space-between;margin:6px 0 14px}
+/* #722: the 3-pane desktop shows Home (search first) in the middle pane when the top search bar is clicked; tablet widths get a Search button in the top nav (and the same click on the bar) */
+/* the search block at the top of Home (field, type chips, link help); on desktop the top bar is the one field, so the page's own is hidden */
+#view-home .st-form{position:relative;margin:0 0 24px}
+#view-home .st-field{display:flex;position:relative}
+#view-home .st-field input{flex:1;min-width:0;width:100%;padding:16px 16px 16px 50px;border-radius:16px;font-size:16px;color:var(--text);background:color-mix(in srgb,var(--panel-2) 80%,transparent);border:1px solid color-mix(in srgb,var(--text) 10%,transparent);transition:border-color var(--dur-ui) var(--ease-out)}
+#view-home .st-field input::placeholder{color:var(--faint-2)}
+#view-home .st-field input:focus{outline:none;border-color:var(--accent)}
+#view-home .st-go{position:absolute;left:6px;top:50%;transform:translateY(-50%);width:44px;height:44px;padding:0;display:flex;align-items:center;justify-content:center;background:transparent;border:0;color:var(--accent);cursor:pointer}
+#view-home .st-go svg{width:20px;height:20px}
+#view-home .st-err{font-size:12.5px;color:var(--bad);margin:6px 2px 0;min-height:0}
+#view-home .st-types{display:flex;flex-wrap:wrap;gap:8px;margin:-8px 0 14px}
+#view-home .st-type{padding:8px 14px;border-radius:999px;background:var(--panel-2);border:1px solid var(--border);color:var(--faint);font:inherit;font-size:13.5px;cursor:pointer}
+#view-home .st-type:hover{color:var(--text)}
+#view-home .st-type.is-active{background:var(--accent);border-color:var(--accent);color:var(--on-accent);font-weight:600}
+#view-home .st-help{font-size:12.5px;color:var(--faint-2);line-height:1.5;margin:0 0 26px}
+@media (min-width:860px){#view-home .st-form{display:none}}
 #view-home .view-scroll{max-width:900px;margin:0 auto}
 #view-home .hm-title{font-size:30px;font-weight:800;letter-spacing:-.5px;margin:6px 0 18px;color:var(--text)}
 #view-home .hm-sec{margin:0 0 26px}
@@ -575,7 +563,7 @@ video.lib-bg-video.is-playing{opacity:1}
 #view-home .hm-map svg{flex:none;width:34px;height:34px}
 #view-home .hm-map b{display:block;font-size:17px}
 #view-home .hm-map span{font-size:12.5px;opacity:.85}
-/* home-vibe: the vibe box at the top of Home (static, no animation) */
+/* home-vibe: the vibe box on Home (static, no animation) */
 #view-home .hm-vibe{padding:20px 20px 18px;border-radius:20px;background:linear-gradient(135deg,rgba(190,70,120,.30),rgba(60,90,170,.26));border:1px solid rgba(255,255,255,.08)}
 #view-home .hm-vibe{position:relative}
 #view-home .hm-vibe h2{font-size:22px;font-weight:800;margin:0 0 4px;padding-right:110px}
@@ -611,47 +599,8 @@ video.lib-bg-video.is-playing{opacity:1}
 #view-home .hm-genre:nth-child(6n){--c1:#3a8f4f;--c2:#15432c}
 #view-home .hm-genre img{position:absolute;right:-8px;bottom:-10px;width:58px;height:58px;border-radius:10px;object-fit:cover;transform:rotate(18deg);box-shadow:0 6px 14px rgba(0,0,0,.45);pointer-events:none}
 #view-home .hm-genre:active{transform:scale(.97)}
-#view-home .hm-empty{font-size:13.5px;color:var(--faint);line-height:1.6;margin:0 0 20px}
-#view-search .st-title{font-size:30px;font-weight:800;letter-spacing:-.5px;margin:0;color:var(--text)}
 #navSearchBtn{display:none}
 @media (min-width:860px){body:not(.split-desktop) #navSearchBtn{display:flex}}
-#view-search .st-close{display:none;width:40px;height:40px;border-radius:50%;align-items:center;justify-content:center;color:var(--faint);background:var(--panel-2)}
-#view-search .st-close:hover{color:var(--text)}
-#view-search .st-close svg{width:18px;height:18px}
-body.split-desktop #view-search .st-close{display:flex}
-@media (min-width:860px){#view-search .st-close{display:flex}}
-body.split-desktop #view-search .view-scroll{max-width:760px;margin:0 auto}
-body.split-desktop #view-search .st-chips{grid-template-columns:repeat(auto-fill,minmax(190px,1fr))}
-#view-search .st-chip .st-chip-art{position:absolute;right:-8px;bottom:-10px;width:62px;height:62px;border-radius:10px;object-fit:cover;transform:rotate(18deg);box-shadow:0 6px 14px rgba(0,0,0,.45);pointer-events:none}
-#view-search .st-chip.is-prompt .st-chip-art{width:72px;height:72px;right:10px;bottom:-14px}
-#view-search .st-chip{padding-right:60px}
-#view-search .st-form{margin:0 0 24px}
-#view-search .st-types{display:flex;flex-wrap:wrap;gap:8px;margin:-8px 0 20px}
-#view-search .st-type{padding:8px 14px;border-radius:999px;background:var(--panel-2);border:1px solid var(--border);color:var(--faint);font:inherit;font-size:13.5px;cursor:pointer}
-#view-search .st-type:hover{color:var(--text)}
-#view-search .st-type.is-active{background:var(--accent);border-color:var(--accent);color:var(--on-accent);font-weight:600}
-@media (min-width:860px){#view-search .st-form{display:none}}
-#view-search .st-field input{padding:16px 16px 16px 50px;border-radius:16px;font-size:16px;background:color-mix(in srgb,var(--panel-2) 80%,transparent);border-color:color-mix(in srgb,var(--text) 10%,transparent)}
-#view-search .st-go{left:6px;width:44px;height:44px;color:var(--accent)}
-#view-search .st-sec h2{font-size:18px;font-weight:700;letter-spacing:0;text-transform:none;color:var(--text);margin:0 0 12px}
-#view-search .st-grid{display:flex;gap:12px;overflow-x:auto;margin:0 calc(-1 * var(--vs-pad,24px));padding:0 var(--vs-pad,24px) 4px;scroll-padding-left:var(--vs-pad,24px);scroll-snap-type:x proximity;scrollbar-width:none}
-#view-search .st-grid::-webkit-scrollbar{display:none}
-#view-search .st-tile{flex:none;width:136px;flex-direction:column;align-items:stretch;gap:8px;padding:0;background:none;border:0;scroll-snap-align:start}
-#view-search .st-tile .st-art,#view-search .st-tile .st-ph{width:136px;height:136px;border-radius:16px;box-shadow:0 8px 18px -8px rgba(0,0,0,.6)}
-#view-search .st-tile .st-ph{font-size:36px}
-#view-search .st-tile .st-n{font-size:14px}
-#view-search .st-chips{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
-#view-search .st-chip{position:relative;overflow:hidden;min-height:92px;padding:14px;border-radius:16px;border:0;text-align:left;color:#fff;font-size:17px;font-weight:800;line-height:1.15;letter-spacing:-.2px;
-  text-shadow:0 1px 6px rgba(0,0,0,.35);background:linear-gradient(135deg,var(--c1,#6b4fbb),var(--c2,#2a1d5c));display:flex;align-items:flex-start}
-#view-search .st-chip.is-prompt{grid-column:1 / -1;min-height:84px;font-size:18px;border:0;background:linear-gradient(120deg,var(--c1,#d9622b),var(--c2,#7a1f3d))}
-#view-search .st-chip::after{content:'';position:absolute;right:-18px;bottom:-22px;width:70px;height:70px;border-radius:50%;background:rgba(255,255,255,.14);pointer-events:none}
-#view-search .st-chip:nth-child(6n+1){--c1:#d9622b;--c2:#7a1f3d}
-#view-search .st-chip:nth-child(6n+2){--c1:#2e8f8a;--c2:#12365a}
-#view-search .st-chip:nth-child(6n+3){--c1:#7b4fd1;--c2:#2a1d5c}
-#view-search .st-chip:nth-child(6n+4){--c1:#c9a227;--c2:#7a4a12}
-#view-search .st-chip:nth-child(6n+5){--c1:#c2417a;--c2:#4e1536}
-#view-search .st-chip:nth-child(6n){--c1:#3a8f4f;--c2:#15432c}
-#view-search .st-chip:active{transform:scale(.97)}
 @media (min-width:860px){#topbar{--tb-l:68px;--tb-r:460px;--tb-min:260px}}
 /* 860-1149px, no split layout: the nav goes icons-only (labels stay for screen
    readers) so the search field has room to sit on the page center */
@@ -2072,18 +2021,18 @@ body:not(.desktop-fs):not([data-disc="cd"]) .player-stage:has(> .artwork-wrap[da
 /* 3-pane desktop: the big vinyl is not clipped by the middle pane; it sits over the library and queue panels' translucent backgrounds, while everything inside
    those panels (and the top bar) stays in front of it and clickable. The panels stop being their own stacking layer for this (isolation, size containment),
    their content is lifted above the disc, and the disc ignores the pointer except over its center label. */
-body.split-desktop:not(.desktop-fs):not(.view-settings-active):not(.view-search-active):not([data-disc="cd"]):has(#artworkWrap[data-mode="art"][data-art-style="record"]) #view-player{overflow:visible}
-body.split-desktop:not(.desktop-fs):not(.view-settings-active):not(.view-search-active):not([data-disc="cd"]):has(#artworkWrap[data-mode="art"][data-art-style="record"]) #artworkWrap > #artRecord{z-index:1;pointer-events:none}
-body.split-desktop:not(.desktop-fs):not(.view-settings-active):not(.view-search-active):not([data-disc="cd"]):has(#artworkWrap[data-mode="art"][data-art-style="record"]) #artworkWrap > #artRecord .record-label{pointer-events:auto}
-body.split-desktop:not(.desktop-fs):not(.view-settings-active):not(.view-search-active):not([data-disc="cd"]):has(#artworkWrap[data-mode="art"][data-art-style="record"]) #view-library{isolation:auto;container-type:normal}
-body.split-desktop:not(.desktop-fs):not(.view-settings-active):not(.view-search-active):not([data-disc="cd"]):has(#artworkWrap[data-mode="art"][data-art-style="record"]) #queue-panel{isolation:auto}
-body.split-desktop:not(.desktop-fs):not(.view-settings-active):not(.view-search-active):not([data-disc="cd"]):has(#artworkWrap[data-mode="art"][data-art-style="record"]) :is(#view-library > .view-scroll,#queue-panel > :not(.queue-drag-handle)){position:relative;z-index:2}
+body.split-desktop:not(.desktop-fs):not(.view-settings-active):not(.view-home-active):not([data-disc="cd"]):has(#artworkWrap[data-mode="art"][data-art-style="record"]) #view-player{overflow:visible}
+body.split-desktop:not(.desktop-fs):not(.view-settings-active):not(.view-home-active):not([data-disc="cd"]):has(#artworkWrap[data-mode="art"][data-art-style="record"]) #artworkWrap > #artRecord{z-index:1;pointer-events:none}
+body.split-desktop:not(.desktop-fs):not(.view-settings-active):not(.view-home-active):not([data-disc="cd"]):has(#artworkWrap[data-mode="art"][data-art-style="record"]) #artworkWrap > #artRecord .record-label{pointer-events:auto}
+body.split-desktop:not(.desktop-fs):not(.view-settings-active):not(.view-home-active):not([data-disc="cd"]):has(#artworkWrap[data-mode="art"][data-art-style="record"]) #view-library{isolation:auto;container-type:normal}
+body.split-desktop:not(.desktop-fs):not(.view-settings-active):not(.view-home-active):not([data-disc="cd"]):has(#artworkWrap[data-mode="art"][data-art-style="record"]) #queue-panel{isolation:auto}
+body.split-desktop:not(.desktop-fs):not(.view-settings-active):not(.view-home-active):not([data-disc="cd"]):has(#artworkWrap[data-mode="art"][data-art-style="record"]) :is(#view-library > .view-scroll,#queue-panel > :not(.queue-drag-handle)){position:relative;z-index:2}
 /* the header bar (the install banner strip under the top bar has its own solid fill) goes behind the disc too: the top bar stops being its own layer here,
    and its buttons, links and the banner's text are lifted above the disc */
-body.split-desktop:not(.desktop-fs):not(.view-settings-active):not(.view-search-active):not([data-disc="cd"]):has(#artworkWrap[data-mode="art"][data-art-style="record"]) #topbar{z-index:auto}
-body.split-desktop:not(.desktop-fs):not(.view-settings-active):not(.view-search-active):not([data-disc="cd"]):has(#artworkWrap[data-mode="art"][data-art-style="record"]) #topbar > :not(#installBanner):not(#importForm):not(#supportPop):not(#testerBanner){position:relative;z-index:2}
-body.split-desktop:not(.desktop-fs):not(.view-settings-active):not(.view-search-active):not([data-disc="cd"]):has(#artworkWrap[data-mode="art"][data-art-style="record"]) #topbar #importForm{z-index:2}
-body.split-desktop:not(.desktop-fs):not(.view-settings-active):not(.view-search-active):not([data-disc="cd"]):has(#artworkWrap[data-mode="art"][data-art-style="record"]) #installBanner > *{position:relative;z-index:2}
+body.split-desktop:not(.desktop-fs):not(.view-settings-active):not(.view-home-active):not([data-disc="cd"]):has(#artworkWrap[data-mode="art"][data-art-style="record"]) #topbar{z-index:auto}
+body.split-desktop:not(.desktop-fs):not(.view-settings-active):not(.view-home-active):not([data-disc="cd"]):has(#artworkWrap[data-mode="art"][data-art-style="record"]) #topbar > :not(#installBanner):not(#importForm):not(#supportPop):not(#testerBanner){position:relative;z-index:2}
+body.split-desktop:not(.desktop-fs):not(.view-settings-active):not(.view-home-active):not([data-disc="cd"]):has(#artworkWrap[data-mode="art"][data-art-style="record"]) #topbar #importForm{z-index:2}
+body.split-desktop:not(.desktop-fs):not(.view-settings-active):not(.view-home-active):not([data-disc="cd"]):has(#artworkWrap[data-mode="art"][data-art-style="record"]) #installBanner > *{position:relative;z-index:2}
 /* #719 CD, to Red Book proportions (120 mm disc = 100%): 15 mm hole = 12.5%, clear hub out to 33 mm = 27.5%, printed/data area
    up to 117 mm = 97.5%, clear 1.5 mm rim after that. Hole, hub and rim are clear glass; the art only covers the band between.
    Same element and spin/needle JS as the record; translucent fills only (no blur, GPU budget). */
@@ -3072,7 +3021,7 @@ body.queue-over-fs #queue-scrim{bottom:0}
    desktop screen, where library/queue (bg video, blend layer, marquees) are
    all still up; the button path slides them away first. Visible again the
    moment flow closes (their own transitions don't include visibility). */
-body:has(#flow-layer.is-open:not(.is-leaving)) :is(#ambient,#topbar,#view-library,#view-search,#view-player,#queue-panel,#hist-panel,#libpl-panel){
+body:has(#flow-layer.is-open:not(.is-leaving)) :is(#ambient,#topbar,#view-library,#view-player,#queue-panel,#hist-panel,#libpl-panel){
   visibility:hidden;transition:visibility 0s var(--dur-surface)}
 /* own lava-lamp ambient (mirrors #ambient, driven by the same artwork) so the
    fullscreen view blooms/fades/shifts with the album art's colors instead of
@@ -3810,7 +3759,6 @@ body.split-desktop .install-banner{padding-left:24px;padding-right:12px}
   body.split-desktop #topbar{padding:0 12px 0 24px}
   body.split-desktop #view-library,
   body.split-desktop #view-player,
-  body.split-desktop #view-search,
   body.split-desktop #view-home,
   body.split-desktop #view-settings{
     position:static;grid-row:2;top:auto;bottom:auto;min-height:0;
@@ -3826,11 +3774,10 @@ body.split-desktop .install-banner{padding-left:24px;padding-right:12px}
   body.split-desktop #view-library{container-type:size}
   body.split-desktop #view-library .lib-bg{position:sticky;top:0;bottom:auto;height:100cqh;margin-bottom:-100cqh}
   body.split-desktop #view-player,
-  body.split-desktop #view-search,
   body.split-desktop #view-home,
   body.split-desktop #view-settings{grid-column:2}
-  body.split-desktop:not(.view-settings-active):not(.view-search-active):not(.view-home-active) #view-player{display:block!important}
-  body.split-desktop.view-search-active #view-search,body.split-desktop.view-home-active #view-home{display:block!important;overflow-y:auto}
+  body.split-desktop:not(.view-settings-active):not(.view-home-active) #view-player{display:block!important}
+  body.split-desktop.view-home-active #view-home{display:block!important;overflow-y:auto}
   body.split-desktop.view-settings-active #view-settings{display:block!important}
   /* issue #141: Settings opened from desktop fullscreen shows on its own -
      no library/queue/playlist panes beside it (see setView()). */
@@ -3908,8 +3855,8 @@ body.split-desktop .install-banner{padding-left:24px;padding-right:12px}
      bottom padding (38px art + 8px*2 padding + 1px border) only while it's
      actually shown, so the 1fr pane row shrinks to sit above it instead of
      being overlapped - and normal (non-Settings) desktop view is untouched. */
-  body.split-desktop:not(.view-settings-active):not(.view-search-active):not(.view-home-active):not(:has(#import-overlay.is-open)):not(:has(#browsePage:not([hidden]))):not(:has(#addSongsPage:not([hidden]))):not(:has(#findMusic:not([hidden]))) #mini-bar{display:none!important}
-  body.split-desktop:is(.view-settings-active,.view-search-active,.view-home-active,:has(#import-overlay.is-open)):has(#mini-bar:not([hidden])) #app{padding-bottom:55px}
+  body.split-desktop:not(.view-settings-active):not(.view-home-active):not(:has(#import-overlay.is-open)):not(:has(#browsePage:not([hidden]))):not(:has(#addSongsPage:not([hidden]))):not(:has(#findMusic:not([hidden]))) #mini-bar{display:none!important}
+  body.split-desktop:is(.view-settings-active,.view-home-active,:has(#import-overlay.is-open)):has(#mini-bar:not([hidden])) #app{padding-bottom:55px}
   body.split-desktop:is(:has(#import-overlay.is-open),:has(#browsePage:not([hidden])),:has(#addSongsPage:not([hidden])),:has(#findMusic:not([hidden]))) #mini-bar:not([hidden]){display:flex}   /* #665: the search window keeps the footer player, like Settings */
   /* :not(.desktop-fs) on .view-scroll only: without it, this override
      survives into the desktop-fs full-width #view-player and cancels the
@@ -5732,10 +5679,10 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
   </main>
 
   <!-- ===== SETTINGS ===== -->
-  <!-- ===== SEARCH (phones: the bottom-nav Search tab, #608) ===== -->
-  <main class="view" id="view-search" hidden>
+  <!-- ===== HOME: the one page for search and browsing (logo, Home button and the Search tab all open it) ===== -->
+  <main class="view" id="view-home" hidden>
     <div class="view-scroll">
-      <div class="st-head"><h1 class="st-title">Search</h1><button type="button" class="st-close" id="stCloseBtn" aria-label="Close search"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6.4 5L5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6z"/></svg></button></div>
+      <div class="hm-head"><h1 class="hm-title">Home</h1></div>
       <form class="st-form" id="searchTabForm" autocomplete="off">
         <span class="st-field">
           <button type="submit" class="st-go" aria-label="Search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg></button>
@@ -5745,22 +5692,7 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
       </form>
       <!-- #799: tell search what you are looking for -->
       <div class="st-types" id="stTypes" role="group" aria-label="Search for"><button type="button" class="st-type" data-stype="all">All</button><button type="button" class="st-type" data-stype="songs">Songs</button><button type="button" class="st-type" data-stype="artists">Artists</button><button type="button" class="st-type" data-stype="albums">Albums</button><button type="button" class="st-type" data-stype="playlists">Playlists</button></div>
-      <section class="st-sec" id="stPicks" hidden>
-        <h2>Picked for you</h2>
-        <div class="st-grid" id="stGrid"></div>
-      </section>
-      <section class="st-sec">
-        <h2 id="stMoodTitle">Right now</h2>
-        <div class="st-chips" id="stChips"></div>
-      </section>
       <p class="st-help">Paste a link to a playlist, album, song or artist from Spotify, Apple Music, YouTube or SoundCloud. Or search a song, an artist or a genre, or describe a mood.</p>
-    </div>
-  </main>
-
-  <!-- #724 desktop Home: your own tops (artists, albums, playlists, songs) and the music map; the player keeps its empty screen with the bouncing E -->
-  <main class="view" id="view-home" hidden>
-    <div class="view-scroll">
-      <div class="hm-head"><h1 class="hm-title">Home</h1></div>
       <div id="hmBody"></div>
     </div>
   </main>
@@ -10126,7 +10058,7 @@ function formatTotalDuration(totalSec){
    DOM REFS
    ========================================================================= */
 const $ = (id) => document.getElementById(id);
-const views = { library: $('view-library'), player: $('view-player'), search: $('view-search'), home: $('view-home'), settings: $('view-settings') };
+const views = { library: $('view-library'), player: $('view-player'), home: $('view-home'), settings: $('view-settings') };
 const urlInput = $('urlInput'), importForm = $('importForm'), importErr = $('importErr'), loadBtn = $('loadBtn');
 // whichever label is showing: "Find music", or "Go" on narrow phones
 function loadBtnLabel(){ return 'the magnifier'; }
@@ -13145,7 +13077,7 @@ async function lastfmImportSelected(){
    Ignores swipes that start on something with its own horizontal gesture (album art, sliders,
    queue rows, tracks, filter pills, inputs) and anything while a sheet, window or menu is open. */
 (function(){
-  const order = ['home', 'search', 'library', 'player', 'queue', 'settings'];   // #725: Home and Search join the row; from the Player, swipe up for the queue and down for Home
+  const order = ['home', 'library', 'player', 'queue', 'settings'];   // #725: Home (search is on it) joins the row; from the Player, swipe up for the queue and down for Home
   const SKIP = 'input,textarea,select,button,a,canvas,.slider,.artwork-wrap,.visual-tabs,.q-row,.q-now,.track-row,.lib-filter,#libpl-panel,#import-overlay,#flow-layer,#findMusic,#browsePage,#musicMap,.lib-ctx-menu,.paste-guide,#splash,#mini-bar,.lyrics-wrap,.controls-row,.seek-row,.hm-row,.st-grid';
   let x0 = 0, y0 = 0, ok = false;
   const phone = () => window.matchMedia('(max-width:859.98px)').matches && !document.body.classList.contains('onb-active');
@@ -13528,7 +13460,11 @@ function settingsRevealEl(el){
   });
 })();
 function setView(name){
+  // Search and Home are one page: 'search' opens Home with the search field focused
+  const focusSearch = name === 'search';
+  if (focusSearch) name = 'home';
   const prevView = state.currentView;
+  if (name === 'home' && prevView !== 'home') state.preHomeView = prevView;   // Esc goes back here
   if (name === 'library' && npLibStale){ npLibStale = false; try{ renderLibrary(); } catch(e){} } // deferred On Air card refresh (#635)
   if (name === 'player' || name === 'library') try{ renderHomeShelf(); } catch(e){} // recent-things shelf (#583d)
   if (name === 'settings' && prevView !== 'settings') state.preSettingsView = prevView;
@@ -13562,10 +13498,8 @@ function setView(name){
   state.currentView = name;
   if (typeof msClearGlow === 'function') msClearGlow();
   if (name === 'settings') awardMilestone('openset');
-  if (name === 'search') renderSearchTab();
   if (name === 'player' && state.queuePos >= 0) awardMilestone('progress');
   document.body.classList.toggle('view-settings-active', name === 'settings');
-  document.body.classList.toggle('view-search-active', name === 'search' && document.body.classList.contains('split-desktop'));
   document.body.classList.toggle('view-home-active', name === 'home' && document.body.classList.contains('split-desktop'));
   if (name === 'home' && typeof renderHome === 'function') renderHome();
   if (state.deskFsOpen) csStackSync();
@@ -13577,7 +13511,7 @@ function setView(name){
   }
   Object.keys(views).forEach(k => { views[k].hidden = k !== name; });
   document.querySelectorAll('.nav-btn[data-view], #bottom-nav button[data-view]').forEach(b => {
-    b.classList.toggle('is-active', b.dataset.view === name);
+    b.classList.toggle('is-active', b.dataset.view === name || (name === 'home' && b.dataset.view === 'search' && !!b.closest('#bottom-nav')));
   });
   views[name].scrollTop = 0;
   updateMiniBarVisibility();
@@ -13593,6 +13527,7 @@ function setView(name){
   // library is left, they only ran for nobody to see
   syncLibraryVideos();
   syncHistoryBuffer();
+  if (focusSearch && !document.body.classList.contains('onb-active')) focusHomeSearch();
 }
 
 /* =========================================================================
@@ -13744,7 +13679,7 @@ document.querySelectorAll('#topnav .nav-btn[data-view], #bottom-nav button[data-
     // (setView only closes the panel when leaving library, not re-entering it).
     if (btn.dataset.view === 'library') closeLibraryPlaylistPanel();
     if (btn.dataset.view === 'home' && state.currentView === 'home'){ setView('player'); return; }   // Home toggles back to the player
-    if (btn.dataset.view === 'search' && window.innerWidth >= 860){ if (state.currentView === 'search') closeDesktopSearch(); else openDesktopSearch(); return; }   // tablet Search button: opens the page, again to go back
+    if (btn.dataset.view === 'search' && state.currentView === 'home'){ focusHomeSearch(); views.home.scrollTop = 0; return; }   // already on the one page: jump to the field
     setView(btn.dataset.view);
   });
 });
@@ -22305,9 +22240,9 @@ importForm.addEventListener('submit', (e) => {
 
 /* ---------- Search tab (#608) ----------
    Phones: the top-bar search field is replaced by a Search button in the
-   bottom nav that opens #view-search - a search bar on top, "Picked for you"
-   tiles from what the listener plays, and mood chips (genres, keywords and
-   prompts) for the current Rosicrucian daily period. The tab's field hands
+   bottom nav that opens Home, the one page for search and browsing (search
+   field and type chips on top, then your sections, see homeSectionOrder).
+   Today's period mood is a chip in Home's vibe box. The page's field hands
    its text to the top-bar form (#urlInput / #importForm, hidden on phones),
    so links, songs, artists, vibes and sentences all go through the one
    existing search path. */
@@ -22367,16 +22302,30 @@ function stGenreArt(term){
       return u;
     }).catch(() => '');
 }
-// #724 Home: what you play most. Songs and playlists/albums are ranked by the play counts already stored on the saved tracks, artists by the recent play
-// history; everything is read from this device (nothing is fetched). Empty rows are left out.
+/* home-order:start */
+// The one page's section order (what a Spotify user finds most interesting, top to bottom). Search is always first and sits above these.
+// Returning: what you are already into, then made for you, then bringing songs in, then discovery. Nothing saved yet: bringing songs in and
+// made-for-you move up, and sections with nothing to show are left out by the caller.
+function homeSectionOrder(returning){
+  return returning
+    ? ['recent', 'artists', 'albums', 'playlists', 'songs', 'genres', 'madeFor', 'vibe', 'add', 'map']
+    : ['add', 'madeFor', 'vibe', 'map'];
+}
+/* home-order:end */
+// #724 Home, now also the search page: what you play most, made-for-you, ways to add songs, and discovery. Songs and playlists/albums are ranked by
+// the play counts already stored on the saved tracks, artists by the recent play history; everything is read from this device (nothing is fetched).
+// A section with nothing in it is not built at all (no empty headings).
 function renderHome(){
   const body = $('hmBody');
   if (!body) return;
+  searchTabInput.placeholder = 'Search, paste a link, or say a vibe';
+  searchTabErr.textContent = '';
   body.textContent = '';
   const special = [SWELL_ID, BLEND_ID, NP_ID];
   const lib = getLibrary().filter(id => !special.includes(id) && !String(id).startsWith('discover-ext:')).map(id => ({ id, pl: getCachedPlaylist(id) })).filter(x => x.pl && Array.isArray(x.pl.tracks));
   const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
-  const section = (title) => { const sec = mk('section', 'hm-sec'); sec.appendChild(mk('h2', '', title)); body.appendChild(sec); return sec; };
+  let cur = null;
+  const section = (title) => { const sec = mk('section', 'hm-sec'); sec.appendChild(mk('h2', '', title)); cur.appendChild(sec); return sec; };
   const card = (name, sub, src, onClick, round) => {
     const b = mk('button', 'hm-card' + (round ? ' is-artist' : '')); b.type = 'button'; b.title = name;
     let cover;
@@ -22386,74 +22335,90 @@ function renderHome(){
     b.addEventListener('click', onClick); return b;
   };
   const row = (sec, cards) => { const r = mk('div', 'hm-row'); cards.forEach(c => r.appendChild(c)); sec.appendChild(r); };
-  renderHomeVibe(body, mk);
-  // #761: every way to get songs in lives here (Add songs block; its own page is one tap away)
   // "returning": the app seeds a few starter playlists for everyone, so count what you did instead: songs played or songs you saved
   let returning = false;
   try { returning = lib.some(x => totalPlaylistPlays(x.pl) > 0) || listenSeedHistory().length > 0; } catch(e){}
-  renderAddSongsBlock(body, mk, returning);
   const coverOf = (pl) => pl.image ? { art: pl.image } : (pl.tracks.find(t => t && (t.videoId || t.art)) || null);
   const plays = (pl) => totalPlaylistPlays(pl);
-  // recently played: playlists and albums you played last, newest first (one tap plays)
-  const recent = lib.filter(x => getLastPlayed(x.id) && x.pl.tracks.length && !isArtistEntry(x.pl) && !isPodcastPlaylistId(x.id)).sort((a, b) => getLastPlayed(b.id) - getLastPlayed(a.id)).slice(0, 10);
-  if (recent.length){ const sec = section('Recently played'); row(sec, recent.map(x => card(x.pl.name, formatLastPlayed(getLastPlayed(x.id)), coverOf(x.pl), () => playPlaylistNow(x.id)))); }
-  // top artists
-  let artists = [];
-  try { artists = searchTabArtistTiles().filter(t => t.sub === 'You play this'); } catch(e){}
-  if (artists.length){ const sec = section('Top artists'); row(sec, artists.map(t => card(t.name, '', t.art ? { art: t.art } : null, () => openArtistPage(t.name), true))); }
-  // top albums and playlists
+  const playsText = (n) => n + (n === 1 ? ' play' : ' plays');
+  let tiles = [];
+  try { tiles = searchTabArtistTiles(); } catch(e){}
+  const artists = tiles.filter(t => t.sub === 'You play this');
   const top = (kind, limit) => lib.filter(x => libSectionOf(x.pl) === kind && x.pl.tracks.length && plays(x.pl) > 0).sort((a, b) => plays(b.pl) - plays(a.pl)).slice(0, limit);
-  const albums = top('album', 10);
-  if (albums.length){ const sec = section('Top albums'); row(sec, albums.map(x => card(x.pl.name, plays(x.pl) + (plays(x.pl) === 1 ? ' play' : ' plays'), coverOf(x.pl), () => toggleLibraryPlaylistPanel(x.id)))); }
-  const lists = top('playlist', 10);
-  if (lists.length){ const sec = section('Top playlists'); row(sec, lists.map(x => card(x.pl.name, plays(x.pl) + (plays(x.pl) === 1 ? ' play' : ' plays'), coverOf(x.pl), () => toggleLibraryPlaylistPanel(x.id)))); }
-  // top songs
-  const seen = new Set(), songs = [];
-  lib.forEach(x => x.pl.tracks.forEach((t, idx) => { if (t && t.plays > 0 && t.videoId && !seen.has(t.videoId)){ seen.add(t.videoId); songs.push({ t, id: x.id, idx }); } }));
-  songs.sort((a, b) => b.t.plays - a.t.plays);
-  if (songs.length){
-    const sec = section('Top songs'), list = mk('div', 'hm-songs');
-    songs.slice(0, 10).forEach((s, i) => {
-      const b = mk('button', 'hm-song'); b.type = 'button';
-      b.appendChild(mk('span', 'hm-rank', String(i + 1)));
-      const im = document.createElement('img'); im.alt = ''; im.loading = 'lazy'; if (s.t.videoId || s.t.art) attachArtworkFallback(im, s.t); b.appendChild(im);
-      const tx = mk('div', 'hm-t'); tx.appendChild(mk('div', 'hm-n', s.t.title)); tx.appendChild(mk('div', 'hm-s', s.t.artist || '')); b.appendChild(tx);
-      b.appendChild(mk('span', 'hm-plays', s.t.plays + (s.t.plays === 1 ? ' play' : ' plays')));
-      b.addEventListener('click', () => { playLibraryTrackInline(s.id, s.idx); setView('player'); });
-      list.appendChild(b);
-    });
-    sec.appendChild(list);
-  }
-  // top genres: the tags Last.fm gave the songs you played, counted over your recent plays (read from this device)
-  try {
-    const hist = listenSeedHistory().filter(h => h && h.t && h.a).slice(0, 300), tagCache = lsGet(LS_TAG_CACHE, {}) || {}, tagN = new Map();
-    hist.forEach(h => ((tagCache[tagCacheKey({ title: h.t, artist: h.a })] || []).slice(0, 3)).forEach(t => { t = String(t).toLowerCase().trim(); if (t && !PASTE_HINT_SKIP_TAGS.test(t)) tagN.set(t, (tagN.get(t) || 0) + 1); }));
-    const tags = Array.from(tagN.entries()).filter(e => e[1] >= 2).sort((a, b) => b[1] - a[1]).slice(0, 8);
-    if (tags.length){
-      const sec = section('Top genres'), g = mk('div', 'hm-genres');
-      tags.forEach(([tag, n]) => {
-        const b = mk('button', 'hm-genre', tag); b.type = 'button'; b.appendChild(mk('small', '', n + (n === 1 ? ' play' : ' plays')));
-        stGenreArt(tag).then(u => { if (u && b.isConnected){ const im = document.createElement('img'); im.alt = ''; im.src = u; im.onerror = () => im.remove(); b.appendChild(im); } });
-        b.addEventListener('click', () => searchTabSubmit(tag));
-        g.appendChild(b);
+  const topCards = (title, kind) => {
+    const list = top(kind, 10);
+    if (list.length) row(section(title), list.map(x => card(x.pl.name, playsText(plays(x.pl)), coverOf(x.pl), () => toggleLibraryPlaylistPanel(x.id))));
+  };
+  const parts = {
+    // playlists and albums you played last, newest first (one tap plays)
+    recent(){
+      const recent = lib.filter(x => getLastPlayed(x.id) && x.pl.tracks.length && !isArtistEntry(x.pl) && !isPodcastPlaylistId(x.id)).sort((a, b) => getLastPlayed(b.id) - getLastPlayed(a.id)).slice(0, 10);
+      if (recent.length) row(section('Recently played'), recent.map(x => card(x.pl.name, formatLastPlayed(getLastPlayed(x.id)), coverOf(x.pl), () => playPlaylistNow(x.id))));
+    },
+    // the artists you play, plus one CuRRentSSsss surfaced that you have not played yet
+    artists(){
+      if (artists.length) row(section('Top artists'), tiles.map(t => card(t.name, t.sub === 'You play this' ? '' : t.sub, t.art ? { art: t.art } : null, () => openArtistPage(t.name), true)));
+      else if (tiles.length) row(section('Picked for you'), tiles.map(t => card(t.name, t.sub, t.art ? { art: t.art } : null, () => openArtistPage(t.name), true)));
+    },
+    albums(){ topCards('Top albums', 'album'); },
+    playlists(){ topCards('Top playlists', 'playlist'); },
+    songs(){
+      const seen = new Set(), songs = [];
+      lib.forEach(x => x.pl.tracks.forEach((t, idx) => { if (t && t.plays > 0 && t.videoId && !seen.has(t.videoId)){ seen.add(t.videoId); songs.push({ t, id: x.id, idx }); } }));
+      songs.sort((a, b) => b.t.plays - a.t.plays);
+      if (!songs.length) return;
+      const sec = section('Top songs'), list = mk('div', 'hm-songs');
+      songs.slice(0, 10).forEach((s, i) => {
+        const b = mk('button', 'hm-song'); b.type = 'button';
+        b.appendChild(mk('span', 'hm-rank', String(i + 1)));
+        const im = document.createElement('img'); im.alt = ''; im.loading = 'lazy'; if (s.t.videoId || s.t.art) attachArtworkFallback(im, s.t); b.appendChild(im);
+        const tx = mk('div', 'hm-t'); tx.appendChild(mk('div', 'hm-n', s.t.title)); tx.appendChild(mk('div', 'hm-s', s.t.artist || '')); b.appendChild(tx);
+        b.appendChild(mk('span', 'hm-plays', playsText(s.t.plays)));
+        b.addEventListener('click', () => { playLibraryTrackInline(s.id, s.idx); setView('player'); });
+        list.appendChild(b);
       });
-      sec.appendChild(g);
-    }
-  } catch(e){}
-  // music map, started from your top artist
-  const nowT = currentTrack(), nowArtist = nowT && nowT.artist && splitArtistNames(nowT.artist)[0];   // #763: the playing artist first
-  const mapFrom = nowArtist || (artists[0] && artists[0].name);
-  {
-    const sec = section('Music map'), b = mk('button', 'hm-map'); b.type = 'button';
-    b.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="12" r="3"/><circle cx="4.5" cy="6" r="2"/><circle cx="19.5" cy="6" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="18" r="2"/><path d="M10 10.5L6 7.5M14 10.5l4-3M10.2 13.8L6.4 17.6M14 13.5l3.6 3.2"/></svg>';
-    const tx = mk('div'); tx.appendChild(mk('b', '', 'Explore your music map')); tx.appendChild(mk('span', '', mapFrom ? 'Start from ' + mapFrom + ' and follow who sounds like who.' : 'Pick an artist and follow who sounds like who.')); b.appendChild(tx);
-    b.addEventListener('click', () => openMusicMap(mapFrom || ''));
-    sec.appendChild(b);
-  }
-  if (body.children.length < 2) body.appendChild(mk('p', 'hm-empty', 'Play a few songs and your top artists, albums, playlists and songs will show up here.'));
+      sec.appendChild(list);
+    },
+    // the tags Last.fm gave the songs you played, counted over your recent plays (read from this device)
+    genres(){
+      try {
+        const hist = listenSeedHistory().filter(h => h && h.t && h.a).slice(0, 300), tagCache = lsGet(LS_TAG_CACHE, {}) || {}, tagN = new Map();
+        hist.forEach(h => ((tagCache[tagCacheKey({ title: h.t, artist: h.a })] || []).slice(0, 3)).forEach(t => { t = String(t).toLowerCase().trim(); if (t && !PASTE_HINT_SKIP_TAGS.test(t)) tagN.set(t, (tagN.get(t) || 0) + 1); }));
+        const tags = Array.from(tagN.entries()).filter(e => e[1] >= 2).sort((a, b) => b[1] - a[1]).slice(0, 8);
+        if (!tags.length) return;
+        const sec = section('Top genres'), g = mk('div', 'hm-genres');
+        tags.forEach(([tag, n]) => {
+          const b = mk('button', 'hm-genre', tag); b.type = 'button'; b.appendChild(mk('small', '', playsText(n)));
+          stGenreArt(tag).then(u => { if (u && b.isConnected){ const im = document.createElement('img'); im.alt = ''; im.src = u; im.onerror = () => im.remove(); b.appendChild(im); } });
+          b.addEventListener('click', () => searchTabSubmit(tag));
+          g.appendChild(b);
+        });
+        sec.appendChild(g);
+      } catch(e){}
+    },
+    // CuRRentSSsss (new songs every day) and SwiiiRrrLL (your library, blended), once they have songs
+    madeFor(){
+      const mine = [[SWELL_ID, 'New songs for you'], [BLEND_ID, 'Your songs, blended']].map(([id, sub]) => ({ id, sub, pl: getCachedPlaylist(id) })).filter(x => x.pl && Array.isArray(x.pl.tracks) && x.pl.tracks.length);
+      if (mine.length) row(section('Made for you'), mine.map(x => card(x.pl.name, x.sub, coverOf(x.pl), () => playPlaylistNow(x.id))));
+    },
+    vibe(){ renderHomeVibe(cur, mk); },
+    // #761: every way to get songs in lives here (Add songs block; its own page is one tap away)
+    add(){ renderAddSongsBlock(cur, mk, returning); },
+    // music map, started from the playing artist, or your top artist
+    map(){
+      const nowT = currentTrack(), nowArtist = nowT && nowT.artist && splitArtistNames(nowT.artist)[0];   // #763: the playing artist first
+      const mapFrom = nowArtist || (artists[0] && artists[0].name);
+      const sec = section('Music map'), b = mk('button', 'hm-map'); b.type = 'button';
+      b.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="12" r="3"/><circle cx="4.5" cy="6" r="2"/><circle cx="19.5" cy="6" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="18" r="2"/><path d="M10 10.5L6 7.5M14 10.5l4-3M10.2 13.8L6.4 17.6M14 13.5l3.6 3.2"/></svg>';
+      const tx = mk('div'); tx.appendChild(mk('b', '', 'Explore your music map')); tx.appendChild(mk('span', '', mapFrom ? 'Start from ' + mapFrom + ' and follow who sounds like who.' : 'Pick an artist and follow who sounds like who.')); b.appendChild(tx);
+      b.addEventListener('click', () => openMusicMap(mapFrom || ''));
+      sec.appendChild(b);
+    },
+  };
+  homeSectionOrder(returning).forEach(k => { cur = document.createDocumentFragment(); parts[k](); if (cur.childNodes.length) body.appendChild(cur); });
   applyUiLang($('view-home'));
 }
-/* home-vibe: the vibe box leads Home, so building a playlist from a feeling
+/* home-vibe: the vibe box on Home, so building a playlist from a feeling
    isn't something you only find by typing a sentence into Search. Anything
    typed here is a vibe (no song-search guessing). The chips: the vibe you
    usually play around now, one for the time of day, then five of the house
@@ -22467,6 +22432,7 @@ function homeVibePicks(){
     const mood = PASTE_HINT_MOOD[block];
     if (mood) picks.push({ q: (PASTE_HINT_WHEN[block] || 'tonight').replace(/^./, c => c.toUpperCase()) + ', ' + mood });
   } catch(e){}
+  try { const pp = PERIOD_PROMPTS[rosicrucianPeriod().letter]; if (pp) picks.push({ q: pp.replace(/^./, c => c.toUpperCase()) }); } catch(e){}   // today's period mood (was on the Search page)
   // house vibes: ones in a language you listen to lead; ones in a language you don't stay off screen
   const langs = musicLangs();
   const day = Math.floor((Date.now() - new Date().getTimezoneOffset() * 60000) / 86400000);
@@ -22474,7 +22440,7 @@ function homeVibePicks(){
   const general = houseVibeShow.filter(h => !h.langs.length);
   const take = (arr, k, off) => { for (let i = 0; i < Math.min(k, arr.length); i++) picks.push({ q: arr[(day * 7 + off + i * 11) % arr.length].q }); };
   take(local, 3, 0);
-  take(general, 5 - Math.min(3, local.length), 3);
+  take(general, 4 - Math.min(3, local.length), 3);
   return picks;
 }
 function renderHomeVibe(body, mk){
@@ -22545,7 +22511,7 @@ var UI_LANGS = {
   es: 'Español', fr: 'Français', de: 'Deutsch', it: 'Italiano', pt: 'Português', nl: 'Nederlands', pl: 'Polski',
   uk: 'Українська', tr: 'Türkçe', el: 'Ελληνικά', sv: 'Svenska', ro: 'Română',
 };
-var UI_LANG_ROOTS = ['#bottom-nav', '#topnav', '#view-home', '#view-search', '#trackMeta', '#libFilter', '#libTop', '#import-overlay', '#settingsHub', '#setTitle', '#settingsBackBtn'];
+var UI_LANG_ROOTS = ['#bottom-nav', '#topnav', '#view-home', '#trackMeta', '#libFilter', '#libTop', '#import-overlay', '#settingsHub', '#setTitle', '#settingsBackBtn'];
 var UI_ATTRS = ['placeholder', 'aria-label', 'title'];
 var uiStrings = null;                       // English text -> translation, null while English
 var uiAttrSet = new WeakMap();              // element -> { attr: { en, set } }
@@ -22621,7 +22587,6 @@ function refreshUiLang(){
   if ($('trackMeta') && $('trackMeta').classList.contains('is-empty')) setMarqueeText(trackTitle, uiT('Nothing playing yet'));
   renderUiLangRow();
   if (state.currentView === 'home') renderHome();
-  if (state.currentView === 'search') renderSearchTab();
 }
 function setUiLang(code){
   code = code === 'en' || UI_LANGS[code] ? code : 'en';
@@ -22679,64 +22644,24 @@ function openHomeVibe(){
   const i = $('hmVibeInput');
   if (i) i.focus();
 }
-function renderSearchTab(){
-  const grid = $('stGrid'), picks = $('stPicks'), chips = $('stChips');
-  searchTabInput.placeholder = 'Search, paste a link, or say a vibe';
-  searchTabErr.textContent = '';
-  let tiles = [];
-  try{ tiles = searchTabArtistTiles(); } catch(e){}
-  picks.hidden = !tiles.length;
-  grid.innerHTML = tiles.map((t, i) =>
-    '<button type="button" class="st-tile" data-i="' + i + '">' +
-      (t.art ? '<img class="st-art" src="' + escapeHtml(t.art) + '" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">'
-             : '<span class="st-ph" aria-hidden="true">' + escapeHtml(t.name.charAt(0).toUpperCase()) + '</span>') +
-      '<span class="st-t"><span class="st-n">' + escapeHtml(t.name) + '</span><span class="st-s">' + escapeHtml(t.sub) + '</span></span>' +
-    '</button>').join('');
-  grid.querySelectorAll('.st-tile').forEach(b => b.addEventListener('click', () => openArtistPage(tiles[+b.dataset.i].name)));
-  const letter = rosicrucianPeriod().letter;
-  const mood = PERIOD_MOODS[letter];
-  const ctx = getTimeContext();
-  const when = PASTE_HINT_WHEN[ctx.block] || 'tonight';
-  const seen = new Set(), tags = [];
-  (mood ? mood.tags : []).forEach(t => { const k = t.replace(/[\s-]/g, ''); if (!seen.has(k) && tags.length < 6){ seen.add(k); tags.push(t); } });
-  const prompts = [pasteHintCap(when) + ', ' + (PASTE_HINT_MOOD[ctx.block] || 'something that fits'), PERIOD_PROMPTS[letter]].filter(Boolean);
-  let usual = null;
-  try { usual = vibeRightNow(); } catch(e){}
-  if (usual && !prompts.some(p => p.toLowerCase() === usual.q.toLowerCase())) prompts.unshift(usual.q);   // what you tend to play around now leads
-  $('stMoodTitle').textContent = 'Right now: ' + when;
-  chips.innerHTML = prompts.map((t, i) => '<button type="button" class="st-chip is-prompt" data-q="p' + i + '">' + escapeHtml(t) + '</button>').join('') +
-    tags.map((t, i) => '<button type="button" class="st-chip" data-q="t' + i + '">' + escapeHtml(t) + '</button>').join('');
-  // #722: a relevant album cover on every card (the top album for that genre word), looked up once and remembered on this device
-  chips.querySelectorAll('.st-chip').forEach((b, i) => {
-    const term = i < prompts.length ? tags[i] : tags[i - prompts.length];
-    if (!term) return;
-    stGenreArt(term).then(u => { if (u && b.isConnected && !b.querySelector('.st-chip-art')){ const im = document.createElement('img'); im.className = 'st-chip-art'; im.alt = ''; im.src = u; im.onerror = () => im.remove(); b.appendChild(im); } });
-  });
-  chips.querySelectorAll('.st-chip').forEach(b => b.addEventListener('click', () => {
-    const k = b.dataset.q;
-    searchTabSubmit(k.charAt(0) === 'p' ? prompts[+k.slice(1)] : tags[+k.slice(1)]);
-  }));
-  applyUiLang($('view-search'));
-}
 document.querySelectorAll('.st-type').forEach(b => b.addEventListener('click', () => setSearchType(b.dataset.stype)));
 setSearchType(searchType);
 $('searchTabForm').addEventListener('submit', (e) => { e.preventDefault(); searchTabSubmit(); });
-// #722 desktop: clicking the top search bar puts the search page in the middle pane (the footer player comes back, like Settings); Esc or the X goes back
-function openDesktopSearch(){
-  if (state.currentView === 'search') return;
-  if (state.deskFsOpen && typeof closeDesktopFs === 'function') closeDesktopFs();
-  state.preSearchView = state.currentView;
-  setView('search');
-  // #800: on desktop the top bar is the one search field; the page's own field is hidden
-  urlInput.focus();
+// Search and Home are one page. The field to type in: the page's own on phones, the top bar on desktop and tablet widths.
+function focusHomeSearch(){
+  const f = window.innerWidth >= 860 ? urlInput : searchTabInput;
+  try{ f.focus({ preventScroll: true }); } catch(e){}
 }
-function closeDesktopSearch(){
-  if (state.currentView !== 'search') return;
-  setView(state.preSearchView && state.preSearchView !== 'search' ? state.preSearchView : 'player');
+// #722 desktop: clicking the top search bar puts Home (search first) in the middle pane (the footer player comes back, like Settings); Esc goes back
+function openDesktopSearch(){
+  if (state.currentView !== 'home'){
+    if (state.deskFsOpen && typeof closeDesktopFs === 'function') closeDesktopFs();
+    setView('home');
+  }
+  urlInput.focus();   // #800: on desktop the top bar is the one search field; the page's own field is hidden
 }
 urlInput.addEventListener('click', () => { if (window.innerWidth >= 860) openDesktopSearch(); });   // 3-pane desktop and tablet widths
-$('stCloseBtn').addEventListener('click', closeDesktopSearch);
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && state.currentView === 'search' && window.innerWidth >= 860 && !importOverlay.classList.contains('is-open')){ e.preventDefault(); closeDesktopSearch(); } });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && state.currentView === 'home' && window.innerWidth >= 860 && !importOverlay.classList.contains('is-open')){ e.preventDefault(); setView(state.preHomeView && state.preHomeView !== 'home' ? state.preHomeView : 'player'); } });
 searchTabInput.addEventListener('input', () => { searchTabErr.textContent = ''; });
 
 /* ---------- Paste a list of songs ----------
@@ -22817,8 +22742,6 @@ async function matchPastedSongs(id){
   });
 });
 
-// The tab only exists on phones: growing past the breakpoint leaves it.
-if (phoneMq) phoneMq.addEventListener('change', () => { if (!phoneMq.matches && state.currentView === 'search') setView('library'); });
 // Paste-a-link flows that used to focus the top-bar field: open the tab on phones.
 function focusSearchField(placeholder){
   if (phoneMq && phoneMq.matches && !document.body.classList.contains('onb-active')){
@@ -25561,15 +25484,18 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
-  { version: 565, date: '2026-11-12', items: [
+  { version: 566, date: '2026-11-12', items: [
     'Genre artist lists are cleaner (artists really known for the genre), every genre has a list, and each artist has a tiny picture that loads fast.',
   ]},
-  { version: 563, date: '2026-11-12', items: [
+  { version: 565, date: '2026-11-12', items: [
     'Artists for each genre now come from our own list that ships with the app, so browsing genres no longer depends on the music store being available.',
   ]},
-  { version: 562, date: '2026-11-12', items: [
+  { version: 564, date: '2026-11-12', items: [
     'Genre labels on the genre map no longer swell when you hover them, so they stay put and are easy to click.',
     'If the music catalogue is busy, genre artists retry on their own a couple of times, and lists that loaded once are kept for two weeks.',
+  ]},
+  { version: 562, date: '2026-11-12', items: [
+    'Search and Home are now one page. Search is at the top, then your recent songs, artists and playlists, made-for-you picks, ways to add songs, and discovery.',
   ]},
   { version: 561, date: '2026-11-12', items: [
     'Credits for the maps, radio stations and genre map now live in Settings, under Credits, not on the pages.',
