@@ -202,9 +202,13 @@ test('search: finds granular genres by their other names and by words in any ord
   assert.ok(ix('psychedelic cumbia').includes('Chicha'));
 });
 
-test('genre-artists.json: only genres on the map, 3-14 plain names each, and most genres are covered', () => {
-  const A2 = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'genre-artists.json'), 'utf8'));
+test('genre-artists.json: only genres on the map, 3-14 plain names each, borrowed lists marked, pictures are Deezer ids, nearly every genre has something', () => {
+  const F = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'genre-artists.json'), 'utf8'));
+  assert.strictEqual(F.v, 2);
   const names = new Set(D.n.map(r => r[0]));
-  Object.keys(A2).forEach(k => { assert.ok(names.has(k), 'unknown genre ' + k); assert.ok(A2[k].length >= 3 && A2[k].length <= 14, k); A2[k].forEach(a => assert.ok(typeof a === 'string' && a.length > 0 && a.length < 120)); });
-  assert.ok(Object.keys(A2).length >= D.n.length * 0.85, 'coverage ' + Object.keys(A2).length);
+  ['lists', 'related'].forEach(k => Object.keys(F[k]).forEach(g => { assert.ok(names.has(g), 'unknown genre ' + g); assert.ok(F[k][g].length >= 3 && F[k][g].length <= 14, g); F[k][g].forEach(a => assert.ok(typeof a === 'string' && a.length > 0 && a.length < 120)); }));
+  Object.keys(F.related).forEach(g => assert.ok(!F.lists[g], g + ' has its own list and a borrowed one'));
+  Object.values(F.pics).forEach(h => assert.ok(/^[0-9a-f]{32}$/.test(h)));
+  const covered = D.n.filter(r => F.lists[r[0]] || F.related[r[0]]).length;
+  assert.ok(covered >= D.n.length * 0.97, 'coverage ' + covered + '/' + D.n.length);
 });

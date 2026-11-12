@@ -11624,7 +11624,7 @@ async function gmArtists(i){
     const pre = await gmPre(), pics = (pre && pre.pics) || {};
     const v2 = pre && pre.v === 2;   // (the first version of the file was a plain genre -> names object)
     const own = v2 ? pre.lists && pre.lists[t.title] : pre && pre[t.title], rel = !own && v2 && pre.related && pre.related[t.title];
-    const pic = (nm) => /^[0-9a-f]{32}$/.test(pics[nm] || '') ? 'https://cdn-images.dzcdn.net/images/artist/' + pics[nm] + '/64x64-000000-60-0-0.jpg' : '';
+    const pic = (nm) => /^[0-9a-f]{32}$/.test(pics[nm] || '') ? 'https://cdn-images.dzcdn.net/images/artist/' + pics[nm] + '/56x56-000000-80-0-0.jpg' : '';
     const mine = Array.isArray(own) ? own : Array.isArray(rel) ? rel : null;
     if (mine && mine.length >= 3) return mine.slice(0, 14).map(nm => ({ name: String(nm), image: pic(nm), rel: !own }));
   } catch(e){}
@@ -25561,8 +25561,8 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
-  { version: 564, date: '2026-11-12', items: [
-    'Artist pictures in the genre panel are tiny and light so they load fast, and a picture that fails to load shows the artist\'s initial instead.',
+  { version: 565, date: '2026-11-12', items: [
+    'Genre artist lists are cleaner (artists really known for the genre), every genre has a list, and each artist has a tiny picture that loads fast.',
   ]},
   { version: 563, date: '2026-11-12', items: [
     'Artists for each genre now come from our own list that ships with the app, so browsing genres no longer depends on the music store being available.',

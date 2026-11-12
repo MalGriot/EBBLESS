@@ -10,7 +10,7 @@
 // Output: { v:2, lists:{ genre: [artist,...up to 14] }, related:{ genre: [artist,...] }, pics:{ artist: deezerHash } }
 //   lists    artists whose own tags put this genre among their top tags
 //   related  for genres with too few of those: the artists that turn up most across the genres it grew out of or led to
-//   pics     Deezer artist-picture id; the page builds https://cdn-images.dzcdn.net/images/artist/<id>/64x64-000000-60-0-0.jpg
+//   pics     Deezer artist-picture id; the page builds https://cdn-images.dzcdn.net/images/artist/<id>/56x56-000000-80-0-0.jpg
 'use strict';
 const fs = require('node:fs');
 const path = require('node:path');
