@@ -10,7 +10,7 @@ const m = /\/\* VIBE-CHART:BEGIN[^*]*\*\/([\s\S]*?)\/\* VIBE-CHART:END \*\//.exe
 assert.ok(m, 'VIBE-CHART block not found in index.html');
 const ctx = {};
 vm.createContext(ctx);
-vm.runInContext(m[1] + '\nthis.api = { VC_MAX, VC_NODES, VC_GRID, VC_BY_ID, vcClean, vcToggle, vcFill, vcCompose, vcNeighbor, vcHeat, vcPathPoints, vcNear, VC_COMPACT };', ctx);
+vm.runInContext(m[1] + '\nthis.api = { VC_MAX, VC_NODES, VC_GRID, VC_BY_ID, vcClean, vcToggle, vcFill, vcCompose, vcNeighbor, vcHeat, vcPathPoints, vcNear, VC_COMPACT, VC_JOURNEYS, VC_HAPPY };', ctx);
 const A = ctx.api;
 const arr = (x) => [...x];
 
@@ -89,4 +89,22 @@ test('compact layout is a 5 x 5 subset made of real cells with short words', () 
   assert.strictEqual(words.length, 25);
   assert.ok(words.every(w => w.length <= 10));
   assert.deepStrictEqual(arr(C.cols), [...C.cols].sort((a, b) => a - b));
+});
+
+test('journeys use real feelings, fit the cap, and every word is on the compact map', () => {
+  const C = A.VC_COMPACT, onMap = new Set();
+  C.rows.forEach(r => C.cols.forEach(c => onMap.add(A.VC_GRID[r][c])));
+  A.VC_JOURNEYS.forEach(j => {
+    assert.strictEqual(A.vcClean(j.ids).length, j.ids.length, j.label);
+    assert.ok(j.ids.length >= 3 && j.ids.length <= A.VC_MAX);
+    j.ids.forEach(id => assert.ok(onMap.has(id), j.label + ': ' + id));
+    assert.ok(A.vcCompose(j.ids).length > 0);
+  });
+});
+
+test('happy chips are real, light-side feelings that also sit on the compact map', () => {
+  const C = A.VC_COMPACT, onMap = new Set();
+  C.rows.forEach(r => C.cols.forEach(c => onMap.add(A.VC_GRID[r][c])));
+  assert.ok(A.VC_HAPPY.length >= 5);
+  A.VC_HAPPY.forEach(id => { assert.ok(A.VC_BY_ID[id] && A.VC_BY_ID[id].c >= 4, id); assert.ok(onMap.has(id), id); });
 });

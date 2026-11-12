@@ -1399,6 +1399,12 @@ html.reduce-motion .lib-grid:not(.is-list) .lib-card .info .name{display:block;w
 .vc-node[hidden]{display:none}
 .vc-chart.is-compact .vc-max{display:none!important}
 @media (min-width:860px){.vc-chart:not(.is-compact) .vc-node{font-size:14.5px;letter-spacing:-.1px}}
+.vc-journeys{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 10px}
+.vc-jl{flex:none;width:100%;font-size:12.5px;font-weight:700;color:var(--faint)}
+.vc-jb{min-height:40px;padding:0 14px;border-radius:999px;background:var(--panel-2);border:1px solid var(--border);color:var(--text);font:inherit;font-size:13.5px;font-weight:600;cursor:pointer}
+.vc-hb[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent,#151107)}
+.vc-happy .vc-jl{color:var(--accent)}
+.vc-jb:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .vc-fullnote{margin:0 2px 8px;font-size:13px;font-weight:700;color:var(--accent)}
 .vc-fullnote[hidden]{display:none}
 .vc-morerow{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:8px 2px 0;font-size:12.5px;color:var(--faint)}
@@ -1417,9 +1423,8 @@ html.reduce-motion .lib-grid:not(.is-list) .lib-card .info .name{display:block;w
 .vc-node[aria-pressed="true"]{background:linear-gradient(180deg,color-mix(in srgb,var(--h) 90%,#fff),var(--h))}
 .vc-node[aria-pressed="true"]{border-color:#fff;box-shadow:inset 0 0 0 2px var(--accent);z-index:2}
 .vc-nl{min-width:0}
-.vc-nn{display:none;position:absolute;left:2px;top:2px;min-width:18px;height:18px;padding:0 3px;border-radius:999px;background:var(--accent);color:var(--on-accent,#151107);font-size:11px;font-weight:800;line-height:18px;text-align:center;box-sizing:border-box}
+.vc-nn{display:none;position:absolute;left:-6px;top:-6px;width:22px;height:22px;border-radius:50%;background:#fff;color:#111;border:2px solid #111;box-shadow:0 2px 6px rgba(0,0,0,.55);font-size:13px;font-weight:900;letter-spacing:0;line-height:18px;text-align:center;box-sizing:border-box;text-shadow:none;z-index:5}
 .vc-node[aria-pressed="true"] .vc-nn{display:block}
-.vc-node[aria-pressed="true"] .vc-nn::after{content:'\2713';margin-left:1px}
 .vc-max{display:none;position:absolute;left:50%;bottom:2px;transform:translateX(-50%);padding:0 6px;border-radius:999px;background:rgba(0,0,0,.55);color:#fff;font-size:10px;font-weight:700;line-height:14px;pointer-events:none;white-space:nowrap}
 .vc-node.is-max[aria-pressed="false"] .vc-max{display:block}
 .vc-panel{display:none}
@@ -10471,6 +10476,17 @@ function vcCompose(sel){
   else t = 'starting out ' + w[0] + ', moving through ' + vcJoin(w.slice(1, -1)) + ', ending up ' + w[w.length - 1];
   return t.slice(0, 300);
 }
+// ready-made journeys (an idea borrowed from how Nonviolent Communication pairs a feeling with what you need): one tap fills the picks, then edit freely.
+// Every word is on the compact map too.
+const VC_HAPPY = ['joyful', 'excited', 'ecstatic', 'proud', 'romantic', 'peaceful', 'comforted'];   // good feelings, one tap away above the map
+const VC_JOURNEYS = [
+  { label: 'Lift me up', ids: ['weary', 'peaceful', 'excited', 'joyful'] },
+  { label: 'Breathe out', ids: ['anxious', 'uneasy', 'peaceful', 'serene'] },
+  { label: 'Be comforted', ids: ['lonely', 'thoughtful', 'healing', 'comforted'] },
+  { label: 'Let it out', ids: ['furious', 'stressed', 'weary', 'peaceful'] },
+  { label: 'Get moving', ids: ['weary', 'restless', 'excited', 'joyful'] },
+  { label: 'Lock in', ids: ['uneasy', 'thoughtful', 'focused', 'proud'] },
+];
 // compact map for narrow screens: 5 columns x 5 rows picked from the 7 x 7 so the plane keeps its shape
 const VC_COMPACT = { cols: [0, 2, 3, 5, 6], rows: [0, 1, 3, 5, 6] };
 const VC_ALL = { cols: [0, 1, 2, 3, 4, 5, 6], rows: [0, 1, 2, 3, 4, 5, 6] };
@@ -10535,6 +10551,7 @@ function vcSync(pop){
     b.classList.toggle('is-far', n > 0 && !on && !near.has(id));
   });
   if (vcPathEl){ const pts = vcPathPoints(vcSel, vcLayoutNow); vcPathEl.setAttribute('points', pts); vcHaloEl.setAttribute('points', pts); }
+  document.querySelectorAll('.vc-hb').forEach(h => { h.setAttribute('aria-pressed', String(vcSel.includes(h.dataset.id))); });
   document.querySelectorAll('.vc-fullnote').forEach(e => { e.hidden = !full; });
   document.querySelectorAll('.vc-count').forEach(e => { e.textContent = n + ' / ' + VC_MAX; });
   document.querySelectorAll('.vc-list').forEach(vcPickList);
@@ -10554,6 +10571,10 @@ function vcSet(id){
   vcSel = r.sel; vcSync(r.change === 'added');
   vcSay((r.change === 'added' ? 'Added ' : 'Removed ') + label + '. ' + vcSel.length + ' of ' + VC_MAX + '.' + (vcSel.length >= VC_MAX ? ' Max reached.' : ''));
   if (vcSheetOpen && !vcSel.length) vcCloseSheet();
+}
+function vcJourney(j){
+  vcSel = vcClean(j.ids); vcSync(true);
+  vcSay(j.label + ': ' + vcSel.join(', ') + '. ' + vcSel.length + ' of ' + VC_MAX + '.');
 }
 function vcClear(){ if (!vcSel.length) return; vcSel = []; vcSync(false); vcSay('Cleared. 0 of ' + VC_MAX + '.'); if (vcSheetOpen) vcCloseSheet(); }
 function vcPlay(){
@@ -10629,6 +10650,14 @@ function vcMount(list){
   sec.appendChild(bpMk('p', 'vc-lead', 'Tap feelings in the order you want the mix to move, up to ' + VC_MAX + '. The line shows your path across the map.'));
   const lay = bpMk('div', 'vc-layout');
   const col = bpMk('div', 'vc-col');
+  const hp = bpMk('div', 'vc-journeys vc-happy'); hp.setAttribute('role', 'group'); hp.setAttribute('aria-label', 'Happy feelings');
+  hp.appendChild(bpMk('span', 'vc-jl', 'Happy feelings'));
+  VC_HAPPY.forEach(id => { const hb = bpMk('button', 'vc-jb vc-hb', id); hb.type = 'button'; hb.dataset.id = id; hb.setAttribute('aria-pressed', 'false'); hb.addEventListener('click', () => vcSet(id)); hp.appendChild(hb); });
+  col.appendChild(hp);
+  const jr = bpMk('div', 'vc-journeys'); jr.setAttribute('role', 'group'); jr.setAttribute('aria-label', 'Start from a journey');
+  jr.appendChild(bpMk('span', 'vc-jl', 'Start from a journey'));
+  VC_JOURNEYS.forEach(j => { const jb = bpMk('button', 'vc-jb', j.label); jb.type = 'button'; jb.title = j.ids.join(' \u2192 '); jb.addEventListener('click', () => vcJourney(j)); jr.appendChild(jb); });
+  col.appendChild(jr);
   const fn = bpMk('p', 'vc-fullnote', 'Max ' + VC_MAX + ' picked. Tap one to remove it, or Play this mix.'); fn.hidden = true; col.appendChild(fn);
   const box = bpMk('div', 'vc-chart'); box.tabIndex = 0; box.setAttribute('role', 'group'); box.setAttribute('aria-label', 'Map of feelings. Scroll sideways to see all of it.');
   const cv = bpMk('div', 'vc-canvas');
@@ -23938,7 +23967,7 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
-  { version: 542, date: '2026-11-12', items: [
+  { version: 543, date: '2026-11-12', items: [
     'Browse by vibe now has a heat map of 49 feelings, cool and calm to warm and intense. Tap up to 7 in the order you want the mix to move, watch the line trace your path, then Play this mix. On a small screen the map shows 25 of the feelings, with a button to see all 49. On a computer your picks are listed beside the map; on a phone they fill a heart you can open.',
   ]},
   { version: 539, date: '2026-11-12', items: [
