@@ -14,7 +14,7 @@ vm.createContext(ctx);
 vm.runInContext(m[1] + '\nthis.api = { gmLabelW, gmMinProm, gmFit, gmDeclutter, gmSearch, gmTicks, gmRing, gmGrow, gmReveal, gmPlaceNear, GM_LABEL_H, GM_SMAX };', ctx);
 const A = ctx.api;
 const D = JSON.parse(fs.readFileSync(path.join(__dirname, 'genre-map.json'), 'utf8'));
-const nodes = D.n.map(r => ({ name: r[0], fam: r[1], x: r[2], y: r[3], prom: r[4], root: !!r[5], dec: r[6], w: A.gmLabelW(r[0]), h: A.GM_LABEL_H }));
+const nodes = D.n.map(r => ({ alias: r[7] || '', name: r[0], fam: r[1], x: r[2], y: r[3], prom: r[4], root: !!r[5], dec: r[6], w: A.gmLabelW(r[0]), h: A.GM_LABEL_H }));
 const idx = (name) => nodes.findIndex(n => n.name === name);
 const has = (a, b) => D.e.some(([x, y]) => x === idx(a) && y === idx(b));
 const order = nodes.map((_, i) => i).sort((a, b) => nodes[b].prom - nodes[a].prom || a - b);
@@ -32,7 +32,7 @@ test('label sizing is the same in the layout script and the page', () => {
 });
 
 test('data: 150-250 genres, unique names, valid families, decades and arrows, every genre-page style is on the chart', () => {
-  assert.ok(D.n.length >= 150 && D.n.length <= 250, 'count ' + D.n.length);
+  assert.ok(D.n.length >= 150 && D.n.length <= 700, 'count ' + D.n.length);
   const names = D.n.map(r => r[0]);
   assert.strictEqual(new Set(names).size, names.length);
   D.n.forEach(r => { assert.ok(D.fam[r[1]], r[0]); assert.ok(r[4] >= 1 && r[4] <= 10); assert.ok(isFinite(r[2]) && isFinite(r[3])); assert.ok(r[5] || r[6] >= 1000, 'decade of ' + r[0]); });
@@ -127,7 +127,7 @@ test('fit centers the chart and keeps it inside the stage', () => {
 });
 
 test('decade axis: ticks never crowd, prefer round decades when thin, show every decade when zoomed in, always keep some', () => {
-  const fit = 0.12;
+  const fit = 0.04;
   for (let s = 0.06; s <= 2.6; s *= 1.15) {
     const t = Array.from(A.gmTicks(D.cols, s, 52));
     assert.ok(t.length >= 1);
@@ -140,7 +140,7 @@ test('decade axis: ticks never crowd, prefer round decades when thin, show every
 
 // web view: the map grows from the family ring as genres are tapped
 const webNodes = () => {
-  const ns = D.n.map(r => ({ name: r[0], fam: r[1], x: 0, y: 0, prom: r[4], root: !!r[5], w: A.gmLabelW(r[0]), h: A.GM_LABEL_H, from: [], to: [], placed: false }));
+  const ns = D.n.map(r => ({ alias: r[7] || '', name: r[0], fam: r[1], x: 0, y: 0, prom: r[4], root: !!r[5], w: A.gmLabelW(r[0]), h: A.GM_LABEL_H, from: [], to: [], placed: false }));
   D.e.forEach(([a, b]) => { ns[a].to.push(b); ns[b].from.push(a); });
   A.gmRing(ns, 1000, 560);
   return ns;
@@ -190,4 +190,14 @@ test('web: at the opening fit on a desktop stage every family name is shown', ()
   const x0 = Math.min(...roots.map(i => ns[i].x - ns[i].w / 2)), x1 = Math.max(...roots.map(i => ns[i].x + ns[i].w / 2)), y0 = Math.min(...roots.map(i => ns[i].y - 15)), y1 = Math.max(...roots.map(i => ns[i].y + 15));
   const f = A.gmFit(x1 - x0, y1 - y0, W, H, 48), v = { s: f.s, tx: f.tx - x0 * f.s, ty: f.ty - y0 * f.s };
   assert.strictEqual(A.gmDeclutter(ns, roots, v, W, H, { floor: 0 }).length, roots.length);
+});
+
+test('search: finds granular genres by their other names and by words in any order', () => {
+  const ix = (q) => A.gmSearch(nodes, q, 6).map(i => nodes[i].name);
+  assert.strictEqual(ix('ethiopian jazz')[0], 'Ethio-jazz');
+  assert.ok(ix('mulatu').includes('Ethio-jazz'));
+  assert.ok(ix('jazz ethiopian').includes('Ethio-jazz'));
+  assert.ok(ix('tropicalia').includes('Tropicália'));
+  assert.ok(ix('south african jazz').includes('Cape jazz'));
+  assert.ok(ix('psychedelic cumbia').includes('Chicha'));
 });

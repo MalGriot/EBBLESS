@@ -10,7 +10,7 @@
 // Output (kept small, it ships inside index.html):
 //   { v:2, w, h, fam:[[id,label,hue,sat,fmKey|null],...],
 //     cols:[[label,xCenter],...], lanes:[[famIndex,y0,y1],...],
-//     n:[[name,famIndex,x,y,prominence,isRoot,decade],...], e:[[fromIndex,toIndex],...] }
+//     n:[[name,famIndex,x,y,prominence,isRoot,decade,aliases],...], e:[[fromIndex,toIndex],...] }
 'use strict';
 const fs = require('node:fs');
 const path = require('node:path');
@@ -22,7 +22,7 @@ const labelW = (name) => Math.round(String(name).length * 7.8 + 42);
 // world units are px at zoom 1: boxes built from these never overlap at zoom >= 1,
 // and the browser thins labels below that, so no two labels ever overlap at any zoom
 const Z_REF = 1;
-const GAP_X = 44, ROW = 36, SUB_ROWS = 5, LANE_PAD = 14, LANE_GAP = 10, MARGIN = 24;
+const GAP_X = 44, ROW = 36, SUB_ROWS = 8, LANE_PAD = 14, LANE_GAP = 10, MARGIN = 24;
 
 // decade -> column. 0 is the family column; then Before 1900, 1900s, 1910s ... 2010s
 function colOf(dec){ return dec < 1900 ? 1 : 2 + (Math.min(dec, 2010) - 1900) / 10; }
@@ -33,11 +33,11 @@ function parse(){
   FAMILIES.forEach((f, fi) => {
     const lines = (SRC[f.id] || '').split('\n').map(s => s.trim()).filter(Boolean);
     lines.forEach((ln, li) => {
-      const [name, p, dec, from] = ln.split('|').map(s => s.trim());
+      const [name, p, dec, from, alias] = ln.split('|').map(s => s.trim());
       if (byName.has(name)) throw new Error('duplicate genre: ' + name);
       const root = li === 0;
       if (!root && !/^\d{4}$/.test(dec || '')) throw new Error('bad decade for ' + name);
-      const n = { name, fam: fi, prom: +p, root, dec: root ? 0 : +dec, from: from ? from.split(',').map(s => s.trim()) : [] };
+      const n = { name, fam: fi, prom: +p, root, dec: root ? 0 : +dec, from: from ? from.split(',').map(s => s.trim()) : [], alias: (alias || '').toLowerCase() };
       if (n.prom < 1 || n.prom > 10 || !isFinite(n.prom)) throw new Error('bad prominence: ' + name);
       if (!root && n.dec >= 1900 && n.dec % 10 !== 0) throw new Error('decade must be a multiple of 10: ' + name);
       n.col = root ? 0 : colOf(n.dec);
@@ -112,7 +112,7 @@ function layout(){
     fam: FAMILIES.map(f => [f.id, f.fm || ({ blues: 'Blues', metal: 'Metal', world: 'World' })[f.id] || f.id, f.hue, f.sat, f.fm]),
     cols,
     lanes: lanes.map(l => [l[0], Math.round(l[1]), Math.round(l[2])]),
-    n: nodes.map(n => [n.name, n.fam, n.x, Math.round(n.y * 10) / 10, n.prom, n.root ? 1 : 0, n.dec]),
+    n: nodes.map(n => [n.name, n.fam, n.x, Math.round(n.y * 10) / 10, n.prom, n.root ? 1 : 0, n.dec, n.alias]),
     e: edges
   };
 }
