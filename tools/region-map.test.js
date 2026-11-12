@@ -57,3 +57,12 @@ test('geojson has one point per station', () => {
   assert.strictEqual(g.features.length, 2);
   assert.deepStrictEqual([...g.features[0].geometry.coordinates], [2, 1]);
 });
+test('search rows may lack a map pin, and the store country code is kept', () => {
+  const r = row({ geo_lat: null, geo_long: null, countrycode: 'in' });
+  assert.strictEqual(A.rmNormalize(r), null);
+  const s = A.rmNormalize(r, true);
+  assert.strictEqual(s.lat, null);
+  assert.strictEqual(s.cc, 'IN');
+  assert.strictEqual(A.rmNormalize(row({ countrycode: 'IND' })).cc, '');
+  assert.strictEqual(A.rmSongsTerm(A.rmNormalize(row({ tags: '', state: '', country: '' }), true)), 'Radio Test');
+});

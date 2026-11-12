@@ -1409,6 +1409,16 @@ html.reduce-motion .lib-grid:not(.is-list) .lib-card .info .name{display:block;w
 .rm-act .rm-go{background:var(--accent);border-color:var(--accent);color:var(--on-accent,#151107)}
 .rm-act :focus-visible,.rm-x:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .rm-note{margin:10px 0 0;font-size:12.5px;line-height:1.4;color:var(--faint)}
+.rm-find{margin:0 0 12px}
+.rm-q{width:100%;box-sizing:border-box;height:46px;padding:0 16px;border-radius:999px;border:1px solid var(--border-2);background:var(--panel);color:var(--text);font:inherit;font-size:16px}
+.rm-q:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.rm-found-msg{margin:8px 4px 0;font-size:13px;color:var(--faint)}
+.rm-found-msg:empty{display:none}
+.rm-found{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:6px;max-height:min(46vh,360px);overflow:auto}
+.rm-found:empty{display:none}
+.rm-found li button{display:block;width:100%;text-align:left;padding:10px 14px;border-radius:14px;border:1px solid var(--border);background:var(--panel);color:var(--text);font:inherit;font-size:14.5px;cursor:pointer}
+.rm-found li button small{display:block;color:var(--faint);font-size:12.5px;margin-top:2px}
+.rm-found li button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .rm-here{margin:0 0 22px}
 .rm-here h2{font-size:18px;font-weight:700;margin:0 0 10px;color:var(--text)}
 .rm-here ul{list-style:none;margin:0;padding:0;display:grid;gap:6px}
@@ -10021,6 +10031,8 @@ const FM_REGIONS = {
   'India': 'Indian music Bollywood indie', 'Korea': 'K-pop K-R&B', 'Japan': 'Japanese city pop',
   'UK': 'UK grime garage soul', 'France': 'French chanson rap', 'Middle East': 'Middle Eastern pop Arabic'
 };
+// iTunes store to search for each region card: songs sold in that country's store, so a word in a title ("Indian", "music") can't pull in unrelated artists
+const FM_REGION_CC = { 'West Africa': 'NG', 'South Africa': 'ZA', 'East Africa': 'KE', 'Caribbean': 'JM', 'Latin America': 'MX', 'Brazil': 'BR', 'India': 'IN', 'Korea': 'KR', 'Japan': 'JP', 'UK': 'GB', 'France': 'FR', 'Middle East': 'AE' };
 const FM_VIBES = {
   'Chill': 'chill relaxing', 'Late night': 'late night slow jams', 'Focus': 'focus instrumental', 'Workout': 'workout high energy',
   'Party': 'party dance', 'Heartbreak': 'heartbreak sad ballads', 'Feel good': 'feel good happy', 'Sunday morning': 'sunday morning soul',
@@ -10126,11 +10138,11 @@ function fmRender(){
   }
   sc.textContent = '';
 }
-async function fmShowArtists(term, title, genre, bpmRange){
-  const token = fmArtists = { args: [term, title, genre, bpmRange], title: bpmRange ? title + ' \u00b7 ' + bpmRange[0] + (bpmRange[1] > 150 ? '+' : '-' + bpmRange[1]) + ' bpm' : title, loading: true, list: [], note: bpmRange ? 'Matching tempo' : '' };
+async function fmShowArtists(term, title, genre, bpmRange, cc){
+  const token = fmArtists = { args: [term, title, genre, bpmRange, cc], title: bpmRange ? title + ' \u00b7 ' + bpmRange[0] + (bpmRange[1] > 150 ? '+' : '-' + bpmRange[1]) + ' bpm' : title, loading: true, list: [], note: bpmRange ? 'Matching tempo' : '' };
   fmRender();
   try{
-    const r = await fetch('https://itunes.apple.com/search?' + new URLSearchParams({ term, entity: 'song', limit: '120' }));
+    const r = await fetch('https://itunes.apple.com/search?' + new URLSearchParams(Object.assign({ term, entity: 'song', limit: '120' }, /^[A-Z]{2}$/.test(cc || '') ? { country: cc } : {})));
     if (!r.ok) throw new Error('search failed');
     const d = await r.json();
     const seen = new Set(), list = [];
@@ -10179,11 +10191,11 @@ async function fmShowArtists(term, title, genre, bpmRange){
 }
 // Find music is now only the results window (artists for a pick) and the sign-in picker; browsing lives on the Browse pages
 function openFindMusic(){ openBrowsePage('genre'); }
-function fmOpenResults(term, title, genre, bpmRange){
+function fmOpenResults(term, title, genre, bpmRange, cc){
   if (!fmEl) fmBuild();
   fmEl.hidden = false;
   statsFeature('find_music');
-  fmShowArtists(term, title, genre, bpmRange);
+  fmShowArtists(term, title, genre, bpmRange, cc);
 }
 function closeFindMusic(){
   if (fmEl) fmEl.hidden = true;
@@ -10250,9 +10262,9 @@ function bpCard(label, artTerm, onClick, cls){
   if (artTerm) stGenreArt(artTerm).then(u => { if (u && b.isConnected && !b.querySelector('.bp-art')){ const im = document.createElement('img'); im.className = 'bp-art'; im.alt = ''; im.src = u; im.onerror = () => im.remove(); b.appendChild(im); } }).catch(() => {});
   return b;
 }
-function bpPick(term, title, genre, range, from){
+function bpPick(term, title, genre, range, from, cc){
   bpLastEl = from || bpLastEl;
-  fmOpenResults(term, title, genre, range);
+  fmOpenResults(term, title, genre, range, cc);
 }
 function bpEmpty(list, what){
   const d = bpMk('div', 'bp-empty'); d.setAttribute('role', 'status');
@@ -10324,7 +10336,7 @@ function bpRender(){
     const keys = bpFilterKeys(Object.keys(FM_REGIONS), bpFilter);
     if (!keys.length){ bpEmpty(list, 'regions'); return; }
     const grid = bpMk('div', 'bp-grid'); grid.setAttribute('role', 'group'); grid.setAttribute('aria-label', 'Regions');
-    keys.forEach(k => grid.appendChild(bpCard(k, FM_REGIONS[k], (b) => bpPick(FM_REGIONS[k], k, null, null, b))));
+    keys.forEach(k => grid.appendChild(bpCard(k, FM_REGIONS[k], (b) => bpPick(FM_REGIONS[k], k, null, null, b, FM_REGION_CC[k]))));
     list.appendChild(grid);
     return;
   }
@@ -10448,10 +10460,13 @@ function rmTileCircle(z, x, y){
 }
 function rmCountry(c){ return String(c || '').replace(/^the\s+/i, '').replace(/united states of america/i, 'United States').replace(/united kingdom of great britain and northern ireland/i, 'United Kingdom').trim(); }
 // one directory row -> a station we can show and play, or null when it is not usable
-function rmNormalize(r){
+function rmNormalize(r, loose){
   if (!r || typeof r !== 'object') return null;
-  const lat = Number(r.geo_lat), lng = Number(r.geo_long);
-  if (!isFinite(lat) || !isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180 || (lat === 0 && lng === 0)) return null;
+  let lat = Number(r.geo_lat), lng = Number(r.geo_long);
+  if (!isFinite(lat) || !isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180 || (lat === 0 && lng === 0)){
+    if (!loose) return null;   // search results may have no map pin; the map itself never does
+    lat = null; lng = null;
+  }
   if (Number(r.lastcheckok) !== 1 || Number(r.ssl_error) === 1 || Number(r.hls) === 1) return null;
   const url = rmHttps(r.url_resolved || r.url);
   const name = String(r.name || '').replace(/\s+/g, ' ').trim().slice(0, 80);
@@ -10459,13 +10474,13 @@ function rmNormalize(r){
   if (!url || !name || !/^[\w-]+$/.test(id)) return null;
   const seen = {}, tags = [];
   String(r.tags || '').split(',').forEach(t => { t = t.trim().toLowerCase().slice(0, 24); if (t.length > 1 && !seen[t] && tags.length < 6){ seen[t] = 1; tags.push(t); } });
-  return { id, name, url, lat, lng, state: String(r.state || '').trim().slice(0, 60), country: rmCountry(r.country).slice(0, 60),
+  return { id, name, url, lat, lng, cc: /^[A-Za-z]{2}$/.test(String(r.countrycode || '')) ? String(r.countrycode).toUpperCase() : '', state: String(r.state || '').trim().slice(0, 60), country: rmCountry(r.country).slice(0, 60),
     tags, bitrate: Math.max(0, Math.min(2000, Math.round(Number(r.bitrate) || 0))), votes: Math.max(0, Number(r.votes) || 0), home: rmHttps(r.homepage) };
 }
 // a search term for EBBLESS songs from the station's place and genre (same search the region cards use)
 function rmSongsTerm(st){
   const g = st.tags.filter(t => RM_GENERIC_TAGS.indexOf(t) < 0).slice(0, 2);
-  return g.concat([st.state, st.country]).filter(Boolean).join(' ').slice(0, 100);
+  return g.concat([st.state, st.country]).filter(Boolean).join(' ').slice(0, 100) || st.name;
 }
 function rmGeo(list){
   const f = [];
@@ -10483,7 +10498,7 @@ const RM_STYLE = 'https://tiles.openfreemap.org/styles/dark';
 const RM_FALLBACK_HOSTS = ['de1', 'de2', 'fi1'].map(h => 'https://' + h + '.api.radio-browser.info');
 const RM_LIMIT = 120, RM_MAX_STATIONS = 8000, RM_PARALLEL = 2;
 let rmMap = null, rmWrap = null, rmLoadP = null, rmGen = 0, rmView = null, rmSel = null, rmServersP = null, rmServerAt = 0;
-let rmMoveT = 0, rmPushT = 0, rmQueue = [], rmBusy = 0, rmFail = false, rmVisBound = false;
+let rmQT = 0, rmQSeq = 0, rmMoveT = 0, rmPushT = 0, rmQueue = [], rmBusy = 0, rmFail = false, rmVisBound = false;
 const rmSt = new Map(), rmDone = new Set(), rmFlight = new Set();
 
 function rmLoadLib(){
@@ -10596,6 +10611,27 @@ function rmListRender(){
   });
   rmSettle();
 }
+function rmSearchRun(q){
+  const box = rmWrap && rmWrap.querySelector('.rm-find');
+  if (!box) return;
+  const ul = box.querySelector('ul'), msg = box.querySelector('.rm-found-msg'), seq = ++rmQSeq;
+  q = String(q || '').replace(/\s+/g, ' ').trim().slice(0, 60);
+  ul.textContent = '';
+  if (q.length < 2){ msg.textContent = ''; return; }
+  msg.textContent = 'Searching\u2026';
+  rmGet('/json/stations/search?name=' + encodeURIComponent(q) + '&hidebroken=true&is_https=true&order=votes&reverse=true&limit=30').then(rows => {
+    if (seq !== rmQSeq || !rmWrap) return;
+    const seen = new Set(), list = [];
+    (Array.isArray(rows) ? rows : []).forEach(r => { const s = rmNormalize(r, true); if (s && !seen.has(s.id)){ seen.add(s.id); list.push(s); } });
+    msg.textContent = list.length ? '' : 'No station found for that name.';
+    list.forEach(s => {
+      const li = document.createElement('li'), b = bpMk('button', '', s.name); b.type = 'button';
+      b.appendChild(bpMk('small', '', [s.state, s.country].filter(Boolean).join(', ') + (s.tags.length ? ' \u00b7 ' + s.tags.slice(0, 3).join(', ') : '')));
+      b.addEventListener('click', () => { if (s.lat != null && !rmSt.has(s.id)){ rmSt.set(s.id, s); rmPushSoon(); } rmSelect(s, b); });
+      li.appendChild(b); ul.appendChild(li);
+    });
+  }).catch(() => { if (seq === rmQSeq && rmWrap) msg.textContent = 'Could not reach the radio directory. Try again.'; });
+}
 function rmSheetOpen(){ return !!rmWrap && !rmWrap.querySelector('.rm-sheet').hidden; }
 function rmCloseSheet(){
   if (!rmWrap) return;
@@ -10614,7 +10650,7 @@ function rmSelect(st, from){
   const x = bpMk('button', 'rm-x', '×'); x.type = 'button'; x.setAttribute('aria-label', 'Close station'); x.addEventListener('click', rmCloseSheet); sh.appendChild(x);
   const act = bpMk('div', 'rm-act');
   const go = bpMk('button', 'rm-go', 'Play songs from here'); go.type = 'button';
-  go.addEventListener('click', () => { bpLastEl = go; fmOpenResults(rmSongsTerm(st), st.state || st.country || st.name); });
+  go.addEventListener('click', () => { bpLastEl = go; fmOpenResults(rmSongsTerm(st), st.state || st.country || st.name, null, null, st.cc); });
   act.appendChild(go);
   const lv = bpMk('button', 'rm-live', 'Listen live'); lv.type = 'button';
   lv.addEventListener('click', () => { if (liveSt && liveSt.id === st.id && liveIsPlaying()) liveStop(); else liveStart(st); });
@@ -10626,7 +10662,7 @@ function rmSelect(st, from){
   sh.hidden = false;
   rmSheetSync();
   statsFeature('region_map_station');
-  if (rmMap){ try { rmMap.easeTo({ center: [st.lng, st.lat], zoom: Math.max(rmMap.getZoom(), 9), padding: { bottom: 200 }, duration: 400 }); } catch(e){} }
+  if (rmMap && st.lat != null){ try { rmMap.easeTo({ center: [st.lng, st.lat], zoom: Math.max(rmMap.getZoom(), 9), padding: { bottom: 200 }, duration: 400 }); } catch(e){} }
   h.focus({ preventScroll: true });
 }
 // the Listen live button and its note follow the live player's state
@@ -10646,7 +10682,7 @@ function rmTeardownMap(){
   if (rmMap){ try { rmMap.remove(); } catch(e){} rmMap = null; }
 }
 function rmDestroy(){
-  rmGen++;
+  rmGen++; rmQSeq++; clearTimeout(rmQT);
   rmTeardownMap();
   rmWrap = null; rmSel = null;
 }
@@ -10661,7 +10697,8 @@ function rmOff(msg){
 function rmMount(top){
   const wrap = rmWrap = bpMk('section', '');
   wrap.setAttribute('aria-label', 'World map of radio stations');
-  wrap.innerHTML = '<div class="rm-wrap"><div class="rm-map" tabindex="0" aria-label="Map. Arrow keys move, plus and minus zoom. The list below the map has the same stations."></div>' +
+  wrap.innerHTML = '<form class="rm-find" role="search" aria-label="Search radio stations"><input type="search" name="q" class="rm-q" placeholder="Search any radio station" aria-label="Search any radio station" maxlength="60" autocomplete="off" enterkeyhint="search" spellcheck="false"><div class="rm-found-msg" role="status" aria-live="polite"></div><ul class="rm-found"></ul></form>' +
+    '<div class="rm-wrap"><div class="rm-map" tabindex="0" aria-label="Map. Arrow keys move, plus and minus zoom. The list below the map has the same stations."></div>' +
     '<div class="rm-ctl" role="group" aria-label="Map zoom"><button type="button" data-rm="in" aria-label="Zoom in">+</button><button type="button" data-rm="out" aria-label="Zoom out">−</button><button type="button" data-rm="reset" aria-label="Show whole world">◎</button></div>' +
     '<div class="rm-status" role="status" aria-live="polite" hidden></div><div class="rm-sheet" role="group" aria-label="Station" hidden></div></div>' +
     '<div class="rm-here" hidden><h2>Stations in view</h2><ul></ul></div>';
@@ -10672,6 +10709,9 @@ function rmMount(top){
     else if (b.dataset.rm === 'out') rmMap.zoomOut({ duration: 250 });
     else rmMap.easeTo({ center: [10, 25], zoom: rmWorldZoom(), duration: 400 });
   });
+  const fq = wrap.querySelector('.rm-q');
+  fq.addEventListener('input', () => { clearTimeout(rmQT); rmQT = setTimeout(() => rmSearchRun(fq.value), 350); });
+  wrap.querySelector('.rm-find').addEventListener('submit', (e) => { e.preventDefault(); clearTimeout(rmQT); rmSearchRun(fq.value); });
   wrap.addEventListener('keydown', (e) => { if (e.key === 'Escape' && rmSheetOpen()){ e.preventDefault(); e.stopPropagation(); rmCloseSheet(); } });
   if (!rmVisBound){
     rmVisBound = true;
@@ -24086,6 +24126,9 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
+  { version: 551, date: '2026-11-12', items: [
+    'On the region map you can search any radio station by name. Region cards and station songs now search that country\'s music store, so unrelated artists stop showing up.'
+  ]},
   { version: 541, date: '2026-11-12', items: [
     'On the region map, a station now has a Listen live button that plays its real radio stream. Live radio can include ads and talk, so songs from that place stay the default.',
   ]},
