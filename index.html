@@ -10686,6 +10686,7 @@ function gmInit(){
     if (b.dataset.gp === 'close'){ gmDeselect(); return; }
     if (b.dataset.gp === 'tog'){ g.min = !g.min; gmPanel(); gmFlyTo(g.sel); const t = g.panel.querySelector('.gm-ptog'); if (t && e.detail === 0) t.focus({ preventScroll: true }); return; }
     if (b.dataset.gp === 'artist'){ const nm = b.dataset.v; if (nm) openMusicMap(nm); return; }
+    if (b.dataset.gp === 'retry'){ const bx = g.panel.querySelector('.gm-artists'); if (bx) bx.innerHTML = '<div class="gm-anote" role="status">Finding artists&hellip;</div>'; gmShowArtists(g.sel, true); return; }
     if (b.dataset.gp === 'play') gmPlay(g.sel, b);
     else if (b.dataset.gp === 'go') gmSelect(+b.dataset.i, { kbd: e.detail === 0, fromPanel: true });
   });
@@ -10991,7 +10992,7 @@ async function gmArtists(i){
   g.artCache = g.artCache || new Map();
   if (g.artCache.has(key)) return g.artCache.get(key);
   const r = await fetch('https://itunes.apple.com/search?' + new URLSearchParams({ term: t.term, entity: 'song', limit: '120' }));
-  if (!r.ok) throw new Error('search failed');
+  if (!r.ok){ const er = new Error('search failed'); er.busy = r.status === 403 || r.status === 429 || r.status >= 500; throw er; }
   const d = await r.json(), seen = new Set(), list = [];
   (d.results || []).forEach(s => {
     if (!s || !s.artistId || seen.has(s.artistId)) return;
@@ -11004,17 +11005,33 @@ async function gmArtists(i){
   g.artCache.set(key, out);
   return out;
 }
-function gmShowArtists(i){
-  const g = gm, box = g.panel.querySelector('.gm-artists');
-  if (!box) return;
+// The store search is rate limited, so artists load only for a genre you stop on (not while you tap through several), never
+// while the phone strip is closed, one request at a time, and a failure is never cached and can be retried.
+function gmShowArtists(i, now){
+  const g = gm;
+  clearTimeout(g.artT);
+  if (!g.panel.querySelector('.gm-artists')) return;
+  const t = gmTerm(i), key = t.term + '|' + (t.genre || '');
+  const cached = g.artCache && g.artCache.has(key);
+  if (g.stage.clientWidth < 640 && g.min) return;   // strip closed: nothing to show yet; opening it loads them
   const fill = (list, err) => {
     if (gm !== g || g.sel !== i) return;
     const b = g.panel.querySelector('.gm-artists'); if (!b) return;
-    if (!list || !list.length){ b.innerHTML = '<div class="gm-anote" role="status">' + (err ? 'Could not load artists. Check your connection.' : 'No artists found for this one.') + '</div>'; return; }
+    if (!list || !list.length){
+      b.innerHTML = '<div class="gm-anote" role="status">' + (err === 'busy' ? 'The music catalogue is busy. Try again in a moment.' : err ? 'Could not load artists. Check your connection and try again.' : 'No artists found for this one.') + '</div>' +
+        (err ? '<button type="button" class="gm-art gm-artall" data-gp="retry">Try again</button>' : '');
+      return;
+    }
     b.innerHTML = list.map(a => '<button type="button" class="gm-art" data-gp="artist" data-v="' + escapeHtml(a.name) + '" aria-label="' + escapeHtml(a.name) + ', open on the music map"><img src="' + escapeHtml(a.image) + '" alt="" loading="lazy"><span>' + escapeHtml(a.name) + '</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="2.5"/><circle cx="5" cy="6" r="1.8"/><circle cx="19" cy="7" r="1.8"/><circle cx="18" cy="18" r="1.8"/><path d="M10 11 6 7M14 11l4-3M14 14l3 3"/></svg></button>').join('') +
       '<button type="button" class="gm-art gm-artall" data-gp="play">See all artists</button>';
   };
-  gmArtists(i).then(l => fill(l, false), () => fill(null, true));
+  const go = () => {
+    if (gm !== g || g.sel !== i) return;
+    if (g.artBusy){ g.artT = setTimeout(go, 500); return; }
+    g.artBusy = true;
+    gmArtists(i).then(l => fill(l, false), (e) => fill(null, e && e.busy ? 'busy' : 'net')).then(() => { g.artBusy = false; });
+  };
+  if (cached || now) go(); else g.artT = setTimeout(go, 700);
 }
 function gmHideSugg(){ if (gm){ gm.sugg.hidden = true; gm.sugg.textContent = ''; } }
 function gmSuggest(q){
@@ -24288,6 +24305,9 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
+  { version: 546, date: '2026-11-12', items: [
+    'Browsing genres no longer hammers the music catalogue: artists for a genre load once you stop on it, and if the catalogue is busy you get a Try again button instead of a dead end.',
+  ]},
   { version: 545, date: '2026-11-12', items: [
     'Tap any genre on the genre map and you now see artists from it, right in the panel. Tap an artist to open them on the music map, or See all artists for the full page.',
   ]},
