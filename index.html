@@ -12188,8 +12188,8 @@ function renderLibraryRadio(){
     open.appendChild(img); open.appendChild(bpMk('span', '', st.name)); open.appendChild(bpMk('small', '', [st.state, st.country].filter(Boolean).join(', ')));
     open.setAttribute('aria-label', st.name + ', radio station. Open its page.');
     open.addEventListener('click', () => rsOpen(st, open));
-    const pl = bpMk('button', 'lib-radio-play'); pl.type = 'button'; pl.setAttribute('aria-label', 'Play ' + st.name + ' live');
-    pl.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>';
+    const pl = bpMk('button', 'lib-radio-play'); pl.type = 'button'; pl.setAttribute('aria-label', 'Tune in to ' + st.name + ' live');
+    pl.innerHTML = rsPlayIcon();
     pl.addEventListener('click', (e) => { e.stopPropagation(); if (liveSt && liveSt.id === st.id && liveIsPlaying()) liveStop(); else liveStart(st); });
     card.appendChild(open); card.appendChild(pl); row.appendChild(card);
   });
@@ -12225,7 +12225,8 @@ function rsPlace(st){
   rsGeo.set(k, p);
   return p;
 }
-var RS_PLAY = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>', RS_STOP = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 6h12v12H6z"/></svg>';
+function rsPlayIcon(){ return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="2" fill="currentColor" stroke="none"/><path d="M8.5 8.5a5 5 0 0 0 0 7M15.5 8.5a5 5 0 0 1 0 7M5.6 5.6a9 9 0 0 0 0 12.8M18.4 5.6a9 9 0 0 1 0 12.8"/></svg>'; }
+function rsStopIcon(){ return '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 6h12v12H6z"/></svg>'; }
 function rsRender(st){
   const body = $('rsBody'), seq = ++rsSeq;
   body.textContent = '';
@@ -12234,7 +12235,7 @@ function rsRender(st){
   img.alt = ''; img.src = rmTileUrl(st.name); cover.appendChild(img);
   const ht = bpMk('div', 'rs-heroText'), meta = bpMk('div', 'rs-meta', 'Radio station'), h = bpMk('h2', '', st.name); h.tabIndex = -1;
   ht.appendChild(meta); ht.appendChild(h); cover.appendChild(ht); wrap.appendChild(cover);
-  const big = bpMk('button', 'rs-bigplay'); big.type = 'button'; big.innerHTML = RS_PLAY; big.setAttribute('aria-label', 'Play ' + st.name + ' live');
+  const big = bpMk('button', 'rs-bigplay'); big.type = 'button'; big.innerHTML = rsPlayIcon(); big.setAttribute('aria-label', 'Tune in to ' + st.name + ' live');
   big.addEventListener('click', () => { if (liveSt && liveSt.id === st.id && liveIsPlaying()) liveStop(); else liveStart(st); });
   wrap.appendChild(big); body.appendChild(wrap);
   const pad = bpMk('div', 'rs-pad'); body.appendChild(pad);
@@ -12313,9 +12314,9 @@ function rmSheetSync(){
   if (sv){ const on = rsIsSaved(rmSel.id); sv.textContent = on ? 'Saved \u2713' : 'Save to library'; sv.classList.toggle('is-saved', on); sv.setAttribute('aria-pressed', String(on)); }
   if (!b || !n) return;
   const mine = !!liveSt && liveSt.id === rmSel.id, mode = mine ? liveMode : 'idle', on = mode === 'playing' || mode === 'loading';
-  b.innerHTML = on ? RS_STOP : RS_PLAY;
-  b.setAttribute('aria-label', (on ? 'Stop ' : 'Play ') + rmSel.name + ' live');
-  n.textContent = mode === 'playing' ? 'Live now.' : mode === 'loading' ? 'Connecting to the station\u2026' : mode === 'error' ? 'Could not reach this station. Tap play to try again, or play songs from here.' : 'Tap play to listen live.';
+  b.innerHTML = on ? rsStopIcon() : rsPlayIcon();
+  b.setAttribute('aria-label', (on ? 'Stop ' : 'Tune in to ') + rmSel.name + (on ? ' live' : ' live'));
+  n.textContent = mode === 'playing' ? 'Live now.' : mode === 'loading' ? 'Connecting to the station\u2026' : mode === 'error' ? 'Could not reach this station. Tap to tune in again, or play songs from here.' : 'Tap to tune in live.';
 }
 function rmTeardownMap(){
   clearTimeout(rmMoveT); clearTimeout(rmPushT);
