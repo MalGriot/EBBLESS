@@ -1334,11 +1334,11 @@ html.reduce-motion .lib-grid:not(.is-list) .lib-card .info .name{display:block;w
 #browsePage{position:fixed;inset:0;z-index:54;background:var(--bg);display:flex;flex-direction:column}
 #browsePage[hidden]{display:none}
 /* the footer nav and the footer player stay visible and tappable: these pages and the artists window stop above them (like #503) */
-body:has(#mini-bar:not([hidden])) :is(#browsePage,#findMusic){bottom:57px}
-body.split-desktop:has(#mini-bar:not([hidden])) :is(#browsePage,#findMusic){bottom:55px}
+body:has(#mini-bar:not([hidden])) :is(#browsePage,#addSongsPage,#findMusic){bottom:57px}
+body.split-desktop:has(#mini-bar:not([hidden])) :is(#browsePage,#addSongsPage,#findMusic){bottom:55px}
 @media (max-width:859.98px){
-  body:not(.split-desktop) :is(#browsePage,#findMusic){bottom:calc(var(--nav-h) + var(--safe-b))}
-  body:not(.split-desktop):has(#mini-bar:not([hidden])) :is(#browsePage,#findMusic){bottom:calc(57px + var(--nav-h) + var(--safe-b))}
+  body:not(.split-desktop) :is(#browsePage,#addSongsPage,#findMusic){bottom:calc(var(--nav-h) + var(--safe-b))}
+  body:not(.split-desktop):has(#mini-bar:not([hidden])) :is(#browsePage,#addSongsPage,#findMusic){bottom:calc(57px + var(--nav-h) + var(--safe-b))}
   body:not(.split-desktop) :is(.bp-scroll,.fm-scroll){padding-bottom:20px}
 }
 .bp-head{flex:none;display:flex;align-items:center;gap:8px;padding:10px 14px;padding-top:calc(10px + var(--safe-t))}
@@ -3910,9 +3910,9 @@ body.split-desktop .install-banner{padding-left:24px;padding-right:12px}
      bottom padding (38px art + 8px*2 padding + 1px border) only while it's
      actually shown, so the 1fr pane row shrinks to sit above it instead of
      being overlapped - and normal (non-Settings) desktop view is untouched. */
-  body.split-desktop:not(.view-settings-active):not(.view-search-active):not(.view-home-active):not(:has(#import-overlay.is-open)):not(:has(#browsePage:not([hidden]))):not(:has(#findMusic:not([hidden]))) #mini-bar{display:none!important}
+  body.split-desktop:not(.view-settings-active):not(.view-search-active):not(.view-home-active):not(:has(#import-overlay.is-open)):not(:has(#browsePage:not([hidden]))):not(:has(#addSongsPage:not([hidden]))):not(:has(#findMusic:not([hidden]))) #mini-bar{display:none!important}
   body.split-desktop:is(.view-settings-active,.view-search-active,.view-home-active,:has(#import-overlay.is-open)):has(#mini-bar:not([hidden])) #app{padding-bottom:55px}
-  body.split-desktop:is(:has(#import-overlay.is-open),:has(#browsePage:not([hidden])),:has(#findMusic:not([hidden]))) #mini-bar:not([hidden]){display:flex}   /* #665: the search window keeps the footer player, like Settings */
+  body.split-desktop:is(:has(#import-overlay.is-open),:has(#browsePage:not([hidden])),:has(#addSongsPage:not([hidden])),:has(#findMusic:not([hidden]))) #mini-bar:not([hidden]){display:flex}   /* #665: the search window keeps the footer player, like Settings */
   /* :not(.desktop-fs) on .view-scroll only: without it, this override
      survives into the desktop-fs full-width #view-player and cancels the
      margin:0 auto centering .view-scroll gets from its base rule (line
