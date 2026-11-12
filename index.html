@@ -1401,6 +1401,7 @@ html.reduce-motion .lib-grid:not(.is-list) .lib-card .info .name{display:block;w
 .as-c1{--c1:#d9622b;--c2:#7a1f3d}.as-c2{--c1:#2e8f8a;--c2:#12365a}.as-c3{--c1:#7b4fd1;--c2:#2a1d5c}
 .as-c4{--c1:#c9a227;--c2:#7a4a12}.as-c5{--c1:#c2417a;--c2:#4e1536}.as-c6{--c1:#3a8f4f;--c2:#15432c}
 .as-hero{flex-wrap:wrap;min-height:128px;padding:20px 18px;margin-top:12px}
+.as-grid .as-hero{margin-top:0;grid-column:1/-1}
 .as-hero .as-ic{width:34px;height:34px;padding:11px}
 .as-hero .as-tx b{font-size:21px}
 .as-src{position:relative;z-index:1;flex:1 0 100%;display:flex;flex-wrap:wrap;gap:6px}
@@ -10457,7 +10458,7 @@ function asBuild(){
     if (pills) s.appendChild(pills); else { const g = bpMk('div', 'as-grid'); nodes.forEach(n => g.appendChild(n)); s.appendChild(g); }
     list.appendChild(s);
   };
-  const imp = asTile('import'); imp.appendChild(asSources());
+  const imp = asTile('import', 'as-hero'); imp.appendChild(asSources());
   group('Bring your music', 'Songs you already have somewhere else.', [imp, asTile('device')]);
   group('Discover', 'Find artists and songs you have not met yet.', ['genre', 'region', 'vibe', 'map'].map(k => asTile(k)));
   group('Quick start', 'Tap a genre to see artists you can add.', null, asPills());
@@ -20559,7 +20560,10 @@ function renderHome(){
   const row = (sec, cards) => { const r = mk('div', 'hm-row'); cards.forEach(c => r.appendChild(c)); sec.appendChild(r); };
   renderHomeVibe(body, mk);
   // #761: every way to get songs in lives here (Add songs block; its own page is one tap away)
-  renderAddSongsBlock(body, mk, lib.length > 0);
+  // "returning": the app seeds a few starter playlists for everyone, so count what you did instead: songs played or songs you saved
+  let returning = false;
+  try { returning = lib.some(x => totalPlaylistPlays(x.pl) > 0) || listenSeedHistory().length > 0; } catch(e){}
+  renderAddSongsBlock(body, mk, returning);
   const coverOf = (pl) => pl.image ? { art: pl.image } : (pl.tracks.find(t => t && (t.videoId || t.art)) || null);
   const plays = (pl) => totalPlaylistPlays(pl);
   // recently played: playlists and albums you played last, newest first (one tap plays)

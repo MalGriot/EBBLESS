@@ -12933,3 +12933,12 @@ Add entries in this shape:
 - **Touches:** index.html (Home, Find music, Browse pages), sw.js
 - **Branch:** agent/browse-pages
 - **Notes:** Test: node --test tools/browse-pages.test.js. Back button, Escape and browser back close the topmost layer. Not a deep link (the app has no view deep links). Region cards have no sub line: the data has only search terms, no artists or languages. No worker change. Cache v539.
+
+
+### add-songs-page: Add songs block on Home and a See all page
+- **Status:** review
+- **Priority:** medium
+- **Description:** Owner: "the add songs section/page should be well designed and inviting." Home's Add songs is now a gradient block: Import your music as the hero (with Spotify, YouTube Music, Apple Music, SoundCloud), then genre, region and vibe cards each with an icon and a one-line benefit, then genre pills and a See all link. A new user (no plays yet) sees "Start your library" with a welcome line; a returning user sees a compact version. See all opens its own page (#addSongsPage) grouped as Bring your music (import, add from this device), Discover (genre, region, vibe, music map) and Quick start (all genre pills).
+- **Touches:** index.html (Home, new Add songs page), sw.js
+- **Branch:** agent/add-songs-page
+- **Notes:** Built on agent/browse-pages (merged in); only calls openBrowsePage, openBring, openMusicMap and the existing upload button. No network calls, one-shot transform/opacity entrance only. "Returning" means songs played or listening history, because every profile is seeded with starter playlists. No Surprise me or This is playlists exist, so none added. Cache v540.
