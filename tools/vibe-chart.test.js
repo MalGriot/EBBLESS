@@ -10,7 +10,7 @@ const m = /\/\* VIBE-CHART:BEGIN[^*]*\*\/([\s\S]*?)\/\* VIBE-CHART:END \*\//.exe
 assert.ok(m, 'VIBE-CHART block not found in index.html');
 const ctx = {};
 vm.createContext(ctx);
-vm.runInContext(m[1] + '\nthis.api = { VC_MAX, VC_NODES, VC_GRID, VC_BY_ID, vcClean, vcToggle, vcFill, vcCompose, vcNeighbor, vcHeat, vcPathPoints, vcNear, VC_BANDS, vcFlowCell, VC_JOURNEYS, VC_HAPPY };', ctx);
+vm.runInContext(m[1] + '\nthis.api = { VC_MAX, VC_NODES, VC_GRID, VC_BY_ID, vcClean, vcToggle, vcFill, vcCompose, vcNeighbor, vcHeat, vcPathPoints, vcNear, vcFlowCell, VC_JOURNEYS, VC_HAPPY };', ctx);
 const A = ctx.api;
 const arr = (x) => [...x];
 
@@ -80,14 +80,18 @@ test('arrow keys move one cell and stop at the edge', () => {
   assert.strictEqual(A.vcNeighbor('furious', 'left'), null);
 });
 
-test('phone flow: every feeling gets its own slot, 4 per line, row name in the two spare slots', () => {
-  assert.strictEqual(A.VC_BANDS.length, 10);
+test('phone flow: one continuous rainbow, every feeling in its own slot, coolest first and warmest last', () => {
   const used = new Set();
   A.VC_NODES.forEach(n => { const f = A.vcFlowCell(n.c, n.r); assert.ok(f.col >= 1 && f.col <= 4); used.add(f.col + ',' + f.row); });
   assert.strictEqual(used.size, 100);
-  for (let r = 0; r < 10; r++) { assert.ok(!used.has('3,' + (3 * r + 3))); assert.ok(!used.has('4,' + (3 * r + 3))); }
-  assert.deepStrictEqual({ ...A.vcFlowCell(0, 0) }, { col: 1, row: 1 });
-  assert.deepStrictEqual({ ...A.vcFlowCell(9, 9) }, { col: 2, row: 30 });
+  assert.deepStrictEqual({ ...A.vcFlowCell(0, 9) }, { col: 1, row: 1 });
+  assert.deepStrictEqual({ ...A.vcFlowCell(9, 0) }, { col: 4, row: 25 });
+});
+
+test('red exists: the warm corner reaches hue 0 and a good share of cells are warm', () => {
+  const hues = arr(A.VC_NODES).map(n => Number(/hsl\((\d+)/.exec(A.vcHeat(n.c, n.r))[1]));
+  assert.ok(hues.filter(h => h <= 15).length >= 8);
+  assert.ok(hues.some(h => h >= 250));
 });
 
 test('journeys use real feelings and fit the cap', () => {
