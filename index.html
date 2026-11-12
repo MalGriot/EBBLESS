@@ -11307,6 +11307,13 @@ function gmInit(){
     if (b.dataset.gp === 'play') gmPlay(g.sel, b);
     else if (b.dataset.gp === 'go') gmSelect(+b.dataset.i, { kbd: e.detail === 0, fromPanel: true });
   });
+  // a picture that does not load becomes the artist's initial
+  g.panel.addEventListener('error', (e) => {
+    const im = e.target;
+    if (!im || im.tagName !== 'IMG' || !im.dataset.av) return;
+    const b = document.createElement('b'); b.className = 'gm-av'; b.setAttribute('aria-hidden', 'true'); b.textContent = im.dataset.av;
+    im.replaceWith(b);
+  }, true);
   g.sugg.addEventListener('click', (e) => { const q = e.target.closest('[data-gq]'); if (q){ gmAnyArtists(q.dataset.gq, q); return; } const b = e.target.closest('[data-gs]'); if (b) gmPickSuggestion(+b.dataset.gs); });
   if (typeof ResizeObserver === 'function'){
     g.ro = new ResizeObserver(() => { if (!g.stage.clientWidth) return; g.sMin = gmSMin(); if (!g.touched && g.sel < 0) gmFitView(false); else gmDirty(); });
@@ -11614,8 +11621,12 @@ function gmPre(){
 async function gmArtists(i){
   const g = gm, t = gmTerm(i), key = t.term + '|' + (t.genre || '');
   try {
-    const pre = await gmPre(), own = pre && pre[t.title];
-    if (Array.isArray(own) && own.length >= 3) return own.slice(0, 14).map(nm => ({ name: String(nm), image: '' }));
+    const pre = await gmPre(), pics = (pre && pre.pics) || {};
+    const v2 = pre && pre.v === 2;   // (the first version of the file was a plain genre -> names object)
+    const own = v2 ? pre.lists && pre.lists[t.title] : pre && pre[t.title], rel = !own && v2 && pre.related && pre.related[t.title];
+    const pic = (nm) => /^[0-9a-f]{32}$/.test(pics[nm] || '') ? 'https://cdn-images.dzcdn.net/images/artist/' + pics[nm] + '/64x64-000000-60-0-0.jpg' : '';
+    const mine = Array.isArray(own) ? own : Array.isArray(rel) ? rel : null;
+    if (mine && mine.length >= 3) return mine.slice(0, 14).map(nm => ({ name: String(nm), image: pic(nm), rel: !own }));
   } catch(e){}
   g.artCache = g.artCache || new Map();
   if (g.artCache.has(key)) return g.artCache.get(key);
@@ -11666,7 +11677,7 @@ function gmShowArtists(i, now){
         (err ? '<button type="button" class="gm-art gm-artall" data-gp="retry">Try again</button>' : '');
       return;
     }
-    b.innerHTML = list.map(a => '<button type="button" class="gm-art" data-gp="artist" data-v="' + escapeHtml(a.name) + '" aria-label="' + escapeHtml(a.name) + ', open on the music map">' + (a.image ? '<img src="' + escapeHtml(a.image) + '" alt="" loading="lazy">' : '<b class="gm-av" aria-hidden="true">' + escapeHtml(Array.from(String(a.name).trim())[0] || '?') + '</b>') + '<span>' + escapeHtml(a.name) + '</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="2.5"/><circle cx="5" cy="6" r="1.8"/><circle cx="19" cy="7" r="1.8"/><circle cx="18" cy="18" r="1.8"/><path d="M10 11 6 7M14 11l4-3M14 14l3 3"/></svg></button>').join('') +
+    b.innerHTML = (list[0] && list[0].rel ? '<div class="gm-anote">From related genres</div>' : '') + list.map(a => '<button type="button" class="gm-art" data-gp="artist" data-v="' + escapeHtml(a.name) + '" aria-label="' + escapeHtml(a.name) + ', open on the music map">' + (a.image ? '<img src="' + escapeHtml(a.image) + '" alt="" loading="lazy" referrerpolicy="no-referrer" data-av="' + escapeHtml(Array.from(String(a.name).trim())[0] || '?') + '">' : '<b class="gm-av" aria-hidden="true">' + escapeHtml(Array.from(String(a.name).trim())[0] || '?') + '</b>') + '<span>' + escapeHtml(a.name) + '</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="2.5"/><circle cx="5" cy="6" r="1.8"/><circle cx="19" cy="7" r="1.8"/><circle cx="18" cy="18" r="1.8"/><path d="M10 11 6 7M14 11l4-3M14 14l3 3"/></svg></button>').join('') +
       '<button type="button" class="gm-art gm-artall" data-gp="play">See all artists</button>';
   };
   const go = () => {
@@ -25550,6 +25561,9 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
+  { version: 564, date: '2026-11-12', items: [
+    'Artist pictures in the genre panel are tiny and light so they load fast, and a picture that fails to load shows the artist\'s initial instead.',
+  ]},
   { version: 563, date: '2026-11-12', items: [
     'Artists for each genre now come from our own list that ships with the app, so browsing genres no longer depends on the music store being available.',
   ]},
