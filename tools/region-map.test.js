@@ -10,7 +10,7 @@ const m = /\/\* REGION-MAP:BEGIN[^*]*\*\/([\s\S]*?)\/\* REGION-MAP:END \*\//.exe
 assert.ok(m, 'REGION-MAP block not found in index.html');
 const ctx = { URL };
 vm.createContext(ctx);
-vm.runInContext(m[1] + '\nthis.api = { rmHttps, rmPublicHost, rmTileOf, rmTileLngLat, rmTilesFor, rmTileCircle, rmNormalize, rmSongsTerm, rmGeo };', ctx);
+vm.runInContext(m[1] + '\nthis.api = { rmHttps, rmPublicHost, rmTileOf, rmTileLngLat, rmTilesFor, rmTileCircle, rmNormalize, rmSongsTerm, rmSongsTerms, rmGeo };', ctx);
 const A = ctx.api;
 const row = (o) => Object.assign({ stationuuid: 'abc-123', name: 'Radio Test', url_resolved: 'https://stream.example.com/live', geo_lat: 40.7, geo_long: -74, lastcheckok: 1, ssl_error: 0, hls: 0, tags: 'jazz,Soul,jazz,music', country: 'The United States Of America', state: 'New York', bitrate: 128, votes: 5 }, o || {});
 
@@ -65,4 +65,11 @@ test('search rows may lack a map pin, and the store country code is kept', () =>
   assert.strictEqual(s.cc, 'IN');
   assert.strictEqual(A.rmNormalize(row({ countrycode: 'IND' })).cc, '');
   assert.strictEqual(A.rmSongsTerm(A.rmNormalize(row({ tags: '', state: '', country: '' }), true)), 'Radio Test');
+});
+test('station songs use several searches, widest after the place', () => {
+  const terms = A.rmSongsTerms(A.rmNormalize(row({ tags: 'jazz,soul', state: 'Kerala', country: 'India' })));
+  assert.ok(terms.length >= 4 && terms.length <= 6);
+  assert.strictEqual(new Set(terms).size, terms.length);
+  assert.ok(terms.includes('India'));
+  assert.deepStrictEqual([...A.rmSongsTerms(A.rmNormalize(row({ tags: '', state: '', country: '' }), true))], ['Radio Test']);
 });

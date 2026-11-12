@@ -10033,6 +10033,21 @@ const FM_REGIONS = {
 };
 // iTunes store to search for each region card: songs sold in that country's store, so a word in a title ("Indian", "music") can't pull in unrelated artists
 const FM_REGION_CC = { 'West Africa': 'NG', 'South Africa': 'ZA', 'East Africa': 'KE', 'Caribbean': 'JM', 'Latin America': 'MX', 'Brazil': 'BR', 'India': 'IN', 'Korea': 'KR', 'Japan': 'JP', 'UK': 'GB', 'France': 'FR', 'Middle East': 'AE' };
+// each region is searched by several languages and styles at once, so the list is long and mixed
+const FM_REGION_TERMS = {
+  'India': ['Indian music Bollywood indie', 'Hindi', 'Tamil', 'Telugu', 'Punjabi', 'Bengali', 'Malayalam', 'Kannada', 'Marathi', 'Indian hip hop'],
+  'West Africa': ['Afrobeats Nigeria Ghana', 'Afro pop', 'Highlife', 'Amapiano Nigeria', 'Naija hip hop', 'Ghana hip life', 'Senegal Mbalax', 'Afro soul'],
+  'South Africa': ['South African amapiano', 'Gqom', 'South African hip hop', 'Afro house South Africa', 'Zulu', 'Kwaito'],
+  'East Africa': ['East African music Kenya', 'Bongo flava', 'Gengetone', 'Ethiopian', 'Uganda music', 'Genge'],
+  'Caribbean': ['Caribbean dancehall soca', 'Reggae', 'Soca', 'Dancehall', 'Afro Caribbean', 'Zouk', 'Calypso'],
+  'Latin America': ['Latin America music', 'Reggaeton', 'Cumbia', 'Salsa', 'Latin trap', 'Bachata', 'Regional Mexican', 'Latin pop'],
+  'Brazil': ['Brazilian MPB samba', 'Funk brasileiro', 'Bossa nova', 'Sertanejo', 'Pagode', 'Brazilian hip hop', 'Forro'],
+  'Korea': ['K-pop K-R&B', 'K-pop', 'Korean R&B', 'Korean hip hop', 'Korean indie', 'Korean ballad'],
+  'Japan': ['Japanese city pop', 'J-pop', 'Japanese hip hop', 'Japanese rock', 'Anime', 'Enka'],
+  'UK': ['UK grime garage soul', 'UK drill', 'British soul', 'UK garage', 'Jungle drum and bass', 'UK indie', 'British R&B'],
+  'France': ['French chanson rap', 'Rap francais', 'Chanson', 'French pop', 'French house', 'Afro trap France'],
+  'Middle East': ['Middle Eastern pop Arabic', 'Arabic pop', 'Khaleeji', 'Turkish pop', 'Persian', 'Israeli', 'Egyptian Arabic', 'Lebanese']
+};
 const FM_VIBES = {
   'Chill': 'chill relaxing', 'Late night': 'late night slow jams', 'Focus': 'focus instrumental', 'Workout': 'workout high energy',
   'Party': 'party dance', 'Heartbreak': 'heartbreak sad ballads', 'Feel good': 'feel good happy', 'Sunday morning': 'sunday morning soul',
@@ -10062,6 +10077,7 @@ function fmBuild(){
     if (!t) return;
     const k = t.dataset.fm, v = t.dataset.v;
     if (k === 'retry' && fmArtists && fmArtists.args) fmShowArtists.apply(null, fmArtists.args);
+    else if (k === 'more' && fmArtists){ fmArtists.shown = (fmArtists.shown || 48) + 48; fmRender(); }
     else if (k === 'ck'){ const it = fmPicker && fmPicker.items.find(x => x.key === v); if (it){ it.on = !it.on; if (it.songs) it.songs.forEach(t => { t.on = it.on; }); fmRender(); } }
     else if (k === 'all'){ if (fmPicker){ const to = !fmPicker.items.every(x => x.on); fmPicker.items.forEach(x => { x.on = to; if (x.songs) x.songs.forEach(t => { t.on = to; }); }); fmRender(); } }
     else if (k === 'exp') spotifyPickerOpen(v);
@@ -10130,10 +10146,12 @@ function fmRender(){
         (fmArtists.error ? '<button type="button" class="fm-retry" data-fm="retry">Try again</button>' : '');
       return;
     }
-    sc.innerHTML = '<div class="fm-artist-grid">' + fmArtists.list.map(a =>
+    const shownN = fmArtists.shown || 48;
+    sc.innerHTML = '<div class="fm-artist-grid">' + fmArtists.list.slice(0, shownN).map(a =>
       '<div class="fm-artist"><button type="button" class="fm-artist-open" data-fm="artist" data-v="' + escapeHtml(a.name) + '">' +
       '<img src="' + escapeHtml(a.image || '') + '" alt="" loading="lazy"><span class="fm-artist-name">' + escapeHtml(a.name) + (a.bpm ? ' <small>' + escapeHtml(a.bpm) + '</small>' : '') + '</span></button>' +
-      '<button type="button" class="fm-add" data-fm="add" data-v="' + escapeHtml(a.id) + '" aria-label="Add ' + escapeHtml(a.name) + ' to your library">+</button></div>').join('') + '</div>';
+      '<button type="button" class="fm-add" data-fm="add" data-v="' + escapeHtml(a.id) + '" aria-label="Add ' + escapeHtml(a.name) + ' to your library">+</button></div>').join('') + '</div>' +
+      (fmArtists.list.length > shownN ? '<button type="button" class="fm-load" data-fm="more" style="margin:16px auto 24px;display:block">Show more artists</button>' : '');
     return;
   }
   sc.textContent = '';
@@ -10142,17 +10160,26 @@ async function fmShowArtists(term, title, genre, bpmRange, cc){
   const token = fmArtists = { args: [term, title, genre, bpmRange, cc], title: bpmRange ? title + ' \u00b7 ' + bpmRange[0] + (bpmRange[1] > 150 ? '+' : '-' + bpmRange[1]) + ' bpm' : title, loading: true, list: [], note: bpmRange ? 'Matching tempo' : '' };
   fmRender();
   try{
-    const r = await fetch('https://itunes.apple.com/search?' + new URLSearchParams(Object.assign({ term, entity: 'song', limit: '120' }, /^[A-Z]{2}$/.test(cc || '') ? { country: cc } : {})));
-    if (!r.ok) throw new Error('search failed');
-    const d = await r.json();
-    const seen = new Set(), list = [];
-    (d.results || []).forEach(t => {
+    // a list of terms (a region's languages and styles) is searched side by side and interleaved, so one big place fills a long list
+    const terms = [].concat(term).slice(0, 10), many = terms.length > 1;
+    const got = await Promise.all(terms.map(tm => fetch('https://itunes.apple.com/search?' + new URLSearchParams(Object.assign({ term: tm, entity: 'song', limit: many ? '200' : '120' }, /^[A-Z]{2}$/.test(cc || '') ? { country: cc } : {})))
+      .then(r => r.ok ? r.json() : null).catch(() => null)));
+    if (!got.some(Boolean)) throw new Error('search failed');
+    const results = [];
+    for (let i = 0, any = true; any; i++){ any = false; got.forEach(b => { const x = b && b.results && b.results[i]; if (x){ results.push(x); any = true; } }); }
+    const bigArt = u => u ? u.replace(/\/\d+x\d+bb\./, '/300x300bb.') : '';
+    const seen = new Set(), list = [], arts = {};
+    results.forEach(t => { if (t && t.artistId && t.artworkUrl100){ (arts[t.artistId] = arts[t.artistId] || []).push(bigArt(t.artworkUrl100)); } });
+    results.forEach(t => {
       if (!t || !t.artistId || seen.has(t.artistId)) return;
       if (genre && FM_GENRE_RE[genre] && !FM_GENRE_RE[genre].test(t.primaryGenreName || '')) return;
       if (genre && normalizeArtistQuery(t.artistName).includes(normalizeArtistQuery(title))) return;
       seen.add(t.artistId);
-      list.push({ song: t.trackName, id: String(t.artistId), name: t.artistName, image: t.artworkUrl100 ? t.artworkUrl100.replace(/\/\d+x\d+bb\./, '/300x300bb.') : '' });
+      list.push({ song: t.trackName, id: String(t.artistId), name: t.artistName, image: bigArt(t.artworkUrl100) });
     });
+    // soundtracks share one cover across many artists: give each artist a cover nobody above has, when they have another
+    const usedArt = new Set();
+    list.forEach(a => { const c = arts[a.id] || []; const pick = c.find(u => !usedArt.has(u)) || a.image; if (pick){ usedArt.add(pick); a.image = pick; } });
     if (fmArtists !== token) return;
     if (bpmRange){
       // one song per artist goes to the tempo lookup (12 at a time); only songs inside the range stay
@@ -10184,7 +10211,7 @@ async function fmShowArtists(term, title, genre, bpmRange, cc){
         }
       }
       token.list = hit;
-    } else token.list = list.slice(0, 30);
+    } else token.list = list.slice(0, many ? 400 : 30);
   } catch(e){ if (fmArtists !== token) return; token.list = []; token.error = true; }
   token.loading = false;
   fmRender();
@@ -10336,7 +10363,7 @@ function bpRender(){
     const keys = bpFilterKeys(Object.keys(FM_REGIONS), bpFilter);
     if (!keys.length){ bpEmpty(list, 'regions'); return; }
     const grid = bpMk('div', 'bp-grid'); grid.setAttribute('role', 'group'); grid.setAttribute('aria-label', 'Regions');
-    keys.forEach(k => grid.appendChild(bpCard(k, FM_REGIONS[k], (b) => bpPick(FM_REGIONS[k], k, null, null, b, FM_REGION_CC[k]))));
+    keys.forEach(k => grid.appendChild(bpCard(k, FM_REGIONS[k], (b) => bpPick(FM_REGION_TERMS[k] || FM_REGIONS[k], k, null, null, b, FM_REGION_CC[k]))));
     list.appendChild(grid);
     return;
   }
@@ -10481,6 +10508,17 @@ function rmNormalize(r, loose){
 function rmSongsTerm(st){
   const g = st.tags.filter(t => RM_GENERIC_TAGS.indexOf(t) < 0).slice(0, 2);
   return g.concat([st.state, st.country]).filter(Boolean).join(' ').slice(0, 100) || st.name;
+}
+// several searches for one station's place, widest last, so "songs from here" fills a long list
+function rmSongsTerms(st){
+  const out = [], add = t => { t = String(t || '').trim().slice(0, 100); if (t && out.indexOf(t) < 0) out.push(t); };
+  add(rmSongsTerm(st));
+  add([st.state, st.country].filter(Boolean).join(' '));
+  add(st.country);
+  st.tags.filter(t => RM_GENERIC_TAGS.indexOf(t) < 0).slice(0, 3).forEach(t => add(t + ' ' + (st.country || '')));
+  add(st.country && st.country + ' pop');
+  add(st.country && st.country + ' hip hop');
+  return out.slice(0, 6);
 }
 function rmGeo(list){
   const f = [];
@@ -10650,7 +10688,7 @@ function rmSelect(st, from){
   const x = bpMk('button', 'rm-x', '×'); x.type = 'button'; x.setAttribute('aria-label', 'Close station'); x.addEventListener('click', rmCloseSheet); sh.appendChild(x);
   const act = bpMk('div', 'rm-act');
   const go = bpMk('button', 'rm-go', 'Play songs from here'); go.type = 'button';
-  go.addEventListener('click', () => { bpLastEl = go; fmOpenResults(rmSongsTerm(st), st.state || st.country || st.name, null, null, st.cc); });
+  go.addEventListener('click', () => { bpLastEl = go; fmOpenResults(rmSongsTerms(st), st.state || st.country || st.name, null, null, st.cc); });
   act.appendChild(go);
   const lv = bpMk('button', 'rm-live', 'Listen live'); lv.type = 'button';
   lv.addEventListener('click', () => { if (liveSt && liveSt.id === st.id && liveIsPlaying()) liveStop(); else liveStart(st); });
@@ -24127,7 +24165,7 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
   { version: 551, date: '2026-11-12', items: [
-    'On the region map you can search any radio station by name. Region cards and station songs now search that country\'s music store, so unrelated artists stop showing up.'
+    'On the region map you can search any radio station by name. Region cards and station songs now search that country\'s music store across many languages and styles, so the artist list is long (with Show more), mixed, and unrelated artists stop showing up. Artists on a shared soundtrack get their own cover when they have one.'
   ]},
   { version: 541, date: '2026-11-12', items: [
     'On the region map, a station now has a Listen live button that plays its real radio stream. Live radio can include ads and talk, so songs from that place stay the default.',
