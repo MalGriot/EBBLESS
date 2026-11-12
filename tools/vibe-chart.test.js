@@ -10,7 +10,7 @@ const m = /\/\* VIBE-CHART:BEGIN[^*]*\*\/([\s\S]*?)\/\* VIBE-CHART:END \*\//.exe
 assert.ok(m, 'VIBE-CHART block not found in index.html');
 const ctx = {};
 vm.createContext(ctx);
-vm.runInContext(m[1] + '\nthis.api = { VC_MAX, VC_NODES, VC_GRID, VC_BY_ID, vcClean, vcToggle, vcFill, vcCompose, vcNeighbor, vcHeat, vcPathPoints, vcNear, VC_WINDOWS, vcWindow, vcBestWindow, VC_JOURNEYS, VC_HAPPY };', ctx);
+vm.runInContext(m[1] + '\nthis.api = { VC_MAX, VC_NODES, VC_GRID, VC_BY_ID, vcClean, vcToggle, vcFill, vcCompose, vcNeighbor, vcHeat, vcPathPoints, vcNear, VC_BANDS, vcFlowCell, VC_JOURNEYS, VC_HAPPY };', ctx);
 const A = ctx.api;
 const arr = (x) => [...x];
 
@@ -32,8 +32,6 @@ test('heat goes from cool (heavy, calm) to warm (bright, intense)', () => {
 test('path points follow pick order; near cells exclude picks', () => {
   assert.strictEqual(A.vcPathPoints(['calm', 'furious']), '4.5,6.5 0.5,0.5');
   assert.strictEqual(A.vcPathPoints([]), '');
-  const lc = A.vcWindow('light-calm'); // columns 2-6, rows 2-6
-  assert.strictEqual(A.vcPathPoints(['calm', 'furious', 'serene'], lc), '2.5,4.5 3.5,4.5');
   const near = A.vcNear(['calm']);
   assert.ok(near.has('serene') && near.has('relaxed') && !near.has('calm') && !near.has('furious'));
   assert.strictEqual(near.size, 5);
@@ -82,17 +80,14 @@ test('arrow keys move one cell and stop at the edge', () => {
   assert.strictEqual(A.vcNeighbor('furious', 'left'), null);
 });
 
-test('the four corner windows are 5 x 5 and together cover every feeling', () => {
-  const seen = new Set();
-  Object.keys(A.VC_WINDOWS).forEach(k => { const L = A.vcWindow(k); assert.strictEqual(L.cols.length, 5); assert.strictEqual(L.rows.length, 5); L.rows.forEach(r => L.cols.forEach(c => seen.add(A.VC_GRID[r][c]))); });
-  assert.strictEqual(seen.size, 49);
-  assert.strictEqual(A.vcWindow('nope').cols[0], 2);
-});
-
-test('best window follows the picks and keeps the current one on a tie', () => {
-  assert.strictEqual(A.vcBestWindow([], 'heavy-calm'), 'heavy-calm');
-  assert.strictEqual(A.vcBestWindow(['numb', 'sleepy', 'drained'], 'light-intense'), 'heavy-calm');
-  assert.strictEqual(A.vcBestWindow(['joyful', 'euphoric'], 'heavy-calm'), 'light-intense');
+test('phone flow: every feeling gets its own slot, 4 per line, row name in the spare slot', () => {
+  assert.strictEqual(A.VC_BANDS.length, 7);
+  const used = new Set();
+  A.VC_NODES.forEach(n => { const f = A.vcFlowCell(n.c, n.r); assert.ok(f.col >= 1 && f.col <= 4); used.add(f.col + ',' + f.row); });
+  assert.strictEqual(used.size, 49);
+  for (let r = 0; r < 7; r++) assert.ok(!used.has('4,' + (2 * r + 2)));   // the band label slot stays free
+  assert.deepStrictEqual({ ...A.vcFlowCell(0, 0) }, { col: 1, row: 1 });
+  assert.deepStrictEqual({ ...A.vcFlowCell(6, 6) }, { col: 3, row: 14 });
 });
 
 test('journeys use real feelings and fit the cap', () => {

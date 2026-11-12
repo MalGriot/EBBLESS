@@ -1393,8 +1393,8 @@ html.reduce-motion .lib-grid:not(.is-list) .lib-card .info .name{display:block;w
 .vc-chart{position:relative;overflow:hidden;border-radius:20px;background:var(--panel);border:1px solid rgba(255,255,255,.08);padding:6px}
 .vc-chart:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .vc-canvas{position:relative}
-.vc-chart.is-compact .vc-grid{grid-auto-rows:50px;gap:3px}
-.vc-chart.is-compact .vc-node{font-size:11px;letter-spacing:-.3px}
+.vc-chart.is-compact .vc-grid{grid-auto-rows:46px;gap:3px}
+.vc-chart.is-compact .vc-node{font-size:12.5px;letter-spacing:-.2px}
 .vc-node[hidden]{display:none}
 .vc-chart.is-compact .vc-max{display:none!important}
 @media (min-width:860px){.vc-chart:not(.is-compact) .vc-node{font-size:14.5px;letter-spacing:-.1px}}
@@ -1406,12 +1406,9 @@ html.reduce-motion .lib-grid:not(.is-list) .lib-card .info .name{display:block;w
 .vc-jb:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .vc-fullnote{margin:0 2px 8px;font-size:13px;font-weight:700;color:var(--accent)}
 .vc-fullnote[hidden]{display:none}
-.vc-quads{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0 0}
-.vc-quads[hidden]{display:none}
-.vc-ql{grid-column:1 / -1;font-size:12.5px;color:var(--faint)}
-.vc-qb{min-height:44px;padding:0 10px;border-radius:14px;background:var(--panel-2);border:1px solid var(--border);color:var(--text);font:inherit;font-size:13.5px;font-weight:600;cursor:pointer}
-.vc-qb[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent,#151107)}
-.vc-qb:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.vc-band{display:flex;align-items:center;justify-content:center;text-align:center;font-size:10.5px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;color:var(--faint)}
+.vc-band[hidden]{display:none}
+.vc-chart.is-compact .vc-path{display:none}
 .vc-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));grid-auto-rows:62px;gap:3px}
 .vc-path{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0}
 .vc-grid{position:relative;z-index:1}
@@ -10489,23 +10486,10 @@ const VC_JOURNEYS = [
   { label: 'Lock in', ids: ['uneasy', 'thoughtful', 'focused', 'proud'] },
 ];
 // compact map for narrow screens: 5 columns x 5 rows picked from the 7 x 7 so the plane keeps its shape
-// on narrow screens the map shows one 5 x 5 corner at a time (no sideways scrolling); the four corners together cover all 49 feelings
-const VC_WINDOWS = {
-  'heavy-intense': { label: 'Heavy, intense', c0: 0, r0: 0 }, 'light-intense': { label: 'Light, intense', c0: 2, r0: 0 },
-  'heavy-calm': { label: 'Heavy, calm', c0: 0, r0: 2 }, 'light-calm': { label: 'Light, calm', c0: 2, r0: 2 },
-};
-function vcWindow(key){
-  const w = VC_WINDOWS[key] || VC_WINDOWS['light-intense'], seq = (s) => [0, 1, 2, 3, 4].map(i => s + i);
-  return { cols: seq(w.c0), rows: seq(w.r0) };
-}
-// the corner holding the most picks (the current one wins ties)
-function vcBestWindow(sel, cur){
-  const cc = VC_WINDOWS[cur] ? cur : 'light-intense', ids = vcClean(sel);
-  const count = (k) => { const L = vcWindow(k); return ids.filter(id => { const n = VC_BY_ID[id]; return L.cols.includes(n.c) && L.rows.includes(n.r); }).length; };
-  let best = cc, bn = count(cc);
-  Object.keys(VC_WINDOWS).forEach(k => { const n = count(k); if (n > bn){ best = k; bn = n; } });
-  return best;
-}
+// narrow screens: no sideways scrolling and no hidden feelings. The plane stays, but each energy row wraps into two lines
+// (4 + 3 feelings) and the spare slot carries the row's name, so the whole rainbow reads top to bottom.
+const VC_BANDS = ['Most intense', 'Intense', 'Lively', 'Steady', 'Easy', 'Quiet', 'Still'];
+function vcFlowCell(c, r){ return c < 4 ? { col: c + 1, row: 2 * r + 1 } : { col: c - 3, row: 2 * r + 2 }; }
 const VC_ALL = { cols: [0, 1, 2, 3, 4, 5, 6], rows: [0, 1, 2, 3, 4, 5, 6] };
 // the path through the picks, as SVG points in grid units (cell centres), in pick order; picks with no cell in this layout are skipped
 function vcPathPoints(sel, layout){
@@ -10529,7 +10513,7 @@ function vcNeighbor(id, dir){
 const VC_KEY = 'ebbless_vibe_chart_v1';
 let vcSel = [];
 try { vcSel = vcClean(JSON.parse(sessionStorage.getItem(VC_KEY) || '[]')); } catch(e){}
-let vcRO = null, vcNodeEls = {}, vcPathEl = null, vcHaloEl = null, vcLayoutNow = VC_ALL, vcWin = 'light-intense', vcNarrow = false, vcPanel = null, vcHeart = null, vcSheet = null, vcSheetOpen = false, vcLive = null;
+let vcRO = null, vcNodeEls = {}, vcPathEl = null, vcHaloEl = null, vcLayoutNow = VC_ALL, vcNarrow = false, vcPanel = null, vcHeart = null, vcSheet = null, vcSheetOpen = false, vcLive = null;
 function vcSave(){ try { sessionStorage.setItem(VC_KEY, JSON.stringify(vcSel)); } catch(e){} }
 function vcSay(msg){ if (vcLive){ vcLive.textContent = ''; setTimeout(() => { if (vcLive) vcLive.textContent = msg; }, 30); } }
 function vcSvg(tag, attrs){ const e = document.createElementNS('http://www.w3.org/2000/svg', tag); Object.keys(attrs || {}).forEach(k => e.setAttribute(k, attrs[k])); return e; }
@@ -10586,13 +10570,12 @@ function vcSet(id){
   }
   if (r.change === 'none') return;
   vcSel = r.sel;
-  if (r.change === 'added' && vcNarrow && vcNodeEls[id] && vcNodeEls[id].hidden){ vcWin = vcBestWindow(vcSel, vcWin); vcApplyLayout(); }
   vcSync(r.change === 'added');
   vcSay((r.change === 'added' ? 'Added ' : 'Removed ') + label + '. ' + vcSel.length + ' of ' + VC_MAX + '.' + (vcSel.length >= VC_MAX ? ' Max reached.' : ''));
   if (vcSheetOpen && !vcSel.length) vcCloseSheet();
 }
 function vcJourney(j){
-  vcSel = vcClean(j.ids); vcWin = vcBestWindow(vcSel, vcWin); if (vcNarrow) vcApplyLayout(); else vcSync(true);
+  vcSel = vcClean(j.ids); vcSync(true);
   vcSay(j.label + ': ' + vcSel.join(', ') + '. ' + vcSel.length + ' of ' + VC_MAX + '.');
 }
 function vcClear(){ if (!vcSel.length) return; vcSel = []; vcSync(false); vcSay('Cleared. 0 of ' + VC_MAX + '.'); if (vcSheetOpen) vcCloseSheet(); }
@@ -10644,19 +10627,14 @@ function vcCloseSheet(noFocus){
 // lay the cells out for the current width: all 49 when there is room (or when asked), else the 25-cell compact map
 function vcApplyLayout(){
   const grid = document.querySelector('.vc-grid'); if (!grid) return;
-  const L = vcNarrow ? vcWindow(vcWin) : VC_ALL;
-  vcLayoutNow = L;
-  grid.style.gridTemplateColumns = 'repeat(' + L.cols.length + ',minmax(0,1fr))';
   grid.closest('.vc-chart').classList.toggle('is-compact', vcNarrow);
+  grid.style.gridTemplateColumns = 'repeat(' + (vcNarrow ? 4 : VC_N) + ',minmax(0,1fr))';
   VC_NODES.forEach(n => {
-    const b = vcNodeEls[n.id], ci = L.cols.indexOf(n.c), ri = L.rows.indexOf(n.r);
-    b.hidden = ci < 0 || ri < 0;
-    if (!b.hidden){ b.style.gridColumn = String(ci + 1); b.style.gridRow = String(ri + 1); }
+    const b = vcNodeEls[n.id];
+    if (vcNarrow){ const f = vcFlowCell(n.c, n.r); b.style.gridColumn = String(f.col); b.style.gridRow = String(f.row); }
+    else { b.style.gridColumn = String(n.c + 1); b.style.gridRow = String(n.r + 1); }
   });
-  const svg = document.querySelector('.vc-path');
-  if (svg) svg.setAttribute('viewBox', '0 0 ' + L.cols.length + ' ' + L.rows.length);
-  const q = document.querySelector('.vc-quads');
-  if (q){ q.hidden = !vcNarrow; q.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.k === vcWin))); }
+  grid.querySelectorAll('.vc-band').forEach((e, r) => { e.hidden = !vcNarrow; e.style.gridColumn = '4'; e.style.gridRow = String(2 * r + 2); });
   vcSync(false);
 }
 function vcMount(list){
@@ -10696,16 +10674,13 @@ function vcMount(list){
     });
     grid.appendChild(b); vcNodeEls[n.id] = b;
   });
+  VC_BANDS.forEach(t => { const bl = bpMk('span', 'vc-band', t); bl.hidden = true; grid.appendChild(bl); });
   cv.appendChild(grid);
   const svg = vcSvg('svg', { viewBox: '0 0 ' + VC_N + ' ' + VC_N, preserveAspectRatio: 'none', 'aria-hidden': 'true', focusable: 'false', class: 'vc-path' });
   vcPathEl = vcSvg('polyline', { points: '', class: 'vc-line' });
   vcHaloEl = vcSvg('polyline', { points: '', class: 'vc-halo' });
   svg.appendChild(vcHaloEl); svg.appendChild(vcPathEl); cv.appendChild(svg);
   box.appendChild(cv); col.appendChild(box);
-  const qd = bpMk('div', 'vc-quads'); qd.hidden = true; qd.setAttribute('role', 'group'); qd.setAttribute('aria-label', 'Which part of the map to show');
-  qd.appendChild(bpMk('span', 'vc-ql', 'The map is bigger than your screen. Pick a corner:'));
-  ['heavy-intense', 'light-intense', 'heavy-calm', 'light-calm'].forEach(k => { const qb = bpMk('button', 'vc-qb', VC_WINDOWS[k].label); qb.type = 'button'; qb.dataset.k = k; qb.setAttribute('aria-pressed', 'false'); qb.addEventListener('click', () => { vcWin = k; vcApplyLayout(); }); qd.appendChild(qb); });
-  col.appendChild(qd);
   col.appendChild(bpMk('p', 'vc-cap', 'Left to right: heavier to lighter. Top to bottom: intense to calm. Warm colors are bright and intense, cool colors are heavy and calm.'));
   const panel = bpMk('aside', 'vc-panel'); panel.setAttribute('aria-label', 'Your picks');
   const ph = bpMk('div', 'vc-ph'); ph.appendChild(bpMk('h3', '', 'Your picks')); ph.appendChild(bpMk('span', 'vc-count', '0 / ' + VC_MAX));
@@ -23987,8 +23962,8 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
-  { version: 544, date: '2026-11-12', items: [
-    'Browse by vibe now has a heat map of 49 feelings, cool and calm to warm and intense. Tap up to 7 in the order you want the mix to move, watch the line trace your path, then Play this mix. On a small screen the map shows one corner at a time, with four buttons to move around it, so there is no sideways scrolling. On a computer your picks are listed beside the map; on a phone they fill a heart you can open.',
+  { version: 545, date: '2026-11-12', items: [
+    'Browse by vibe now has a heat map of 49 feelings, cool and calm to warm and intense. Tap up to 7 in the order you want the mix to move, watch the line trace your path, then Play this mix. On a small screen all 49 feelings stack top to bottom in named rows, so there is no sideways scrolling. On a computer your picks are listed beside the map; on a phone they fill a heart you can open.',
   ]},
   { version: 539, date: '2026-11-12', items: [
     'Browse by genre, region and vibe on Home each open their own page now, with a filter for genres and regions, and the same colorful cards as Search.',
