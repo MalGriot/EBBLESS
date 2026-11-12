@@ -6268,7 +6268,7 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
         <li><a href="https://soundcloud.com" target="_blank" rel="noopener">SoundCloud</a><span>Playback and SoundCloud links</span></li>
         <li><a href="https://open.spotify.com" target="_blank" rel="noopener" id="creditsSpotifyLink">Spotify</a><span id="creditsSpotifyDesc">Playlist, album and song links, cover art</span></li>
         <li><a href="https://music.apple.com" target="_blank" rel="noopener">Apple Music</a><span>Playlist, album and song links, cover art</span></li>
-        <li><a href="https://nominatim.openstreetmap.org" target="_blank" rel="noopener">OpenStreetMap Nominatim</a><span>Place search on the region map, only when you ask for it</span></li>
+        <li><a href="https://nominatim.openstreetmap.org" target="_blank" rel="noopener">OpenStreetMap Nominatim</a><span>Place search on the region map and a station's street-level place, only when you ask for it or open a station</span></li>
         <li><a href="https://www.radio-browser.info" target="_blank" rel="noopener">Radio Browser</a><span>Community radio station directory for the region map</span></li>
         <li><a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a><span>Map tiles for the region map, with data from <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors</a></span></li>
         <li><a href="https://maplibre.org" target="_blank" rel="noopener">MapLibre</a><span>Open source map renderer</span></li>
@@ -12257,15 +12257,16 @@ function rsRender(st){
   const about = bpMk('div'), near = bpMk('div', 'rs-sec rs-near'); pad.appendChild(about); pad.appendChild(near);
   let placeLine = '';
   const sec = (title, node) => { const d = bpMk('div', 'rs-sec'); d.appendChild(bpMk('h3', '', title)); d.appendChild(node); about.appendChild(d); };
+  const langs = () => String(st.lang || '').split(',').map(x => x.trim().replace(/\b\w/g, c => c.toUpperCase())).filter(Boolean);
   const fill = () => {
     if (seq !== rsSeq) return;
     about.textContent = '';
     const place = placeLine || [st.state, st.country].filter(Boolean).join(', ');
-    meta.textContent = ['Radio station', st.lang ? st.lang.replace(/\b\w/g, c => c.toUpperCase()) : ''].filter(Boolean).join(' · ');
+    meta.textContent = ['Radio station', langs().slice(0, 2).join(', ')].filter(Boolean).join(' · ');
     if (place) sec('Place', bpMk('p', '', place));
     const gen = rmGenres(st.allTags && st.allTags.length ? st.allTags : st.tags, 8);
     if (gen.length){ const t = bpMk('div', 'rs-tags'); gen.forEach(x => t.appendChild(bpMk('span', '', x))); sec('Genres', t); }
-    if (st.lang) sec('Language', bpMk('p', '', st.lang.replace(/\b\w/g, c => c.toUpperCase())));
+    if (langs().length) sec(langs().length > 1 ? 'Languages' : 'Language', bpMk('p', '', langs().join(', ')));
     if (st.home){ const p = bpMk('p'), a = bpMk('a', '', st.home.replace(/^https:\/\/(www\.)?/, '').replace(/\/$/, '').slice(0, 50)); a.href = st.home; a.target = '_blank'; a.rel = 'noopener noreferrer'; p.appendChild(a); sec('Website', p); }
     sec('About live radio', bpMk('p', 'rs-note', 'Play is the station as it broadcasts, so it can include ads and talk. Songs from here are picked by EBBLESS from this place, with no ads.'));
     rsLogo(st).then(u => { if (seq === rsSeq) img.src = u; });
