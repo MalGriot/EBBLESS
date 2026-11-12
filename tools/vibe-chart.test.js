@@ -10,7 +10,7 @@ const m = /\/\* VIBE-CHART:BEGIN[^*]*\*\/([\s\S]*?)\/\* VIBE-CHART:END \*\//.exe
 assert.ok(m, 'VIBE-CHART block not found in index.html');
 const ctx = {};
 vm.createContext(ctx);
-vm.runInContext(m[1] + '\nthis.api = { VC_MAX, VC_NODES, VC_GRID, VC_EMOJI_GRID, vcBeatMs, vcGrow, VC_BY_ID, vcClean, vcToggle, vcFill, vcCompose, vcNeighbor, vcHeat, vcPathPoints, vcNear, vcFlowCell, VC_JOURNEYS, VC_HAPPY };', ctx);
+vm.runInContext(m[1] + '\nthis.api = { VC_MAX, VC_NODES, VC_GRID, VC_EMOJI_GRID, vcBeatMs, vcGrow, vcSummary, VC_BY_ID, vcClean, vcToggle, vcFill, vcCompose, vcNeighbor, vcHeat, vcPathPoints, vcNear, vcFlowCell, VC_JOURNEYS, VC_HAPPY };', ctx);
 const A = ctx.api;
 const arr = (x) => [...x];
 
@@ -121,4 +121,14 @@ test('heart beats faster and grows with every pick, and rests at zero', () => {
   assert.strictEqual(A.vcBeatMs(1), 1500); assert.strictEqual(A.vcBeatMs(7), 500); assert.strictEqual(A.vcBeatMs(12), 500);
   for (let n = 1; n < 7; n++){ assert.ok(A.vcBeatMs(n + 1) < A.vcBeatMs(n)); assert.ok(A.vcGrow(n + 1) > A.vcGrow(n)); }
   assert.strictEqual(A.vcGrow(0), 1); assert.strictEqual(A.vcGrow(7), 1.42);
+});
+
+test('mix summary: a weather emoji from where the picks centre, a rollercoaster for a wide range', () => {
+  assert.strictEqual(A.vcSummary([]).emoji, '');
+  assert.strictEqual(A.vcSummary(['numb', 'drained', 'sleepy', 'exhausted', 'empty', 'gloomy', 'hopeless']).name, 'rainy');
+  assert.strictEqual(A.vcSummary(['serene', 'calm', 'comforted', 'tranquil', 'blissful', 'healing', 'peaceful']).name, 'sunrise');
+  assert.strictEqual(A.vcSummary(['furious', 'enraged', 'angry', 'seething', 'frantic', 'panicked', 'bitter']).name, 'stormy');
+  assert.strictEqual(A.vcSummary(['elated', 'stoked', 'joyful', 'excited', 'euphoric', 'ecstatic', 'thrilled']).name, 'fireworks');
+  assert.strictEqual(A.vcSummary(['furious', 'blissful', 'numb', 'elated', 'panicked', 'serene', 'hopeless']).name, 'rollercoaster');
+  assert.ok(A.vcSummary(['calm', 'sad', 'joyful']).emoji.length > 0);
 });
