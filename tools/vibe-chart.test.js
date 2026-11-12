@@ -10,7 +10,7 @@ const m = /\/\* VIBE-CHART:BEGIN[^*]*\*\/([\s\S]*?)\/\* VIBE-CHART:END \*\//.exe
 assert.ok(m, 'VIBE-CHART block not found in index.html');
 const ctx = {};
 vm.createContext(ctx);
-vm.runInContext(m[1] + '\nthis.api = { VC_MAX, VC_NODES, VC_GRID, VC_BY_ID, vcClean, vcToggle, vcFill, vcCompose, vcNeighbor, vcHeat, vcPathPoints, vcNear, VC_COMPACT, VC_JOURNEYS, VC_HAPPY };', ctx);
+vm.runInContext(m[1] + '\nthis.api = { VC_MAX, VC_NODES, VC_GRID, VC_BY_ID, vcClean, vcToggle, vcFill, vcCompose, vcNeighbor, vcHeat, vcPathPoints, vcNear, VC_WINDOWS, vcWindow, vcBestWindow, VC_JOURNEYS, VC_HAPPY };', ctx);
 const A = ctx.api;
 const arr = (x) => [...x];
 
@@ -32,9 +32,8 @@ test('heat goes from cool (heavy, calm) to warm (bright, intense)', () => {
 test('path points follow pick order; near cells exclude picks', () => {
   assert.strictEqual(A.vcPathPoints(['calm', 'furious']), '4.5,6.5 0.5,0.5');
   assert.strictEqual(A.vcPathPoints([]), '');
-  // compact 5 x 5: calm (col 4,row 6) is not a cell there, furious and numb are; picks without a cell are skipped
-  assert.strictEqual(A.vcPathPoints(['furious', 'calm', 'numb'], A.VC_COMPACT), '0.5,0.5 0.5,4.5');
-  assert.strictEqual(A.vcPathPoints(['sad', 'joyful'], A.VC_COMPACT), '4.5,1.5');
+  const lc = A.vcWindow('light-calm'); // columns 2-6, rows 2-6
+  assert.strictEqual(A.vcPathPoints(['calm', 'furious', 'serene'], lc), '2.5,4.5 3.5,4.5');
   const near = A.vcNear(['calm']);
   assert.ok(near.has('serene') && near.has('relaxed') && !near.has('calm') && !near.has('furious'));
   assert.strictEqual(near.size, 5);
@@ -83,28 +82,28 @@ test('arrow keys move one cell and stop at the edge', () => {
   assert.strictEqual(A.vcNeighbor('furious', 'left'), null);
 });
 
-test('compact layout is a 5 x 5 subset made of real cells with short words', () => {
-  const C = A.VC_COMPACT, words = [];
-  C.rows.forEach(r => C.cols.forEach(c => words.push(A.VC_GRID[r][c])));
-  assert.strictEqual(words.length, 25);
-  assert.ok(words.every(w => w.length <= 10));
-  assert.deepStrictEqual(arr(C.cols), [...C.cols].sort((a, b) => a - b));
+test('the four corner windows are 5 x 5 and together cover every feeling', () => {
+  const seen = new Set();
+  Object.keys(A.VC_WINDOWS).forEach(k => { const L = A.vcWindow(k); assert.strictEqual(L.cols.length, 5); assert.strictEqual(L.rows.length, 5); L.rows.forEach(r => L.cols.forEach(c => seen.add(A.VC_GRID[r][c]))); });
+  assert.strictEqual(seen.size, 49);
+  assert.strictEqual(A.vcWindow('nope').cols[0], 2);
 });
 
-test('journeys use real feelings, fit the cap, and every word is on the compact map', () => {
-  const C = A.VC_COMPACT, onMap = new Set();
-  C.rows.forEach(r => C.cols.forEach(c => onMap.add(A.VC_GRID[r][c])));
+test('best window follows the picks and keeps the current one on a tie', () => {
+  assert.strictEqual(A.vcBestWindow([], 'heavy-calm'), 'heavy-calm');
+  assert.strictEqual(A.vcBestWindow(['numb', 'sleepy', 'drained'], 'light-intense'), 'heavy-calm');
+  assert.strictEqual(A.vcBestWindow(['joyful', 'euphoric'], 'heavy-calm'), 'light-intense');
+});
+
+test('journeys use real feelings and fit the cap', () => {
   A.VC_JOURNEYS.forEach(j => {
     assert.strictEqual(A.vcClean(j.ids).length, j.ids.length, j.label);
     assert.ok(j.ids.length >= 3 && j.ids.length <= A.VC_MAX);
-    j.ids.forEach(id => assert.ok(onMap.has(id), j.label + ': ' + id));
     assert.ok(A.vcCompose(j.ids).length > 0);
   });
 });
 
-test('happy chips are real, light-side feelings that also sit on the compact map', () => {
-  const C = A.VC_COMPACT, onMap = new Set();
-  C.rows.forEach(r => C.cols.forEach(c => onMap.add(A.VC_GRID[r][c])));
+test('happy chips are real, light-side feelings', () => {
   assert.ok(A.VC_HAPPY.length >= 5);
-  A.VC_HAPPY.forEach(id => { assert.ok(A.VC_BY_ID[id] && A.VC_BY_ID[id].c >= 4, id); assert.ok(onMap.has(id), id); });
+  A.VC_HAPPY.forEach(id => { assert.ok(A.VC_BY_ID[id] && A.VC_BY_ID[id].c >= 4, id); });
 });
