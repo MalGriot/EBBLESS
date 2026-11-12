@@ -201,3 +201,10 @@ test('search: finds granular genres by their other names and by words in any ord
   assert.ok(ix('south african jazz').includes('Cape jazz'));
   assert.ok(ix('psychedelic cumbia').includes('Chicha'));
 });
+
+test('genre-artists.json: only genres on the map, 3-14 plain names each, and most genres are covered', () => {
+  const A2 = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'genre-artists.json'), 'utf8'));
+  const names = new Set(D.n.map(r => r[0]));
+  Object.keys(A2).forEach(k => { assert.ok(names.has(k), 'unknown genre ' + k); assert.ok(A2[k].length >= 3 && A2[k].length <= 14, k); A2[k].forEach(a => assert.ok(typeof a === 'string' && a.length > 0 && a.length < 120)); });
+  assert.ok(Object.keys(A2).length >= D.n.length * 0.85, 'coverage ' + Object.keys(A2).length);
+});

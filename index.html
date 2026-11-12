@@ -1547,6 +1547,7 @@ body.split-desktop:has(#mini-bar:not([hidden])) :is(#browsePage,#addSongsPage,#f
 .gm-art:hover{background:color-mix(in srgb,var(--text) 8%,transparent)}
 .gm-art:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .gm-art img{flex:none;width:38px;height:38px;border-radius:50%;object-fit:cover;background:var(--panel)}
+.gm-av{flex:none;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb,var(--accent) 22%,var(--panel));color:var(--accent);font-size:15px;font-weight:800}
 .gm-art span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .gm-art svg{flex:none;width:20px;height:20px;color:var(--accent)}
 .gm-artall{justify-content:center;min-height:40px;color:var(--faint);font-size:13px}
@@ -11603,8 +11604,19 @@ function gmTerm(i){
 }
 function gmPlay(i, from){ const t = gmTerm(i); bpPick(t.term, t.title, t.genre, null, from); }
 // artists for a genre, from the same keyless store search the artists page uses; kept for the session
+// our own list first: genre-artists.json (built by tools/genre-artists-build.js from open MusicBrainz tags) ships with the app,
+// so browsing genres does not depend on a music store at all; the live store search is only the fallback for a genre it lacks
+let gmPreP = null;
+function gmPre(){
+  if (!gmPreP) gmPreP = fetch('genre-artists.json').then(r => r.ok ? r.json() : {}).catch(() => ({}));
+  return gmPreP;
+}
 async function gmArtists(i){
   const g = gm, t = gmTerm(i), key = t.term + '|' + (t.genre || '');
+  try {
+    const pre = await gmPre(), own = pre && pre[t.title];
+    if (Array.isArray(own) && own.length >= 3) return own.slice(0, 14).map(nm => ({ name: String(nm), image: '' }));
+  } catch(e){}
   g.artCache = g.artCache || new Map();
   if (g.artCache.has(key)) return g.artCache.get(key);
   // lists that loaded once are kept on this device for two weeks, so a genre you have seen never needs the store again
@@ -11654,7 +11666,7 @@ function gmShowArtists(i, now){
         (err ? '<button type="button" class="gm-art gm-artall" data-gp="retry">Try again</button>' : '');
       return;
     }
-    b.innerHTML = list.map(a => '<button type="button" class="gm-art" data-gp="artist" data-v="' + escapeHtml(a.name) + '" aria-label="' + escapeHtml(a.name) + ', open on the music map"><img src="' + escapeHtml(a.image) + '" alt="" loading="lazy"><span>' + escapeHtml(a.name) + '</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="2.5"/><circle cx="5" cy="6" r="1.8"/><circle cx="19" cy="7" r="1.8"/><circle cx="18" cy="18" r="1.8"/><path d="M10 11 6 7M14 11l4-3M14 14l3 3"/></svg></button>').join('') +
+    b.innerHTML = list.map(a => '<button type="button" class="gm-art" data-gp="artist" data-v="' + escapeHtml(a.name) + '" aria-label="' + escapeHtml(a.name) + ', open on the music map">' + (a.image ? '<img src="' + escapeHtml(a.image) + '" alt="" loading="lazy">' : '<b class="gm-av" aria-hidden="true">' + escapeHtml(Array.from(String(a.name).trim())[0] || '?') + '</b>') + '<span>' + escapeHtml(a.name) + '</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="2.5"/><circle cx="5" cy="6" r="1.8"/><circle cx="19" cy="7" r="1.8"/><circle cx="18" cy="18" r="1.8"/><path d="M10 11 6 7M14 11l4-3M14 14l3 3"/></svg></button>').join('') +
       '<button type="button" class="gm-art gm-artall" data-gp="play">See all artists</button>';
   };
   const go = () => {
@@ -25538,6 +25550,9 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
+  { version: 563, date: '2026-11-12', items: [
+    'Artists for each genre now come from our own list that ships with the app, so browsing genres no longer depends on the music store being available.',
+  ]},
   { version: 562, date: '2026-11-12', items: [
     'Genre labels on the genre map no longer swell when you hover them, so they stay put and are easy to click.',
     'If the music catalogue is busy, genre artists retry on their own a couple of times, and lists that loaded once are kept for two weeks.',
