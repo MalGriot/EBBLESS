@@ -14,27 +14,27 @@ vm.runInContext(m[1] + '\nthis.api = { VC_MAX, VC_NODES, VC_GRID, VC_BY_ID, vcCl
 const A = ctx.api;
 const arr = (x) => [...x];
 
-test('grid: 7 x 7, unique plain words, each cell placed where its row and column say', () => {
-  assert.strictEqual(A.VC_NODES.length, 49);
-  assert.strictEqual(new Set(arr(A.VC_NODES).map(n => n.id)).size, 49);
+test('grid: 10 x 10, unique plain words, each cell placed where its row and column say', () => {
+  assert.strictEqual(A.VC_NODES.length, 100);
+  assert.strictEqual(new Set(arr(A.VC_NODES).map(n => n.id)).size, 100);
   assert.ok(arr(A.VC_NODES).every(n => /^[a-z]{3,11}$/.test(n.label)));
   assert.strictEqual(A.VC_BY_ID.furious.c, 0); assert.strictEqual(A.VC_BY_ID.furious.r, 0);
-  assert.strictEqual(A.VC_BY_ID.euphoric.c, 6); assert.strictEqual(A.VC_BY_ID.euphoric.r, 0);
-  assert.strictEqual(A.VC_BY_ID.numb.c, 0); assert.strictEqual(A.VC_BY_ID.numb.r, 6);
+  assert.strictEqual(A.VC_BY_ID.elated.c, 9); assert.strictEqual(A.VC_BY_ID.elated.r, 0);
+  assert.strictEqual(A.VC_BY_ID.numb.c, 0); assert.strictEqual(A.VC_BY_ID.numb.r, 8);
   assert.ok(A.VC_BY_ID.calm.r > A.VC_BY_ID.anxious.r && A.VC_BY_ID.joyful.c > A.VC_BY_ID.sad.c);
 });
 
 test('heat goes from cool (heavy, calm) to warm (bright, intense)', () => {
   const hue = (c, r) => Number(/hsl\((\d+)/.exec(A.vcHeat(c, r))[1]);
-  assert.ok(hue(0, 6) > 200); assert.ok(hue(6, 0) < 30); assert.ok(hue(3, 3) > hue(6, 0) && hue(3, 3) < hue(0, 6));
+  assert.ok(hue(0, 9) > 200); assert.ok(hue(9, 0) < 30); assert.ok(hue(4, 4) > hue(9, 0) && hue(4, 4) < hue(0, 9));
 });
 
 test('path points follow pick order; near cells exclude picks', () => {
-  assert.strictEqual(A.vcPathPoints(['calm', 'furious']), '4.5,6.5 0.5,0.5');
+  assert.strictEqual(A.vcPathPoints(['calm', 'furious']), '8.5,8.5 0.5,0.5');
   assert.strictEqual(A.vcPathPoints([]), '');
   const near = A.vcNear(['calm']);
-  assert.ok(near.has('serene') && near.has('relaxed') && !near.has('calm') && !near.has('furious'));
-  assert.strictEqual(near.size, 5);
+  assert.ok(near.has('serene') && near.has('tranquil') && !near.has('calm') && !near.has('furious'));
+  assert.strictEqual(near.size, 8);
 });
 
 test('toggle adds in order, removes, and stops at 7', () => {
@@ -73,21 +73,21 @@ test('fill goes from 0 to 1 over 7', () => {
 });
 
 test('arrow keys move one cell and stop at the edge', () => {
-  assert.strictEqual(A.vcNeighbor('calm', 'right'), 'serene');
-  assert.strictEqual(A.vcNeighbor('calm', 'left'), 'quiet');
-  assert.strictEqual(A.vcNeighbor('calm', 'up'), 'relaxed');
-  assert.strictEqual(A.vcNeighbor('calm', 'down'), null);
+  assert.strictEqual(A.vcNeighbor('calm', 'right'), 'comforted');
+  assert.strictEqual(A.vcNeighbor('calm', 'left'), 'serene');
+  assert.strictEqual(A.vcNeighbor('calm', 'up'), 'healing');
+  assert.strictEqual(A.vcNeighbor('tranquil', 'down'), null);
   assert.strictEqual(A.vcNeighbor('furious', 'left'), null);
 });
 
-test('phone flow: every feeling gets its own slot, 4 per line, row name in the spare slot', () => {
-  assert.strictEqual(A.VC_BANDS.length, 7);
+test('phone flow: every feeling gets its own slot, 4 per line, row name in the two spare slots', () => {
+  assert.strictEqual(A.VC_BANDS.length, 10);
   const used = new Set();
   A.VC_NODES.forEach(n => { const f = A.vcFlowCell(n.c, n.r); assert.ok(f.col >= 1 && f.col <= 4); used.add(f.col + ',' + f.row); });
-  assert.strictEqual(used.size, 49);
-  for (let r = 0; r < 7; r++) assert.ok(!used.has('4,' + (2 * r + 2)));   // the band label slot stays free
+  assert.strictEqual(used.size, 100);
+  for (let r = 0; r < 10; r++) { assert.ok(!used.has('3,' + (3 * r + 3))); assert.ok(!used.has('4,' + (3 * r + 3))); }
   assert.deepStrictEqual({ ...A.vcFlowCell(0, 0) }, { col: 1, row: 1 });
-  assert.deepStrictEqual({ ...A.vcFlowCell(6, 6) }, { col: 3, row: 14 });
+  assert.deepStrictEqual({ ...A.vcFlowCell(9, 9) }, { col: 2, row: 30 });
 });
 
 test('journeys use real feelings and fit the cap', () => {
@@ -100,5 +100,5 @@ test('journeys use real feelings and fit the cap', () => {
 
 test('happy chips are real, light-side feelings', () => {
   assert.ok(A.VC_HAPPY.length >= 5);
-  A.VC_HAPPY.forEach(id => { assert.ok(A.VC_BY_ID[id] && A.VC_BY_ID[id].c >= 4, id); });
+  A.VC_HAPPY.forEach(id => { assert.ok(A.VC_BY_ID[id] && A.VC_BY_ID[id].c >= 6, id); });
 });
