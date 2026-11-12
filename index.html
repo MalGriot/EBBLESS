@@ -1554,9 +1554,6 @@ body.split-desktop:has(#mini-bar:not([hidden])) :is(#browsePage,#addSongsPage,#f
 .gm-plab{margin:10px 0 6px;font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--faint)}
 .gm-chips{display:flex;flex-wrap:wrap;gap:8px}
 .gm-chip{display:inline-flex;align-items:center;gap:7px;min-height:38px;padding:0 12px;border-radius:999px;background:color-mix(in srgb,var(--text) 5%,transparent);border:1px solid hsl(var(--gm-h) var(--gm-s) 60% / .4);color:var(--text);font:inherit;font-size:13px;font-weight:600;cursor:pointer}
-.gm-foot{margin:14px 2px 0;font-size:13px}
-.gm-foot a{color:var(--faint);text-decoration:underline;text-underline-offset:3px}
-.gm-foot a:hover{color:var(--accent)}
 @media (max-width:639px){.gm-panel.is-min .gm-pbody{display:none}.gm-wrap.is-web .gm-zoomctl{top:10px}}
 @media (min-width:640px){
   .gm-panel{left:auto;top:10px;right:10px;bottom:10px;width:300px;max-height:none;transform:translateX(24px)}
@@ -6256,6 +6253,7 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
         <li><a href="https://www.wikidata.org" target="_blank" rel="noopener">Wikidata</a><span>Artist labels and awards</span></li>
         <li><a href="https://coverartarchive.org" target="_blank" rel="noopener">Cover Art Archive</a><span>Album art</span></li>
         <li><a href="https://lrclib.net" target="_blank" rel="noopener">LRCLIB</a><span>Synced lyrics</span></li>
+        <li><a href="https://everynoise.com/engenremap.html" target="_blank" rel="noopener">Every Noise at Once</a><span>Inspiration for the genre map</span></li>
       </ul>
     </div>
     <div class="credits-group">
@@ -10646,7 +10644,7 @@ function bpRender(){
     if (gmViewIsMap() && gmMount(list)) return;
     if (gmFailed) list.appendChild(bpMk('p', 'bp-lead', 'The genre map could not load, so here is the list.'));
     const hits = bpFilterGenres(FM_GENRES, bpFilter);
-    if (!hits.length){ bpEmpty(list, 'genres or styles'); gmFootLink(list); return; }
+    if (!hits.length){ bpEmpty(list, 'genres or styles'); return; }
     const grid = bpMk('div', 'bp-grid');
     grid.setAttribute('role', 'group'); grid.setAttribute('aria-label', 'Genres');
     hits.forEach(({ g, subs, byStyle }, i) => {
@@ -10665,7 +10663,6 @@ function bpRender(){
       }
     });
     list.appendChild(grid);
-    gmFootLink(list);
     return;
   }
   if (bpKind === 'region'){
@@ -11243,7 +11240,6 @@ function zmGestures(st, o){
 }
 
 const LS_GENRE_VIEW = 'ebbless:genreView';
-const GM_EVERYNOISE = 'https://everynoise.com/engenremap.html';
 let gm = null, gmFailed = false;
 function gmViewIsMap(){ return !gmFailed && lsGet(LS_GENRE_VIEW, 'map') !== 'list'; }
 function gmViewNow(){ const v = lsGet(LS_GENRE_VIEW, 'map'); return v === 'list' || v === 'years' ? v : 'map'; }
@@ -11692,11 +11688,6 @@ function gmTopControls(top){
     else if (bpFilterEl.value.trim()){ e.preventDefault(); gmAnyArtists(bpFilterEl.value, bpFilterEl); }
   });
 }
-function gmFootLink(list){
-  const p = bpMk('p', 'gm-foot');
-  const a = bpMk('a', '', 'More genres on EveryNoise'); a.href = GM_EVERYNOISE; a.target = '_blank'; a.rel = 'noopener noreferrer';
-  p.appendChild(a); list.appendChild(p);
-}
 // puts the map on the page; false means it could not be built, and the caller shows the list instead
 function gmMount(list){
   try {
@@ -11704,7 +11695,6 @@ function gmMount(list){
     const g = gm;
     gmSetMode(g, lsGet(LS_GENRE_VIEW, 'map') === 'years' ? 'years' : 'web');
     list.appendChild(g.el);
-    gmFootLink(list);
     if (bpFilterEl) gmSuggest(bpFilter); else gmHideSugg();
     if (g.stage.clientWidth){ if (!g.touched && g.sel < 0 && !g.fitted){ g.fitted = true; gmFitView(false); } else gmDirty(); }
     else requestAnimationFrame(() => { if (gm === g && g.stage.clientWidth){ g.fitted = true; if (!g.touched) gmFitView(false); else gmDirty(); } });
@@ -12091,13 +12081,14 @@ function rmInit(gen){
       rmMap = new maplibregl.Map({
         container: el, style: RM_STYLE, center: rmView ? rmView.c : [10, 25], zoom: rmView ? rmView.z : rmWorldZoom(), minZoom: 0, maxZoom: 17,
         renderWorldCopies: false, dragRotate: false, pitchWithRotate: false, fadeDuration: 0,
-        cooperativeGestures: !!(window.matchMedia && matchMedia('(pointer:coarse)').matches), attributionControl: { compact: true, customAttribution: 'Radio Browser' }
+        cooperativeGestures: !!(window.matchMedia && matchMedia('(pointer:coarse)').matches), attributionControl: { compact: true }
       });
     } catch(e){ rmOff('The map needs WebGL, which is not available here. Pick a region below.'); return; }
     const map = rmMap;
     try { map.touchZoomRotate.disableRotation(); } catch(e){}
     map.on('error', (ev) => { if (map === rmMap && ev && ev.error && /webgl/i.test(String(ev.error.message || ''))) rmOff('The map needs WebGL, which is not available here. Pick a region below.'); });
     map.on('load', () => {
+      try { const at = el.querySelector('.maplibregl-ctrl-attrib'); if (at){ at.removeAttribute('open'); at.classList.remove('maplibregl-compact-show'); } } catch(e){}   // credits live in Settings > Credits; the map keeps only its small info button
       if (map !== rmMap) return;
       map.addSource('rm-st', { type: 'geojson', data: rmGeo(rmSt), cluster: true, clusterRadius: 46, clusterMaxZoom: 13 });
       map.addLayer({ id: 'rm-cl', type: 'circle', source: 'rm-st', filter: ['has', 'point_count'], paint: { 'circle-color': '#e0b26a', 'circle-opacity': 0.92, 'circle-radius': ['step', ['get', 'point_count'], 15, 10, 19, 40, 24, 120, 30], 'circle-stroke-width': 2, 'circle-stroke-color': 'rgba(21,17,7,.7)' } });
@@ -25523,6 +25514,9 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
+  { version: 561, date: '2026-11-12', items: [
+    'Credits for the maps, radio stations and genre map now live in Settings, under Credits, not on the pages.',
+  ]},
   { version: 560, date: '2026-11-12', items: [
     'The Browse pages and the artists window now keep the bottom menu and the footer player in view.',
     'The region map opens instantly from a world list of radio stations that is refreshed every day, and region cards open from ready-made artist lists refreshed every week, so the app no longer searches Radio Browser or iTunes every time you open one.'
