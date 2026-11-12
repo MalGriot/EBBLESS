@@ -1579,28 +1579,32 @@ body.split-desktop:has(#mini-bar:not([hidden])) :is(#browsePage,#addSongsPage,#r
 .rm-found .rm-geo{text-align:center;color:var(--accent);font-weight:700}
 #rsPage{position:fixed;inset:0;z-index:54;background:var(--bg);display:flex;flex-direction:column}
 #rsPage[hidden]{display:none}
+.rs-scroll{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:0 0 calc(28px + var(--safe-b))}
 .rs-inner{max-width:640px;margin:0 auto}
-.rs-hero{display:flex;gap:16px;align-items:center;margin:6px 0 18px}
-.rs-logo{flex:none;width:96px;height:96px;border-radius:20px;background:var(--panel-3);overflow:hidden}
-.rs-logo img{display:block;width:100%;height:100%;object-fit:cover}
-.rs-hero h2{margin:0;font-size:24px;font-weight:800;line-height:1.15;overflow-wrap:anywhere;color:var(--text)}
-.rs-hero h2:focus{outline:none}
-.rs-place{margin:4px 0 0;color:var(--faint);font-size:14px;overflow-wrap:anywhere}
-.rs-tags{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 0}
-.rs-tags span{padding:3px 10px;border-radius:999px;background:var(--panel-3);color:var(--text);font-size:12px}
-.rs-play{display:block;width:100%;min-height:58px;border-radius:999px;border:0;background:var(--accent);color:var(--on-accent,#151107);font:inherit;font-size:18px;font-weight:800;cursor:pointer}
-.rs-play:focus-visible,.rs-row :focus-visible,.rs-near button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.rs-row{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 0}
+.rs-back{position:absolute;left:10px;top:calc(10px + var(--safe-t));z-index:5;width:44px;height:44px;border-radius:50%;border:0;background:rgba(0,0,0,.45);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.rs-back svg{width:22px;height:22px}
+.rs-back:focus-visible,.rs-bigplay:focus-visible,.rs-row :focus-visible,.rs-near button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.rs-cover{position:relative;height:clamp(250px,40vh,340px);border-radius:0 0 50% 50% / 0 0 38px 38px;overflow:hidden;display:flex;align-items:flex-start;justify-content:center;padding-top:calc(54px + var(--safe-t));box-sizing:border-box;background:linear-gradient(165deg,hsl(var(--rs-h,220),45%,34%),hsl(var(--rs-h,220),40%,12%))}
+.rs-cover::after{content:'';position:absolute;inset:0;pointer-events:none;background:linear-gradient(to bottom,rgba(0,0,0,.2),rgba(0,0,0,0) 30%,rgba(0,0,0,0) 45%,rgba(0,0,0,.72))}
+.rs-cover img{position:relative;z-index:1;width:124px;height:124px;border-radius:26px;object-fit:cover;box-shadow:0 8px 24px rgba(0,0,0,.4);background:rgba(255,255,255,.08)}
+.rs-heroText{position:absolute;z-index:2;left:20px;right:104px;bottom:26px;color:#fff;text-shadow:0 1px 8px rgba(0,0,0,.5)}
+.rs-meta{font-size:12px;opacity:.88}
+.rs-heroText h2{margin:4px 0 0;font-size:28px;font-weight:800;line-height:1.1;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.rs-heroText h2:focus{outline:none}
+.rs-heroWrap{position:relative;margin-bottom:46px}
+.rs-bigplay{position:absolute;right:22px;bottom:-32px;z-index:3;width:64px;height:64px;border-radius:50%;border:0;background:var(--accent);color:var(--on-accent,#151107);display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 0 0 5px var(--bg),0 6px 18px rgba(0,0,0,.45)}
+.rs-bigplay svg{width:28px;height:28px}
+.rs-pad{padding:0 16px}
+.rs-note{margin:0 0 12px;font-size:13px;line-height:1.45;color:var(--faint)}
+.rs-row{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px}
 .rs-row button,.rs-row a{min-height:44px;padding:0 18px;border-radius:999px;border:1px solid var(--border-2);background:var(--panel-2);color:var(--text);font:inherit;font-size:14.5px;font-weight:700;display:inline-flex;align-items:center;cursor:pointer;text-decoration:none}
 .rs-row .is-saved{border-color:var(--accent);color:var(--accent)}
-.rs-note{margin:12px 2px 0;font-size:13px;line-height:1.45;color:var(--faint)}
-.rs-info{margin:20px 0 0}
-.rs-info>div{display:flex;justify-content:space-between;gap:18px;padding:12px 0;border-bottom:1px solid var(--border);font-size:14.5px}
-.rs-info dt{color:var(--faint);flex:none}
-.rs-info dd{margin:0;text-align:right;overflow-wrap:anywhere;color:var(--text)}
-.rs-info a{color:var(--accent)}
-.rs-near{margin:24px 0 0}
-.rs-near h3{margin:0 0 10px;font-size:17px;font-weight:700;color:var(--text)}
+.rs-sec{margin:22px 0 0}
+.rs-sec h3{margin:0 0 10px;font-size:17px;font-weight:700;color:var(--text)}
+.rs-sec p{margin:0;font-size:15px;line-height:1.5;color:var(--text);overflow-wrap:anywhere}
+.rs-sec a{color:var(--accent)}
+.rs-tags{display:flex;flex-wrap:wrap;gap:8px}
+.rs-tags span{padding:6px 14px;border-radius:999px;background:var(--panel-3);color:var(--text);font-size:13.5px}
 .rs-near ul{list-style:none;margin:0;padding:0;display:grid;gap:6px}
 .rs-near button{display:block;width:100%;text-align:left;padding:10px 14px;border-radius:14px;border:1px solid var(--border);background:var(--panel);color:var(--text);font:inherit;font-size:14.5px;cursor:pointer;overflow-wrap:anywhere}
 .rs-near small{display:block;color:var(--faint);font-size:12.5px;margin-top:2px}
@@ -11860,10 +11864,27 @@ function rmInitials(name){
   return (w.length > 1 ? w[0][0] + w[1][0] : (w[0] || '?').slice(0, 2)).toUpperCase();
 }
 // a drawn logo for a station that has none (or whose logo will not load): its initials on a colour taken from its name
+function rmHue(name){ let h = 0; String(name || '').split('').forEach(c => { h = (h * 31 + c.charCodeAt(0)) >>> 0; }); return h % 360; }
 function rmTileUrl(name){
-  let h = 0; String(name || '').split('').forEach(c => { h = (h * 31 + c.charCodeAt(0)) >>> 0; });
-  const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300"><rect width="300" height="300" fill="hsl(' + (h % 360) + ',42%,30%)"/><text x="150" y="150" font-family="sans-serif" font-size="110" font-weight="800" fill="#fff" text-anchor="middle" dominant-baseline="central">' + rmInitials(name) + '</text></svg>';
+  const h = rmHue(name);
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300"><rect width="300" height="300" fill="hsl(' + h + ',42%,30%)"/><text x="150" y="150" font-family="sans-serif" font-size="110" font-weight="800" fill="#fff" text-anchor="middle" dominant-baseline="central">' + rmInitials(name) + '</text></svg>';
   return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+}
+// tags as genres people would name: generic ones dropped, a tag inside a longer one folded into it ("pop" into "hindi pop"), words capitalised
+function rmGenres(tags, max){
+  const generic = RM_GENERIC_TAGS, seen = new Set(), t = [];
+  (tags || []).forEach(x => { x = String(x || '').trim().toLowerCase().replace(/\s+/g, ' ').slice(0, 30); if (x.length > 1 && generic.indexOf(x) < 0 && !seen.has(x)){ seen.add(x); t.push(x); } });
+  const keep = t.filter(x => !t.some(y => y !== x && y.length > x.length && (' ' + y + ' ').indexOf(' ' + x + ' ') >= 0));
+  return keep.slice(0, max || 8).map(x => x.replace(/(^|[\s-])(\p{L})/gu, (m, a, b) => a + b.toUpperCase()));
+}
+// a street-level-to-country line from a geocoder address: neighbourhood, city, state, country, each once
+function rmPlaceLine(a){
+  if (!a || typeof a !== 'object') return '';
+  const pick = (...k) => { for (const x of k){ if (a[x]) return String(a[x]); } return ''; };
+  const parts = [pick('suburb', 'neighbourhood', 'city_district', 'quarter'), pick('city', 'town', 'village', 'municipality', 'county'), pick('state', 'region'), pick('country')];
+  const out = [];
+  parts.forEach(x => { x = x.trim().slice(0, 50); if (x && !out.some(y => rmFold(y) === rmFold(x))) out.push(x); });
+  return out.slice(0, 4).join(', ');
 }
 function rmFold(t){ return String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim(); }
 // the places that stations sit in (countries, then regions), with a centre and a box, built from any list of stations
@@ -12113,6 +12134,7 @@ function rsDetail(st){
       ['favicon', 'lang', 'codec', 'clicks', 'checked'].forEach(k => { if (n[k]) st[k] = n[k]; });
       if (!st.home && n.home) st.home = n.home;
       if (!st.tags.length) st.tags = n.tags;
+      st.allTags = String(rows[0].tags || '').split(',').map(x => x.trim()).filter(Boolean).slice(0, 16);
       if (!st.bitrate) st.bitrate = n.bitrate;
       if (!st.state) st.state = n.state;
       if (!st.cc) st.cc = n.cc;
@@ -12177,8 +12199,8 @@ function rsBuild(){
   rsEl = document.createElement('div');
   rsEl.id = 'rsPage'; rsEl.hidden = true;
   rsEl.setAttribute('role', 'dialog'); rsEl.setAttribute('aria-modal', 'true'); rsEl.setAttribute('aria-label', 'Radio station');
-  rsEl.innerHTML = '<div class="bp-head"><button type="button" class="fm-back" id="rsBack" aria-label="Back"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20z"/></svg></button><h1 class="bp-title">Radio station</h1></div>' +
-    '<div class="bp-scroll" id="rsScroll"><div class="rs-inner" id="rsBody"></div></div>';
+  rsEl.innerHTML = '<button type="button" class="rs-back" id="rsBack" aria-label="Back"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20z"/></svg></button>' +
+    '<div class="rs-scroll" id="rsScroll"><div class="rs-inner" id="rsBody"></div></div>';
   document.body.appendChild(rsEl);
   $('rsBack').addEventListener('click', () => rsClose());
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && rsOpenNow() && !(fmEl && !fmEl.hidden)){ e.preventDefault(); e.stopImmediatePropagation(); rsClose(); } }, true);
@@ -12192,30 +12214,31 @@ function rsClose(){
   rsFrom = null;
 }
 function rmCloseSheet(){ rsClose(); }
-function rsInfoRow(dl, label, val, href){
-  if (val == null || val === '') return;
-  const d = document.createElement('div'), dt = bpMk('dt', '', label), dd = bpMk('dd');
-  if (href){ const a = bpMk('a', '', val); a.href = href; a.target = '_blank'; a.rel = 'noopener noreferrer'; dd.appendChild(a); } else dd.textContent = val;
-  d.appendChild(dt); d.appendChild(dd); dl.appendChild(d);
+const rsGeo = new Map();
+// the street-level place for a station's map position (one OpenStreetMap lookup, only when its page opens, kept for the session)
+function rsPlace(st){
+  if (st.lat == null) return Promise.resolve('');
+  const k = st.id;
+  if (rsGeo.has(k)) return rsGeo.get(k);
+  const p = fetch('https://nominatim.openstreetmap.org/reverse?' + new URLSearchParams({ format: 'jsonv2', lat: String(st.lat), lon: String(st.lng), zoom: '14', addressdetails: '1', 'accept-language': (navigator.language || 'en').slice(0, 12) }), { credentials: 'omit' })
+    .then(r => r.ok ? r.json() : null).then(d => rmPlaceLine(d && d.address)).catch(() => '');
+  rsGeo.set(k, p);
+  return p;
 }
-function rsAgo(iso){
-  const t = Date.parse(iso); if (!isFinite(t)) return '';
-  const d = Math.max(0, Math.round((Date.now() - t) / 864e5));
-  return d < 1 ? 'Today' : d === 1 ? 'Yesterday' : d + ' days ago';
-}
+var RS_PLAY = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>', RS_STOP = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 6h12v12H6z"/></svg>';
 function rsRender(st){
   const body = $('rsBody'), seq = ++rsSeq;
   body.textContent = '';
-  const hero = bpMk('div', 'rs-hero'), logo = bpMk('div', 'rs-logo'), img = document.createElement('img');
-  img.alt = ''; img.src = rmTileUrl(st.name); logo.appendChild(img);
-  const head = bpMk('div'), h = bpMk('h2', '', st.name); h.tabIndex = -1; head.appendChild(h);
-  head.appendChild(bpMk('p', 'rs-place', [st.state, st.country].filter(Boolean).join(', ') || 'Place not listed'));
-  const tg = bpMk('div', 'rs-tags'); st.tags.slice(0, 5).forEach(x => tg.appendChild(bpMk('span', '', x))); if (st.tags.length) head.appendChild(tg);
-  hero.appendChild(logo); hero.appendChild(head); body.appendChild(hero);
-  const play = bpMk('button', 'rs-play', 'Play live now'); play.type = 'button';
-  play.addEventListener('click', () => { if (liveSt && liveSt.id === st.id && liveIsPlaying()) liveStop(); else liveStart(st); });
-  body.appendChild(play);
-  const note = bpMk('p', 'rs-note rs-livenote'); note.setAttribute('role', 'status'); body.appendChild(note);
+  const wrap = bpMk('div', 'rs-heroWrap'), cover = bpMk('div', 'rs-cover'), img = document.createElement('img');
+  cover.style.setProperty('--rs-h', String(rmHue(st.name)));
+  img.alt = ''; img.src = rmTileUrl(st.name); cover.appendChild(img);
+  const ht = bpMk('div', 'rs-heroText'), meta = bpMk('div', 'rs-meta', 'Radio station'), h = bpMk('h2', '', st.name); h.tabIndex = -1;
+  ht.appendChild(meta); ht.appendChild(h); cover.appendChild(ht); wrap.appendChild(cover);
+  const big = bpMk('button', 'rs-bigplay'); big.type = 'button'; big.innerHTML = RS_PLAY; big.setAttribute('aria-label', 'Play ' + st.name + ' live');
+  big.addEventListener('click', () => { if (liveSt && liveSt.id === st.id && liveIsPlaying()) liveStop(); else liveStart(st); });
+  wrap.appendChild(big); body.appendChild(wrap);
+  const pad = bpMk('div', 'rs-pad'); body.appendChild(pad);
+  const note = bpMk('p', 'rs-note rs-livenote'); note.setAttribute('role', 'status'); pad.appendChild(note);
   const row = bpMk('div', 'rs-row');
   const sv = bpMk('button', 'rs-save', 'Save to library'); sv.type = 'button'; sv.addEventListener('click', () => rsToggleSave(st)); row.appendChild(sv);
   const go = bpMk('button', '', 'Songs from here'); go.type = 'button';
@@ -12230,24 +12253,21 @@ function rsRender(st){
     });
     row.appendChild(mp);
   }
-  body.appendChild(row);
-  body.appendChild(bpMk('p', 'rs-note', 'Play live is the station as it broadcasts, so it can include ads and talk. Songs from here are picked by EBBLESS from this place, with no ads.'));
-  const dl = bpMk('dl', 'rs-info'); body.appendChild(dl);
-  const near = bpMk('div', 'rs-near'); body.appendChild(near);
+  pad.appendChild(row);
+  const about = bpMk('div'), near = bpMk('div', 'rs-sec rs-near'); pad.appendChild(about); pad.appendChild(near);
+  let placeLine = '';
+  const sec = (title, node) => { const d = bpMk('div', 'rs-sec'); d.appendChild(bpMk('h3', '', title)); d.appendChild(node); about.appendChild(d); };
   const fill = () => {
     if (seq !== rsSeq) return;
-    dl.textContent = '';
-    rsInfoRow(dl, 'Place', [st.state, st.country].filter(Boolean).join(', '));
-    rsInfoRow(dl, 'Language', st.lang ? st.lang.replace(/\b\w/g, c => c.toUpperCase()) : '');
-    rsInfoRow(dl, 'Genres', st.tags.join(', '));
-    rsInfoRow(dl, 'Audio', [st.codec, st.bitrate ? st.bitrate + ' kbps' : ''].filter(Boolean).join(' · '));
-    rsInfoRow(dl, 'Votes', st.votes ? st.votes.toLocaleString() : '');
-    rsInfoRow(dl, 'Listens', st.clicks ? st.clicks.toLocaleString() : '');
-    rsInfoRow(dl, 'Stream checked', rsAgo(st.checked));
-    rsInfoRow(dl, 'Location', st.lat != null ? st.lat.toFixed(2) + ', ' + st.lng.toFixed(2) : '');
-    rsInfoRow(dl, 'Website', st.home ? st.home.replace(/^https:\/\/(www\.)?/, '').replace(/\/$/, '').slice(0, 40) : '', st.home);
-    if (!dl.children.length) dl.appendChild(bpMk('p', 'rs-note', 'The directory has no more details for this station.'));
-    h.textContent = st.name;
+    about.textContent = '';
+    const place = placeLine || [st.state, st.country].filter(Boolean).join(', ');
+    meta.textContent = ['Radio station', st.lang ? st.lang.replace(/\b\w/g, c => c.toUpperCase()) : ''].filter(Boolean).join(' · ');
+    if (place) sec('Place', bpMk('p', '', place));
+    const gen = rmGenres(st.allTags && st.allTags.length ? st.allTags : st.tags, 8);
+    if (gen.length){ const t = bpMk('div', 'rs-tags'); gen.forEach(x => t.appendChild(bpMk('span', '', x))); sec('Genres', t); }
+    if (st.lang) sec('Language', bpMk('p', '', st.lang.replace(/\b\w/g, c => c.toUpperCase())));
+    if (st.home){ const p = bpMk('p'), a = bpMk('a', '', st.home.replace(/^https:\/\/(www\.)?/, '').replace(/\/$/, '').slice(0, 50)); a.href = st.home; a.target = '_blank'; a.rel = 'noopener noreferrer'; p.appendChild(a); sec('Website', p); }
+    sec('About live radio', bpMk('p', 'rs-note', 'Play is the station as it broadcasts, so it can include ads and talk. Songs from here are picked by EBBLESS from this place, with no ads.'));
     rsLogo(st).then(u => { if (seq === rsSeq) img.src = u; });
     // stations close by, from the ones already loaded on the map
     near.textContent = '';
@@ -12269,6 +12289,7 @@ function rsRender(st){
   };
   fill();
   rsDetail(st).then(fill);
+  rsPlace(st).then(line => { if (line && seq === rsSeq){ placeLine = line; fill(); } });
   return h;
 }
 function rsOpen(st, from, keepFrom){
@@ -12287,12 +12308,13 @@ function rmSelect(st, from){ rsOpen(st, from); }
 // the page's Play and Save buttons and its live note follow the live player and the library
 function rmSheetSync(){
   if (!rsOpenNow() || !rmSel) return;
-  const b = rsEl.querySelector('.rs-play'), n = rsEl.querySelector('.rs-livenote'), sv = rsEl.querySelector('.rs-save');
-  if (sv){ const on = rsIsSaved(rmSel.id); sv.textContent = on ? 'Saved ✓' : 'Save to library'; sv.classList.toggle('is-saved', on); sv.setAttribute('aria-pressed', String(on)); }
+  const b = rsEl.querySelector('.rs-bigplay'), n = rsEl.querySelector('.rs-livenote'), sv = rsEl.querySelector('.rs-save');
+  if (sv){ const on = rsIsSaved(rmSel.id); sv.textContent = on ? 'Saved \u2713' : 'Save to library'; sv.classList.toggle('is-saved', on); sv.setAttribute('aria-pressed', String(on)); }
   if (!b || !n) return;
-  const mine = !!liveSt && liveSt.id === rmSel.id, mode = mine ? liveMode : 'idle';
-  b.textContent = mode === 'playing' ? 'Stop live radio' : mode === 'loading' ? 'Connecting… tap to stop' : 'Play live now';
-  n.textContent = mode === 'playing' ? 'Live now.' : mode === 'error' ? 'Could not reach this station. Try again, or play songs from here.' : '';
+  const mine = !!liveSt && liveSt.id === rmSel.id, mode = mine ? liveMode : 'idle', on = mode === 'playing' || mode === 'loading';
+  b.innerHTML = on ? RS_STOP : RS_PLAY;
+  b.setAttribute('aria-label', (on ? 'Stop ' : 'Play ') + rmSel.name + ' live');
+  n.textContent = mode === 'playing' ? 'Live now.' : mode === 'loading' ? 'Connecting to the station\u2026' : mode === 'error' ? 'Could not reach this station. Tap play to try again, or play songs from here.' : 'Tap play to listen live.';
 }
 function rmTeardownMap(){
   clearTimeout(rmMoveT); clearTimeout(rmPushT);

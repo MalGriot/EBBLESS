@@ -10,7 +10,7 @@ const m = /\/\* REGION-MAP:BEGIN[^*]*\*\/([\s\S]*?)\/\* REGION-MAP:END \*\//.exe
 assert.ok(m, 'REGION-MAP block not found in index.html');
 const ctx = { URL };
 vm.createContext(ctx);
-vm.runInContext(m[1] + '\nthis.api = { rmHttps, rmPublicHost, rmTileOf, rmTileLngLat, rmTilesFor, rmTileCircle, rmNormalize, rmSongsTerm, rmSongsTerms, rmGeo, rmToRow, rmFromRow, rmInitials, rmTileUrl, rmBuildPlaces, rmPlaceSearch, rmGeoPlace };', ctx);
+vm.runInContext(m[1] + '\nthis.api = { rmHttps, rmPublicHost, rmTileOf, rmTileLngLat, rmTilesFor, rmTileCircle, rmNormalize, rmSongsTerm, rmSongsTerms, rmGeo, rmToRow, rmFromRow, rmInitials, rmTileUrl, rmBuildPlaces, rmPlaceSearch, rmGeoPlace, rmGenres, rmPlaceLine, rmHue };', ctx);
 const A = ctx.api;
 const row = (o) => Object.assign({ stationuuid: 'abc-123', name: 'Radio Test', url_resolved: 'https://stream.example.com/live', geo_lat: 40.7, geo_long: -74, lastcheckok: 1, ssl_error: 0, hls: 0, tags: 'jazz,Soul,jazz,music', country: 'The United States Of America', state: 'New York', bitrate: 128, votes: 5 }, o || {});
 
@@ -116,4 +116,15 @@ test('geocoder rows become places, bad ones are dropped', () => {
   assert.deepStrictEqual([...p.box], [72.7, 18.8, 73, 19.3]);
   assert.strictEqual(A.rmGeoPlace({ lat: 'x', lon: 1 }), null);
   assert.strictEqual(A.rmGeoPlace(null), null);
+});
+test('genres drop generic tags and fold into the longer name', () => {
+  assert.deepStrictEqual([...A.rmGenres(['music', 'pop', 'hindi pop', 'Bollywood', 'radio', 'bollywood', 'lo-fi'])], ['Hindi Pop', 'Bollywood', 'Lo-Fi']);
+  assert.strictEqual(A.rmGenres(['music', 'fm']).length, 0);
+  assert.strictEqual(A.rmGenres(null).length, 0);
+});
+test('place line runs from neighbourhood to country without repeats', () => {
+  assert.strictEqual(A.rmPlaceLine({ suburb: 'Bandra', city: 'Mumbai', state: 'Maharashtra', country: 'India' }), 'Bandra, Mumbai, Maharashtra, India');
+  assert.strictEqual(A.rmPlaceLine({ city: 'Singapore', state: 'Singapore', country: 'Singapore' }), 'Singapore');
+  assert.strictEqual(A.rmPlaceLine(null), '');
+  assert.strictEqual(A.rmHue('x'), A.rmHue('x'));
 });
