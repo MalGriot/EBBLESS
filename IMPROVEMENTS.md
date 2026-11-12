@@ -12927,7 +12927,7 @@ Add entries in this shape:
 
 
 ### browse-pages: Dedicated Browse by genre / region / vibe pages from Home
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Owner: "browse by buttons should lead to their own dedicated pages. well designed, robust." The three Browse cards (and the Home genre pills, and the empty-player Find music button) now open their own full-screen page (#browsePage) with Search-style gradient cards, a filter box (genre, region), tempo and "describe your vibe" (vibe). A pick opens the existing artists window on top, whose back returns to the page with scroll kept. Artists window got a loading skeleton and a Try again state. The old Find music tabs were removed.
 - **Touches:** index.html (Home, Find music, Browse pages), sw.js
@@ -12936,7 +12936,7 @@ Add entries in this shape:
 
 
 ### genre-map: Browse by genre is an interactive genre map
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Owner: "browse by genre should have a genre map", then "start with the genres like on the artist map, then infinite zoom with arrows; the grid can go; by year as a toggle". Map (default) opens on the 15 genre families; tapping any genre grows the map around it (what it came from to its left, what it led to to its right, a family's 10 biggest styles fanned outward), with SVG arrows (well-established lineage only), infinite pan and zoom to 8x, and a Reset button. Chips and search reveal any genre next to something already on the map. Timeline is the earlier year-by-lane chart (decade axis, 15 lanes) as a second view; List is the old gradient cards (also the fallback if the map cannot build). Tap a genre for a side panel (desktop) or a one-line bottom strip that expands (phones) with Play (same call the list view makes), Came from and Led to. Small "More genres on EveryNoise" link. Our own data; nothing taken from EveryNoise.
 - **Touches:** index.html (Browse pages, music map gesture code now shared via zmGestures), sw.js, tools/genre-map-*.js, scripts/check.sh
@@ -12944,7 +12944,7 @@ Add entries in this shape:
 - **Notes:** Data in tools/genre-map-data.js; `node tools/genre-map-layout.js` regenerates tools/genre-map.json and the GENRE-MAP-DATA block in index.html (scripts/check.sh fails if stale). Test: node --test tools/genre-map.test.js. No worker route added. Not run on a real phone; verified in the preview at 320/360/768/1280 px with zero label overlaps at every zoom. Phones start at a closer zoom than "Fit", at the beginning of the story, so names stay readable. Merge note: built on agent/browse-pages (v539); Each genre's panel lists artists from it (keyless store search, cached per session); tapping one opens the music map on them. sw.js is v545 here (now 509 genres with aliases; search falls back to an artist search for any typed term); region-map and vibe-chart are at v541 on their branches, so bump again when merging. Phone polish (owner review at 390 px): opens on the 1960s with a travel hint, low zoom keeps only important dots and arrows, axis ticks thin by zoom, selection is a one-line strip that expands.
 
 ### region-map: Browse by region world map that zooms to local radio stations
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Owner: "browse by region should have a world map (that zooms in to the granularity of the local radio stations)". The Region page now opens with a dark world map (zoom and pan to street level, +/- and reset, tap to zoom, keyboard). Stations from the open Radio Browser directory are pins that cluster when zoomed out. Tapping one opens a sheet with the station's place, genres and bitrate, and Play songs from here (the same ad-free songs search the region cards use). The region cards stay below the map as the list and as the fallback when there is no WebGL or no network.
 - **Touches:** index.html (Browse pages, Credits), sw.js
@@ -12952,14 +12952,14 @@ Add entries in this shape:
 - **Notes:** Test: node --test tools/region-map.test.js. MapLibre GL JS 5.17.0 loads from cdnjs (with SRI) only when the Region page opens and is not precached; the map is destroyed on leaving the page and when the tab is hidden. Tiles and style from OpenFreeMap (dark), no keys. Cost: no worker route; stations fetched per tile of the visible area (120 max each, 2 at a time, debounced 450 ms, cached in memory); no billing impact. Credits list has Radio Browser, OpenFreeMap and MapLibre. Listen live (second commit): one HTMLAudioElement, https only, reuses the player's title/artist lines, play button and media-session controls, shows Live radio in place of the seek bar, pauses the deck player when it starts and stops when a song starts; one automatic retry then a Try again toast. Verified in the preview: map, clusters, tap-to-zoom, station sheet, songs-from-here, Listen live play/pause/stop at 360, about 800 and 1280 px, no console errors or gpu-watchdog warnings. Not verified: the stream error path, the tab-hidden teardown, a real touch device, and playback on Android/Mac native apps. The preview pane is hidden, so the first map paint took 10 to 20 s there; a visible tab should paint at once.
 - **Notes:** Test: node --test tools/browse-pages.test.js. Back button, Escape and browser back close the topmost layer. Not a deep link (the app has no view deep links). Region cards have no sub line: the data has only search terms, no artists or languages. No worker change. Cache v540. The pages and the artists window stop above the footer nav and footer player (desktop keeps the footer player on).
 ### vibe-chart: Browse by vibe: flow chart of feelings, pick up to 14
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Owner: "browse by vibe should have a flow chart of emotions and states and you should be able to highlight multiple (listed as you gather them, up to 7; on desktop visibly listed, on mobile they fill a heart cart)". The Vibe page now has a heat map of 100 feelings (10 x 10, each with an emoji) on the mood plane (left to right heavy to light, top to bottom intense to calm), cells colored cool to warm, with a line tracing the picks in order (owner feedback: heat map, not a flow chart with arrows). Tap to pick (numbered badge and ring, tap again to remove), the 15th shows a "Max 14" hint. Desktop: side panel with the picks in order, remove buttons and n / 7. Phone: a heart that fills by n / 14 and opens a bottom sheet. Play this mix turns the picks, in order, into one sentence and hands it to bpStartVibe (the same function as the What's the vibe? box). The old Right now / Tempo / Moods cards stay below as the list view.
 - **Touches:** index.html (Browse pages, Vibe), sw.js
 - **Branch:** agent/vibe-chart
 - **Notes:** Test: node --test tools/vibe-chart.test.js. No worker change; the order is expressed in the sentence (the vibe feature's energy arc is chosen from words in the text, so a blend). Under about 620 px the map shows a 5 x 5 compact version (25 of the 49 feelings, with a visible note and a Show all 49 button that makes the full grid pan sideways inside its own box (the music map's zoom code is tied to its own state, so not reused). Picks are kept for the session (sessionStorage). Cache v551 (on top of agent/browse-pages v539, which must merge first).
 ### add-songs-page: Add songs block on Home and a See all page
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Owner: "the add songs section/page should be well designed and inviting." Home's Add songs is now a gradient block: Import your music as the hero (with Spotify, YouTube Music, Apple Music, SoundCloud), then genre, region and vibe cards each with an icon and a one-line benefit, then genre pills and a See all link. A new user (no plays yet) sees "Start your library" with a welcome line; a returning user sees a compact version. See all opens its own page (#addSongsPage) grouped as Bring your music (import, add from this device), Discover (genre, region, vibe, music map) and Quick start (all genre pills).
 - **Touches:** index.html (Home, new Add songs page), sw.js
