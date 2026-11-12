@@ -539,7 +539,6 @@ video.lib-bg-video.is-playing{opacity:1}
 #view-home .st-help{font-size:12.5px;color:var(--faint-2);line-height:1.5;margin:0 0 26px}
 @media (min-width:860px){#view-home .st-form{display:none}}
 #view-home .view-scroll{max-width:900px;margin:0 auto}
-#view-home .hm-title{font-size:30px;font-weight:800;letter-spacing:-.5px;margin:6px 0 18px;color:var(--text)}
 #view-home .hm-sec{margin:0 0 26px}
 #view-home .hm-sec h2{font-size:18px;font-weight:700;margin:0 0 12px;color:var(--text)}
 #view-home .hm-row{display:flex;gap:14px;overflow-x:auto;margin:0 calc(-1 * var(--vs-pad,24px));padding:0 var(--vs-pad,24px) 6px;scrollbar-width:none}
@@ -5682,7 +5681,7 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
   <!-- ===== HOME: the one page for search and browsing (logo, Home button and the Search tab all open it) ===== -->
   <main class="view" id="view-home" hidden>
     <div class="view-scroll">
-      <div class="hm-head"><h1 class="hm-title">Home</h1></div>
+      <div class="hm-head"><h1 class="sr-only">Home</h1></div>
       <form class="st-form" id="searchTabForm" autocomplete="off">
         <span class="st-field">
           <button type="submit" class="st-go" aria-label="Search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg></button>
@@ -25493,6 +25492,9 @@ const WHATS_NEW = [
   { version: 564, date: '2026-11-12', items: [
     'Genre labels on the genre map no longer swell when you hover them, so they stay put and are easy to click.',
     'If the music catalogue is busy, genre artists retry on their own a couple of times, and lists that loaded once are kept for two weeks.',
+  ]},
+  { version: 563, date: '2026-11-12', items: [
+    'The first page no longer has a big Home title, like the other pages.'
   ]},
   { version: 562, date: '2026-11-12', items: [
     'Search and Home are now one page. Search is at the top, then your recent songs, artists and playlists, made-for-you picks, ways to add songs, and discovery.',
