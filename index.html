@@ -1455,6 +1455,15 @@ html.reduce-motion .lib-grid:not(.is-list) .lib-card .info .name{display:block;w
 .gm-play{flex:none;display:flex;align-items:center;justify-content:center;gap:6px;min-height:38px;padding:0 15px;border:0;border-radius:999px;background:var(--accent);color:var(--on-accent,#151107);font:inherit;font-size:14px;font-weight:800;cursor:pointer}
 .gm-play svg{width:16px;height:16px}
 .gm-pbody{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;margin-top:6px;max-height:min(30vh,200px)}
+.gm-artists{display:flex;flex-direction:column;gap:2px}
+.gm-art{display:flex;align-items:center;gap:10px;width:100%;min-height:46px;padding:4px 8px 4px 4px;border:0;border-radius:12px;background:none;color:var(--text);font:inherit;font-size:14px;font-weight:600;text-align:left;cursor:pointer}
+.gm-art:hover{background:color-mix(in srgb,var(--text) 8%,transparent)}
+.gm-art:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.gm-art img{flex:none;width:38px;height:38px;border-radius:50%;object-fit:cover;background:var(--panel)}
+.gm-art span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gm-art svg{flex:none;width:20px;height:20px;color:var(--accent)}
+.gm-artall{justify-content:center;min-height:40px;color:var(--faint);font-size:13px}
+.gm-anote{padding:8px 4px;color:var(--faint);font-size:13px}
 .gm-plab{margin:10px 0 6px;font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--faint)}
 .gm-chips{display:flex;flex-wrap:wrap;gap:8px}
 .gm-chip{display:inline-flex;align-items:center;gap:7px;min-height:38px;padding:0 12px;border-radius:999px;background:color-mix(in srgb,var(--text) 5%,transparent);border:1px solid hsl(var(--gm-h) var(--gm-s) 60% / .4);color:var(--text);font:inherit;font-size:13px;font-weight:600;cursor:pointer}
@@ -10277,7 +10286,7 @@ function bpBuild(){
   document.body.appendChild(bpEl);
   $('bpBack').addEventListener('click', closeBrowsePage);
   document.addEventListener('keydown', (e) => {
-    if (e.key !== 'Escape' || bpEl.hidden || (fmEl && !fmEl.hidden) || importOverlay.classList.contains('is-open')) return;
+    if (e.key !== 'Escape' || bpEl.hidden || (fmEl && !fmEl.hidden) || musicMapOpen() || importOverlay.classList.contains('is-open')) return;
     e.preventDefault();
     if (bpFilterEl && document.activeElement === bpFilterEl && bpFilterEl.value){ bpFilterEl.value = ''; bpFilter = ''; bpRender(); return; }
     closeBrowsePage();
@@ -10676,6 +10685,7 @@ function gmInit(){
     const b = e.target.closest('[data-gp]'); if (!b) return;
     if (b.dataset.gp === 'close'){ gmDeselect(); return; }
     if (b.dataset.gp === 'tog'){ g.min = !g.min; gmPanel(); gmFlyTo(g.sel); const t = g.panel.querySelector('.gm-ptog'); if (t && e.detail === 0) t.focus({ preventScroll: true }); return; }
+    if (b.dataset.gp === 'artist'){ const nm = b.dataset.v; if (nm) openMusicMap(nm); return; }
     if (b.dataset.gp === 'play') gmPlay(g.sel, b);
     else if (b.dataset.gp === 'go') gmSelect(+b.dataset.i, { kbd: e.detail === 0, fromPanel: true });
   });
@@ -10958,18 +10968,53 @@ function gmPanel(){
     '<button type="button" class="gm-ptog" data-gp="tog" aria-expanded="' + !g.min + '" aria-controls="gmPBody" aria-label="' + (g.min ? 'Show' : 'Hide') + ' what it came from and led to"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg></button>' +
     '<button type="button" class="gm-pclose" data-gp="close" aria-label="Close">&times;</button></div>' +
     '<div class="gm-pbody" id="gmPBody">' +
+    '<div class="gm-plab">Artists &middot; open on the music map</div><div class="gm-artists"><div class="gm-anote" role="status">Finding artists&hellip;</div></div>' +
     (from.length ? '<div class="gm-plab">Came from</div><div class="gm-chips">' + from.map(chip).join('') + '</div>' : '') +
     (to.length ? '<div class="gm-plab">Led to</div><div class="gm-chips">' + to.map(chip).join('') + '</div>' : '') +
     (styles.length ? '<div class="gm-plab">Styles</div><div class="gm-chips">' + styles.map(chip).join('') + '</div>' : '') +
     (!from.length && !to.length && !styles.length ? '<div class="gm-plab">No arrows on the map for this one yet.</div>' : '') + '</div>';
   p.hidden = false; p.offsetWidth; p.classList.add('is-open');
+  gmShowArtists(g.sel);
 }
 // the same call a style button on the list view makes (see bpRender); styles the list does not have get a plain search
-function gmPlay(i, from){
+// what a genre searches for: the same terms the list view's style buttons use; styles the list does not have get a plain search
+function gmTerm(i){
   const g = gm, n = g.nodes[i], fm = g.D.fam[n.fam][4];
-  if (fm && FM_GENRES[fm] && FM_GENRES[fm].includes(n.name)) bpPick(n.name + ' ' + fm.split(/[ /&]+/)[0], n.name, fm, null, from);
-  else if (n.root) bpPick(n.name, n.name, fm && FM_GENRE_RE[fm] ? fm : null, null, from);
-  else bpPick(n.name + (g.D.fam[n.fam][0] === 'world' ? ' world music' : ''), n.name, null, null, from);
+  if (fm && FM_GENRES[fm] && FM_GENRES[fm].includes(n.name)) return { term: n.name + ' ' + fm.split(/[ /&]+/)[0], title: n.name, genre: fm };
+  if (n.root) return { term: n.name, title: n.name, genre: fm && FM_GENRE_RE[fm] ? fm : null };
+  return { term: n.name + (g.D.fam[n.fam][0] === 'world' ? ' world music' : ''), title: n.name, genre: null };
+}
+function gmPlay(i, from){ const t = gmTerm(i); bpPick(t.term, t.title, t.genre, null, from); }
+// artists for a genre, from the same keyless store search the artists page uses; kept for the session
+async function gmArtists(i){
+  const g = gm, t = gmTerm(i), key = t.term + '|' + (t.genre || '');
+  g.artCache = g.artCache || new Map();
+  if (g.artCache.has(key)) return g.artCache.get(key);
+  const r = await fetch('https://itunes.apple.com/search?' + new URLSearchParams({ term: t.term, entity: 'song', limit: '120' }));
+  if (!r.ok) throw new Error('search failed');
+  const d = await r.json(), seen = new Set(), list = [];
+  (d.results || []).forEach(s => {
+    if (!s || !s.artistId || seen.has(s.artistId)) return;
+    if (t.genre && FM_GENRE_RE[t.genre] && !FM_GENRE_RE[t.genre].test(s.primaryGenreName || '')) return;
+    if (t.genre && normalizeArtistQuery(s.artistName).includes(normalizeArtistQuery(t.title))) return;
+    seen.add(s.artistId);
+    list.push({ name: s.artistName, image: s.artworkUrl100 ? s.artworkUrl100.replace(/\/\d+x\d+bb\./, '/120x120bb.') : '' });
+  });
+  const out = list.slice(0, 14);
+  g.artCache.set(key, out);
+  return out;
+}
+function gmShowArtists(i){
+  const g = gm, box = g.panel.querySelector('.gm-artists');
+  if (!box) return;
+  const fill = (list, err) => {
+    if (gm !== g || g.sel !== i) return;
+    const b = g.panel.querySelector('.gm-artists'); if (!b) return;
+    if (!list || !list.length){ b.innerHTML = '<div class="gm-anote" role="status">' + (err ? 'Could not load artists. Check your connection.' : 'No artists found for this one.') + '</div>'; return; }
+    b.innerHTML = list.map(a => '<button type="button" class="gm-art" data-gp="artist" data-v="' + escapeHtml(a.name) + '" aria-label="' + escapeHtml(a.name) + ', open on the music map"><img src="' + escapeHtml(a.image) + '" alt="" loading="lazy"><span>' + escapeHtml(a.name) + '</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="2.5"/><circle cx="5" cy="6" r="1.8"/><circle cx="19" cy="7" r="1.8"/><circle cx="18" cy="18" r="1.8"/><path d="M10 11 6 7M14 11l4-3M14 14l3 3"/></svg></button>').join('') +
+      '<button type="button" class="gm-art gm-artall" data-gp="play">See all artists</button>';
+  };
+  gmArtists(i).then(l => fill(l, false), () => fill(null, true));
 }
 function gmHideSugg(){ if (gm){ gm.sugg.hidden = true; gm.sugg.textContent = ''; } }
 function gmSuggest(q){
@@ -24243,6 +24288,9 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
+  { version: 545, date: '2026-11-12', items: [
+    'Tap any genre on the genre map and you now see artists from it, right in the panel. Tap an artist to open them on the music map, or See all artists for the full page.',
+  ]},
   { version: 544, date: '2026-11-12', items: [
     'The genre map now has around 500 genres and styles, from boom bap to Ethio-jazz, and search understands other names too: try ethiopian jazz, tropicalia or psychedelic cumbia. Anything it does not chart yet can still be searched for artists.',
   ]},
