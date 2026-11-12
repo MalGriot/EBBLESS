@@ -11607,6 +11607,9 @@ async function gmArtists(i){
   const g = gm, t = gmTerm(i), key = t.term + '|' + (t.genre || '');
   g.artCache = g.artCache || new Map();
   if (g.artCache.has(key)) return g.artCache.get(key);
+  // lists that loaded once are kept on this device for two weeks, so a genre you have seen never needs the store again
+  const kept = gmArtistsKept(key);
+  if (kept){ g.artCache.set(key, kept); return kept; }
   const r = await fetch('https://itunes.apple.com/search?' + new URLSearchParams({ term: t.term, entity: 'song', limit: '120' }));
   if (!r.ok){ const er = new Error('search failed'); er.busy = r.status === 403 || r.status === 429 || r.status >= 500; throw er; }
   const d = await r.json(), seen = new Set(), list = [];
@@ -11619,10 +11622,23 @@ async function gmArtists(i){
   });
   const out = list.slice(0, 14);
   g.artCache.set(key, out);
+  if (out.length) gmArtistsKeep(key, out);
   return out;
 }
 // The store search is rate limited, so artists load only for a genre you stop on (not while you tap through several), never
 // while the phone strip is closed, one request at a time, and a failure is never cached and can be retried.
+const LS_GENRE_ARTISTS = 'ebbless:genreArtists';
+function gmArtistsKept(key){
+  const all = lsGet(LS_GENRE_ARTISTS, {}), e = all && all[key];
+  return e && Array.isArray(e.l) && Date.now() - e.t < 14 * 864e5 ? e.l : null;
+}
+function gmArtistsKeep(key, list){
+  const all = lsGet(LS_GENRE_ARTISTS, {}) || {};
+  all[key] = { t: Date.now(), l: list.map(a => ({ name: String(a.name).slice(0, 80), image: String(a.image || '').slice(0, 200) })) };
+  const keys = Object.keys(all);
+  if (keys.length > 80) keys.sort((a, b) => all[a].t - all[b].t).slice(0, keys.length - 80).forEach(k => { delete all[k]; });
+  lsSet(LS_GENRE_ARTISTS, all);
+}
 function gmShowArtists(i, now){
   const g = gm;
   clearTimeout(g.artT);
@@ -11645,9 +11661,17 @@ function gmShowArtists(i, now){
     if (gm !== g || g.sel !== i) return;
     if (g.artBusy){ g.artT = setTimeout(go, 500); return; }
     g.artBusy = true;
-    gmArtists(i).then(l => fill(l, false), (e) => fill(null, e && e.busy ? 'busy' : 'net')).then(() => { g.artBusy = false; });
+    gmArtists(i).then(l => fill(l, false), (e) => {
+      // the store search throttles by address: wait and try again twice on its own before asking the visitor to
+      if (e && e.busy && (g.artTry = (g.artTry || 0) + 1) <= 2){
+        const b = g.panel.querySelector('.gm-artists'); if (b && g.sel === i) b.innerHTML = '<div class="gm-anote" role="status">The music catalogue is busy, trying again&hellip;</div>';
+        g.artT = setTimeout(go, g.artTry === 1 ? 4000 : 9000); return;
+      }
+      g.artTry = 0; fill(null, e && e.busy ? 'busy' : 'net');
+    }).then(() => { g.artBusy = false; });
   };
-  if (cached || now) go(); else g.artT = setTimeout(go, 700);
+  g.artTry = 0;
+  if (cached || gmArtistsKept(key) || now) go(); else g.artT = setTimeout(go, 700);
 }
 function gmHideSugg(){ if (gm){ gm.sugg.hidden = true; gm.sugg.textContent = ''; } }
 function gmSuggest(q){
@@ -25514,6 +25538,10 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
+  { version: 562, date: '2026-11-12', items: [
+    'Genre labels on the genre map no longer swell when you hover them, so they stay put and are easy to click.',
+    'If the music catalogue is busy, genre artists retry on their own a couple of times, and lists that loaded once are kept for two weeks.',
+  ]},
   { version: 561, date: '2026-11-12', items: [
     'Credits for the maps, radio stations and genre map now live in Settings, under Credits, not on the pages.',
   ]},
@@ -46150,7 +46178,7 @@ else { markInviteShown(TUTORIAL_INVITE_DAY_KEY); showSplashChoice(); }
   document.addEventListener('pointerover', function(e){
     if (e.pointerType !== 'mouse' || rm.matches) return;
     var b = e.target.closest && e.target.closest('button');
-    if (!b || b.id === 'splashLogoBtn' || b.disabled || b.classList.contains('set-hub-row') || (e.relatedTarget && b.contains(e.relatedTarget))) return;
+    if (!b || b.id === 'splashLogoBtn' || b.disabled || b.classList.contains('set-hub-row') || b.classList.contains('gm-lab') || b.classList.contains('gm-art') || (e.relatedTarget && b.contains(e.relatedTarget))) return;
     grow(b, '1.07');
   });
   document.addEventListener('pointerout', function(e){
