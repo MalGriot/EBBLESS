@@ -37,23 +37,24 @@ test('path points follow pick order; near cells exclude picks', () => {
   assert.strictEqual(near.size, 8);
 });
 
-test('toggle adds in order, removes, and stops at 7', () => {
+test('toggle adds in order, removes, and stops at 14', () => {
+  const ids = arr(A.VC_NODES).slice(0, 14).map(n => n.id);
   let s = [];
-  ['calm', 'sad', 'tense', 'tired', 'hopeful', 'joyful', 'focused'].forEach(id => { const r = A.vcToggle(s, id); assert.strictEqual(r.change, 'added'); s = arr(r.sel); });
-  assert.strictEqual(s.length, 7);
-  const full = A.vcToggle(s, 'angry');
+  ids.forEach(id => { const r = A.vcToggle(s, id); assert.strictEqual(r.change, 'added'); s = arr(r.sel); });
+  assert.strictEqual(s.length, 14);
+  const full = A.vcToggle(s, 'calm');
   assert.strictEqual(full.change, 'full');
   assert.deepStrictEqual(arr(full.sel), s);
-  const rm = A.vcToggle(s, 'tense');
+  const rm = A.vcToggle(s, ids[3]);
   assert.strictEqual(rm.change, 'removed');
-  assert.deepStrictEqual(arr(rm.sel), ['calm', 'sad', 'tired', 'hopeful', 'joyful', 'focused']);
+  assert.deepStrictEqual(arr(rm.sel), ids.filter(x => x !== ids[3]));
   assert.strictEqual(A.vcToggle(s, 'nope').change, 'none');
 });
 
 test('clean drops unknown, repeated and surplus ids', () => {
   assert.deepStrictEqual(arr(A.vcClean(['calm', 'calm', '<b>x</b>', 7, 'sad'])), ['calm', 'sad']);
   assert.deepStrictEqual(arr(A.vcClean('calm')), []);
-  assert.strictEqual(A.vcClean(A.VC_NODES.map(n => n.id)).length, 7);
+  assert.strictEqual(A.vcClean(A.VC_NODES.map(n => n.id)).length, 14);
 });
 
 test('compose keeps the order and stays short', () => {
@@ -68,8 +69,8 @@ test('compose keeps the order and stays short', () => {
 });
 
 test('fill goes from 0 to 1 over 7', () => {
-  assert.strictEqual(A.vcFill(0), 0); assert.strictEqual(A.vcFill(7), 1); assert.strictEqual(A.vcFill(9), 1);
-  assert.ok(Math.abs(A.vcFill(3) - 3 / 7) < 1e-9);
+  assert.strictEqual(A.vcFill(0), 0); assert.strictEqual(A.vcFill(14), 1); assert.strictEqual(A.vcFill(19), 1);
+  assert.ok(Math.abs(A.vcFill(3) - 3 / 14) < 1e-9);
 });
 
 test('arrow keys move one cell and stop at the edge', () => {
@@ -118,9 +119,9 @@ test('every feeling has its own emoji', () => {
 
 test('heart beats faster and grows with every pick, and rests at zero', () => {
   assert.strictEqual(A.vcBeatMs(0), 0);
-  assert.strictEqual(A.vcBeatMs(1), 1500); assert.strictEqual(A.vcBeatMs(7), 500); assert.strictEqual(A.vcBeatMs(12), 500);
-  for (let n = 1; n < 7; n++){ assert.ok(A.vcBeatMs(n + 1) < A.vcBeatMs(n)); assert.ok(A.vcGrow(n + 1) > A.vcGrow(n)); }
-  assert.strictEqual(A.vcGrow(0), 1); assert.strictEqual(A.vcGrow(7), 1.42);
+  assert.strictEqual(A.vcBeatMs(1), 1500); assert.strictEqual(A.vcBeatMs(14), 500); assert.strictEqual(A.vcBeatMs(20), 500);
+  for (let n = 1; n < 14; n++){ assert.ok(A.vcBeatMs(n + 1) < A.vcBeatMs(n)); assert.ok(A.vcGrow(n + 1) > A.vcGrow(n)); }
+  assert.strictEqual(A.vcGrow(0), 1); assert.strictEqual(A.vcGrow(14), 1.42);
 });
 
 test('mix summary: a weather emoji from where the picks centre, a rollercoaster for a wide range', () => {
