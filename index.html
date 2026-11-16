@@ -2428,6 +2428,14 @@ body.split-desktop .ads-report-btn{margin-bottom:20px}
 .transport-full{width:100%;max-width:480px;margin-top:clamp(10px,4dvh,26px)}
 .seek-row{display:flex;align-items:center;gap:10px}
 .seek-row .t{font-size:11px;color:var(--faint-2);width:34px;flex:none;text-align:center}
+/* DJ markers (#844): numbered flags on the progress bar */
+.dj-btn{flex:none;margin-left:6px;padding:3px 7px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--faint);font-family:inherit;font-size:10px;font-weight:700;line-height:1;letter-spacing:.06em;cursor:pointer}
+.dj-btn:hover{color:var(--text)}
+.dj-btn[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent,#151107)}
+.dj-mark{position:absolute;bottom:100%;margin-bottom:3px;min-width:16px;height:16px;padding:0 3px;transform:translateX(-50%);border:0;border-radius:4px;background:var(--accent);color:var(--on-accent,#151107);font-family:inherit;font-size:10px;font-weight:700;line-height:16px;text-align:center;cursor:pointer;z-index:3}
+.dj-mark::after{content:'';position:absolute;left:50%;top:100%;width:2px;height:9px;margin-left:-1px;background:var(--accent);border-radius:1px}
+.dj-mark:hover{transform:translateX(-50%) scale(1.15)}
+body.is-live-radio .seek-row>.dj-btn{display:none}
 .seek-track{flex:1;height:14px;display:flex;align-items:center;cursor:pointer;position:relative;touch-action:none;user-select:none;-webkit-user-select:none}
 .seek-track .rail{width:100%;height:3px;border-radius:2px;background:var(--border);position:relative;overflow:hidden}
 .seek-track .fill{position:absolute;left:0;top:0;bottom:0;width:0%;background:var(--player-accent);border-radius:2px}
@@ -5687,6 +5695,7 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
             <span class="live-tag" aria-hidden="true">Live radio</span>
             <div class="seek-track" id="seekTrack"><div class="rail"><div class="fill" id="seekFill"></div></div><div class="knob" id="seekKnob"></div></div>
             <span class="t tnum" id="timeDur">0:00</span>
+            <button type="button" class="dj-btn" id="djBtn" aria-pressed="false" title="DJ markers" aria-label="DJ markers">DJ</button>
           </div>
           <div class="controls-row">
             <button class="ctl-btn small" id="shuffleBtn" title="Shuffle" aria-label="Shuffle" aria-pressed="false">
@@ -5988,6 +5997,7 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
           <li><span><kbd>4</kbd></span>Lyrics</li>
           <li><span><kbd>5</kbd></span>Video</li>
           <li><span><kbd>Z</kbd></span>Back to the previous look (Art, Cymatics, fLUX, Lyrics or Video)</li>
+          <li><span><kbd>D</kbd></span>DJ markers on the progress bar. While on: 1 to 9 set a marker, or jump to it if it is set; Shift+1 to 9 clear it; 0 restarts the song</li>
           <li><span><kbd>T</kbd></span>With the video showing: cinema mode (dim the rest; the Video button does the same)</li>
           <li><span><kbd>I</kbd></span>Cymatics: hold pattern on / off</li>
           <li><span><kbd>K</kbd></span>Shuffle</li>
@@ -39219,6 +39229,85 @@ function syncIosPodSkip(isPod){
   });
 }
 let kbSeekLast = null; // { player, to, at }
+/* ---------- DJ markers (#844) ----------
+   D (or the DJ chip beside the time) turns it on. Then 1 to 9 drop a numbered marker at the playing position, or jump
+   straight to it when it already exists; Shift+1 to 9 remove one; 0 restarts the song. While it is on the digits no
+   longer switch looks. Markers are per song, kept on this device (ebbless:cues, last 200 songs). Two decks, speed
+   matching and recording sets from the ticket are not built. */
+const LS_CUES = 'ebbless:cues', DJ_SONGS_MAX = 200;
+let djOn = false, djSig = '';
+let djStore = (() => { const v = lsGet(LS_CUES, {}); return v && typeof v === 'object' && !Array.isArray(v) ? v : {}; })();
+function djKey(){ const t = trackAt(state.queuePos); return t && t.videoId ? t.videoId : ''; }
+function djList(){ const a = djStore[djKey()]; const out = Array.isArray(a) ? a.slice(0, 9) : []; while (out.length < 9) out.push(null); return out; }
+function djSave(key, list){
+  if (list.some(v => typeof v === 'number')) djStore[key] = list; else delete djStore[key];
+  const keys = Object.keys(djStore);
+  if (keys.length > DJ_SONGS_MAX) keys.slice(0, keys.length - DJ_SONGS_MAX).forEach(k => delete djStore[k]);
+  lsSet(LS_CUES, djStore);
+}
+function djDeck(){ const ad = activeDeck(); return ad && ad.player && ad.player.getCurrentTime && ad.player.seekTo ? ad : null; }
+function djJump(sec){
+  const ad = djDeck(); if (!ad) return;
+  const dur = ad.player.getDuration ? ad.player.getDuration() || 0 : 0;
+  ad.player.seekTo(Math.max(0, dur ? Math.min(sec, dur - 1) : sec), true);
+  try { updateSeekUI(); } catch(e){}
+}
+function djFmt(t){ return formatTime(Math.round(t)); }
+function djPress(n, clear){
+  const key = djKey(), ad = djDeck();
+  if (!key || !ad || liveActive()) return;
+  const list = djList();
+  if (clear){ if (list[n - 1] != null){ list[n - 1] = null; djSave(key, list); showToast('Marker ' + n + ' cleared'); } }
+  else if (list[n - 1] == null){
+    const t = Math.round((ad.player.getCurrentTime() || 0) * 10) / 10;
+    list[n - 1] = t; djSave(key, list); showToast('Marker ' + n + ' set at ' + djFmt(t));
+  } else djJump(list[n - 1]);
+  djRender(true);
+}
+function djRender(force){
+  const track = $('seekTrack');
+  if (!track) return;
+  const ad = djDeck(), dur = ad && ad.player.getDuration ? Math.round((ad.player.getDuration() || 0) * 10) / 10 : 0;
+  const list = djOn ? djList() : [];
+  const sig = (djOn ? '1' : '0') + '|' + djKey() + '|' + dur + '|' + list.join(',');
+  if (!force && sig === djSig) return;
+  djSig = sig;
+  track.querySelectorAll('.dj-mark').forEach(m => m.remove());
+  if (!djOn || !dur) return;
+  list.forEach((t, i) => {
+    if (typeof t !== 'number' || t < 0 || t > dur) return;
+    const m = document.createElement('button'); m.type = 'button'; m.className = 'dj-mark'; m.textContent = String(i + 1);
+    m.style.left = Math.min(100, t / dur * 100).toFixed(2) + '%';
+    m.title = 'Marker ' + (i + 1) + ' at ' + djFmt(t) + '. Tap to jump';
+    m.setAttribute('aria-label', 'Jump to marker ' + (i + 1) + ' at ' + djFmt(t));
+    m.addEventListener('pointerdown', (e) => e.stopPropagation());
+    m.addEventListener('click', (e) => { e.stopPropagation(); djJump(t); });
+    track.appendChild(m);
+  });
+}
+function djToggle(on){
+  djOn = on === undefined ? !djOn : !!on;
+  const b = $('djBtn'); if (b){ b.setAttribute('aria-pressed', String(djOn)); b.classList.toggle('is-on', djOn); }
+  document.body.classList.toggle('dj-on', djOn);
+  showToast(djOn ? 'DJ markers on: 1 to 9 set or jump, Shift+1 to 9 clear, 0 restarts' : 'DJ markers off');
+  djRender(true);
+}
+$('djBtn').addEventListener('click', () => djToggle());
+setInterval(() => { if (djOn) djRender(); }, 1000);
+// runs before the app's own shortcuts so the digits mean markers, not looks, while DJ markers are on
+document.addEventListener('keydown', (e) => {
+  if (!djOn || e.metaKey || e.ctrlKey || e.altKey) return;
+  const t = e.target;
+  if (t && (t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable || (t.tagName === 'INPUT' && !/^(range|checkbox|radio|button|submit|reset|file|color|image)$/i.test(t.type)))) return;
+  const m = /^(?:Digit|Numpad)(\d)$/.exec(e.code || '');
+  if (!m) return;
+  e.preventDefault(); e.stopImmediatePropagation();
+  if (e.repeat) return;
+  const n = +m[1];
+  if (n === 0){ if (djKey() && !liveActive()) djJump(0); }
+  else djPress(n, e.shiftKey);
+}, true);
+
 function kbSeekBy(delta){
   if (state.queuePos < 0) return;
   const ad = activeDeck();
@@ -39334,6 +39423,9 @@ document.addEventListener('keydown', (e) => {
     case 'z': case 'Z':
       if (!e.repeat && !e.metaKey && !e.ctrlKey) lookBack();
       break;
+    case 'd': case 'D':
+      if (!e.repeat && !e.metaKey && !e.ctrlKey) djToggle();   // #844
+      break;
     case 'q': case 'Q':
       if (!e.repeat) kbShowPane(document.querySelector('#topnav [data-action="toggle-queue"]'));
       break;
@@ -39394,6 +39486,7 @@ if (window.matchMedia('(hover:hover) and (pointer:fine)').matches){
     ['#visualTabs .v-tab[data-mode="lyrics"]', '4'],
     ['#ytPanelBtn', '5'],
     ['#cinemaBtn', 'T'],
+    ['#djBtn', 'D'],
     ['#reportBugBtn', 'Shift+B'],
     ['#suggestIdeaBtn', 'Shift+S']
   ];
