@@ -1356,6 +1356,10 @@ body.split-desktop:has(#mini-bar:not([hidden])) :is(#browsePage,#addSongsPage,#f
 .vc-journeys{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 10px}
 .vc-jl{flex:none;width:100%;font-size:12.5px;font-weight:700;color:var(--faint)}
 .vc-jb{min-height:40px;padding:0 14px;border-radius:999px;background:var(--panel-2);border:1px solid var(--border);color:var(--text);font:inherit;font-size:13.5px;font-weight:600;cursor:pointer}
+.vc-modes{display:flex;gap:8px;margin:0 0 14px}
+.vc-mode[aria-pressed="true"],.vc-moodb:hover{background:var(--accent);border-color:var(--accent);color:var(--on-accent,#151107)}
+.vc-moods[hidden],.vc-layout[hidden],.vc-lead[hidden]{display:none}
+.vc-moodb{min-height:48px;padding:0 22px;font-size:15px}
 .vc-hb[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent,#151107)}
 .vc-happy .vc-jl{color:var(--accent)}
 .vc-jb:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
@@ -10807,6 +10811,13 @@ function vcCompose(sel){
 // ready-made journeys (an idea borrowed from how Nonviolent Communication pairs a feeling with what you need): one tap fills the picks, then edit freely.
 // Every word is on the compact map too.
 const VC_HAPPY = ['joyful', 'excited', 'ecstatic', 'proud', 'romantic', 'peaceful', 'comforted'];   // good feelings, one tap away above the map
+// #859 / #854 / #852: the simple way in is seven popular music moods; the 100-feeling map stays as the "Emotions" mode.
+// Each is a sentence for the same vibe search the map uses (fixed text, never typed text).
+const VC_MOODS = [
+  ['Chill', 'chill, relaxed songs'], ['Happy', 'happy, feel-good songs'], ['Sad', 'sad, emotional songs'], ['Romantic', 'romantic songs for two'],
+  ['Sexy', 'sexy, sensual slow jams'], ['Hype', 'high-energy hype songs'], ['Focus', 'calm focus music with no distractions'],
+];
+const LS_VC_MODE = 'ebbless:vcmode';
 const VC_JOURNEYS = [
   { label: 'Lift me up', ids: ['weary', 'peaceful', 'excited', 'joyful'] },
   { label: 'Breathe out', ids: ['anxious', 'uneasy', 'peaceful', 'serene'] },
@@ -10850,7 +10861,7 @@ function vcSvg(tag, attrs){ const e = document.createElementNS('http://www.w3.or
 function vcPickList(ol){
   ol.textContent = '';
   if (!vcSel.length){
-    const li = bpMk('li', 'vc-empty', 'Tap feelings on the map. Up to 7, in the order you want the mix to move.');
+    const li = bpMk('li', 'vc-empty', 'Tap feelings on the map. Up to ' + VC_MAX + ', in the order you want the mix to move.');
     ol.appendChild(li); return;
   }
   vcSel.forEach((id, i) => {
@@ -10981,12 +10992,27 @@ function vcMount(list){
   vcNodeEls = {};
   const sec = bpMk('section', 'bp-sec vc-sec');
   sec.appendChild(bpMk('h2', '', 'How do you want to feel?'));
-  sec.appendChild(bpMk('p', 'vc-lead', 'Tap feelings in the order you want the mix to move, up to ' + VC_MAX + '. The line shows your path across the map.'));
+  const modes = bpMk('div', 'vc-modes'); modes.setAttribute('role', 'group'); modes.setAttribute('aria-label', 'Mood or emotion');
+  const mBtns = {};
+  [['moods', 'Moods'], ['emotions', 'Emotions']].forEach(([k, label]) => { const mb = bpMk('button', 'vc-jb vc-mode', label); mb.type = 'button'; mb.addEventListener('click', () => setMode(k)); modes.appendChild(mb); mBtns[k] = mb; });
+  sec.appendChild(modes);
+  const moodsView = bpMk('div', 'vc-moods'); moodsView.setAttribute('role', 'group'); moodsView.setAttribute('aria-label', 'Popular moods');
+  moodsView.appendChild(bpMk('p', 'vc-lead', 'Pick a mood and the music starts.'));
+  const mrow = bpMk('div', 'vc-journeys');
+  VC_MOODS.forEach(([name, sentence]) => {
+    const mb = bpMk('button', 'vc-jb vc-moodb', name); mb.type = 'button';
+    mb.addEventListener('click', () => { statsFeature('browse_vibe_mood'); bpStartVibe(sentence); });
+    mrow.appendChild(mb);
+  });
+  moodsView.appendChild(mrow);
+  sec.appendChild(moodsView);
+  const lead = bpMk('p', 'vc-lead', 'Tap feelings in the order you want the mix to move, up to ' + VC_MAX + '. The line shows your path across the map.');
+  sec.appendChild(lead);
   const lay = bpMk('div', 'vc-layout');
   const col = bpMk('div', 'vc-col');
   const hp = bpMk('div', 'vc-journeys vc-happy'); hp.setAttribute('role', 'group'); hp.setAttribute('aria-label', 'Happy feelings');
   hp.appendChild(bpMk('span', 'vc-jl', 'Happy feelings'));
-  VC_HAPPY.forEach(id => { const hb = bpMk('button', 'vc-jb vc-hb', VC_BY_ID[id].emoji + ' ' + id); hb.type = 'button'; hb.dataset.id = id; hb.setAttribute('aria-pressed', 'false'); hb.addEventListener('click', () => vcSet(id)); hp.appendChild(hb); });
+  VC_HAPPY.forEach(id => { const hb = bpMk('button', 'vc-jb vc-hb', id); hb.type = 'button'; hb.dataset.id = id; hb.setAttribute('aria-pressed', 'false'); hb.addEventListener('click', () => vcSet(id)); hp.appendChild(hb); });
   col.appendChild(hp);
   const jr = bpMk('div', 'vc-journeys'); jr.setAttribute('role', 'group'); jr.setAttribute('aria-label', 'Start from a journey');
   jr.appendChild(bpMk('span', 'vc-jl', 'Start from a journey'));
@@ -11001,7 +11027,6 @@ function vcMount(list){
     b.style.setProperty('--h', vcHeat(n.c, n.r));
     b.setAttribute('aria-pressed', 'false');
     const nn = bpMk('span', 'vc-nn'); nn.setAttribute('aria-hidden', 'true'); b.appendChild(nn);
-    const ne = bpMk('span', 'vc-ne', n.emoji); ne.setAttribute('aria-hidden', 'true'); b.appendChild(ne);
     b.appendChild(bpMk('span', 'vc-nl', n.label));
     const mx = bpMk('span', 'vc-max', 'Max ' + VC_MAX); mx.setAttribute('aria-hidden', 'true'); b.appendChild(mx);
     b.addEventListener('click', () => vcSet(n.id));
@@ -11025,6 +11050,15 @@ function vcMount(list){
   panel.appendChild(ph); panel.appendChild(bpMk('ol', 'vc-list')); panel.appendChild(vcActions());
   vcPanel = panel;
   lay.appendChild(col); lay.appendChild(panel); sec.appendChild(lay); list.appendChild(sec);
+  // Moods first (simple); Emotions is the full map. The heart cart belongs to the map only.
+  function setMode(k){
+    const emo = k === 'emotions';
+    moodsView.hidden = emo; lead.hidden = !emo; lay.hidden = !emo; vcHeart.hidden = !emo;
+    Object.keys(mBtns).forEach(m => { mBtns[m].setAttribute('aria-pressed', String(m === k)); mBtns[m].classList.toggle('is-on', m === k); });
+    try { lsSet(LS_VC_MODE, k); } catch(e){}
+    if (emo) vcApplyLayout();
+  }
+  setMode(lsGet(LS_VC_MODE, 'moods') === 'emotions' ? 'emotions' : 'moods');
   vcApplyLayout();
   if (vcRO) vcRO.disconnect();
   if (window.ResizeObserver){
