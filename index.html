@@ -541,12 +541,14 @@ video.lib-bg-video.is-playing{opacity:1}
 #view-home .view-scroll{max-width:900px;margin:0 auto}
 #view-home .hm-sec{margin:0 0 26px}
 #view-home .hm-sec h2{font-size:18px;font-weight:700;margin:0 0 12px;color:var(--text)}
-#view-home .hm-row{display:flex;gap:14px;overflow-x:auto;margin:0 calc(-1 * var(--vs-pad,24px));padding:0 var(--vs-pad,24px) 6px;scrollbar-width:none}
+#view-home .hm-row{display:flex;gap:14px;overflow-x:auto;margin:-8px calc(-1 * var(--vs-pad,24px)) -6px;padding:8px var(--vs-pad,24px) 12px;scrollbar-width:none}   /* #840: room for the hover grow and shadow */
 #view-home .hm-row::-webkit-scrollbar{display:none}
 #view-home .hm-card{flex:none;width:128px;display:flex;flex-direction:column;gap:7px;text-align:left;color:var(--text);cursor:pointer}
 #view-home .hm-card img,#view-home .hm-card .hm-ph{width:128px;height:128px;border-radius:14px;object-fit:cover;background:var(--panel-3);box-shadow:0 8px 18px -8px rgba(0,0,0,.6);transition:transform var(--dur-ui) var(--ease-out)}
 #view-home .hm-card:hover img,#view-home .hm-card:hover .hm-ph{transform:scale(1.03)}
 #view-home .hm-card.is-artist img,#view-home .hm-card.is-artist .hm-ph{border-radius:50%}
+#view-home .hm-card.is-artist{text-align:center}   /* #842 */
+#view-home .hm-card.is-artist .hm-n,#view-home .hm-card.is-artist .hm-s{text-align:center}
 #view-home .hm-ph{display:flex;align-items:center;justify-content:center;font-size:34px;font-weight:700;color:var(--faint)}
 #view-home .hm-n{font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #view-home .hm-s{font-size:11.5px;color:var(--faint-2);margin-top:-4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -557,6 +559,7 @@ video.lib-bg-video.is-playing{opacity:1}
 #view-home .hm-song img{flex:none;width:44px;height:44px;border-radius:8px;object-fit:cover;background:var(--panel-3)}
 #view-home .hm-song .hm-t{min-width:0;flex:1}
 #view-home .hm-song .hm-n{font-size:14px}
+#view-home .hm-song .hm-s{margin-top:3px}   /* #843: the artist sat tight under the title */
 #view-home .hm-plays{flex:none;font-size:12px;color:var(--faint-2)}
 #view-home .hm-map{display:flex;align-items:center;gap:14px;width:100%;padding:16px 18px;border-radius:16px;color:#fff;text-align:left;cursor:pointer;background:linear-gradient(120deg,#2e8f8a,#12365a)}
 #view-home .hm-map svg{flex:none;width:34px;height:34px}
@@ -1353,6 +1356,10 @@ body.split-desktop:has(#mini-bar:not([hidden])) :is(#browsePage,#addSongsPage,#f
 .vc-journeys{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 10px}
 .vc-jl{flex:none;width:100%;font-size:12.5px;font-weight:700;color:var(--faint)}
 .vc-jb{min-height:40px;padding:0 14px;border-radius:999px;background:var(--panel-2);border:1px solid var(--border);color:var(--text);font:inherit;font-size:13.5px;font-weight:600;cursor:pointer}
+.vc-modes{display:flex;gap:8px;margin:0 0 14px}
+.vc-mode[aria-pressed="true"],.vc-moodb:hover{background:var(--accent);border-color:var(--accent);color:var(--on-accent,#151107)}
+.vc-moods[hidden],.vc-layout[hidden],.vc-lead[hidden]{display:none}
+.vc-moodb{min-height:48px;padding:0 22px;font-size:15px}
 .vc-hb[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent,#151107)}
 .vc-happy .vc-jl{color:var(--accent)}
 .vc-jb:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
@@ -3372,6 +3379,10 @@ html.reduce-motion *,html.reduce-motion *::before,html.reduce-motion *::after{an
 .song-page-lyric{font-size:17px;font-weight:600;line-height:1.4;padding:4px 0;color:var(--text);overflow-wrap:anywhere}
 .song-page-lyric.is-gap{min-height:14px}
 .song-page-link{cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.song-stats{display:flex;gap:10px;padding:10px 14px 2px}
+.song-stat{min-width:84px;padding:9px 14px;border-radius:12px;background:var(--panel-2);border:1px solid var(--border)}
+.song-stat b{display:block;font-size:18px;font-weight:700;line-height:1.2;font-variant-numeric:tabular-nums;color:var(--text)}
+.song-stat span{font-size:11.5px;color:var(--faint)}
 /* #754: artist name(s) on album and song pages, one tappable chip per artist */
 .page-artists{display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px;padding:6px 10px 0}
 .page-artist{display:inline-flex;align-items:center;gap:8px;min-height:44px;max-width:100%;padding:4px 12px 4px 4px;border:0;border-radius:999px;background:none;color:var(--accent);font:inherit;font-size:16px;font-weight:700;cursor:pointer}
@@ -5704,7 +5715,7 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
         <div class="st-err" id="searchTabErr" role="alert"></div>
       </form>
       <!-- #799: tell search what you are looking for -->
-      <div class="st-types" id="stTypes" role="group" aria-label="Search for"><button type="button" class="st-type" data-stype="all">All</button><button type="button" class="st-type" data-stype="songs">Songs</button><button type="button" class="st-type" data-stype="artists">Artists</button><button type="button" class="st-type" data-stype="albums">Albums</button><button type="button" class="st-type" data-stype="playlists">Playlists</button></div>
+      <div class="st-types" id="stTypes" role="group" aria-label="Search for"><button type="button" class="st-type" data-stype="songs">Songs</button><button type="button" class="st-type" data-stype="artists">Artists</button><button type="button" class="st-type" data-stype="albums">Albums</button><button type="button" class="st-type" data-stype="moods">Moods</button></div>
       <p class="st-help">Paste a link to a playlist, album, song or artist from Spotify, Apple Music, YouTube or SoundCloud. Or search a song, an artist or a genre, or describe a mood.</p>
       <div id="hmBody"></div>
     </div>
@@ -5956,13 +5967,14 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
           <li><span><kbd>Shift</kbd>+<kbd>L</kbd></span>Paste a link</li>
           <li><span><kbd>Q</kbd></span>Queue</li>
           <li><span><kbd>S</kbd></span>Settings</li>
-          <li><span><kbd>F</kbd></span>Fullscreen</li>
+          <li><span><kbd>F</kbd></span>Fullscreen (on Home: the whole page)</li>
           <li><span><kbd>Esc</kbd></span>Close the video, leave fullscreen, close a playlist</li>
           <li><span><kbd>1</kbd></span>Art (again to change style)</li>
           <li><span><kbd>2</kbd></span>Cymatics</li>
           <li><span><kbd>3</kbd></span>fLUX (inside it: <kbd>&uarr;</kbd> <kbd>&darr;</kbd> change the look, other keys work as usual)</li>
           <li><span><kbd>4</kbd></span>Lyrics</li>
           <li><span><kbd>5</kbd></span>Video</li>
+          <li><span><kbd>Z</kbd></span>Back to the previous look (Art, Cymatics, fLUX, Lyrics or Video)</li>
           <li><span><kbd>T</kbd></span>With the video showing: cinema mode (dim the rest; the Video button does the same)</li>
           <li><span><kbd>I</kbd></span>Cymatics: hold pattern on / off</li>
           <li><span><kbd>K</kbd></span>Shuffle</li>
@@ -7695,6 +7707,18 @@ function advSet(key, val){
   if (val === null || val === undefined) delete p[key]; else p[key] = val;
   lsSet(LS_ADV, p);
 }
+/* #816: a device that asks for reduced motion gets the saving settings switched on once (Motion: Reduced, Cursor: Native),
+   so Settings shows what is really in effect. Done once only: if the listener later picks Full or a cursor, that stays. */
+(function(){
+  try {
+    if (!window.matchMedia || !matchMedia('(prefers-reduced-motion:reduce)').matches) return;
+    if (lsGet('ebbless:rmAuto', false)) return;
+    lsSet('ebbless:rmAuto', true);
+    const p = advPrefs();
+    if (!p.motion) advSet('motion', 'reduced');
+    if (!p.cursor) advSet('cursor', 'native');
+  } catch(e){}
+})();
 /* ---------- volume leveling (volume-equalizer) ----------
    Evens out loudness between tracks. YouTube measures every video's
    loudness (playerConfig.audioConfig.loudnessDb, surfaced by the worker's
@@ -9836,10 +9860,10 @@ async function resolvePlaylistInner(playlistId, type, onProgress, onFirstTrack){
 // each waits for the previous to settle. Resolves to the playlist, or null
 // (dead link: threw, or no playable songs), so callers skip saving it.
 let bgLoadChain = Promise.resolve();
-function queueBackgroundLoad(id, type){
+function queueBackgroundLoad(id, type, onProgress){
   const run = async () => {
     try{
-      const pl = await resolvePlaylist(id, type, () => {});
+      const pl = await resolvePlaylist(id, type, onProgress || (() => {}));
       return pl && (pl.tracks || []).some(t => t && t.videoId) ? pl : null;
     } catch(e){ return null; }
   };
@@ -10844,6 +10868,13 @@ function vcCompose(sel){
 // ready-made journeys (an idea borrowed from how Nonviolent Communication pairs a feeling with what you need): one tap fills the picks, then edit freely.
 // Every word is on the compact map too.
 const VC_HAPPY = ['joyful', 'excited', 'ecstatic', 'proud', 'romantic', 'peaceful', 'comforted'];   // good feelings, one tap away above the map
+// #859 / #854 / #852: the simple way in is seven popular music moods; the 100-feeling map stays as the "Emotions" mode.
+// Each is a sentence for the same vibe search the map uses (fixed text, never typed text).
+const VC_MOODS = [
+  ['Chill', 'chill, relaxed songs'], ['Happy', 'happy, feel-good songs'], ['Sad', 'sad, emotional songs'], ['Romantic', 'romantic songs for two'],
+  ['Sexy', 'sexy, sensual slow jams'], ['Hype', 'high-energy hype songs'], ['Focus', 'calm focus music with no distractions'],
+];
+const LS_VC_MODE = 'ebbless:vcmode';
 const VC_JOURNEYS = [
   { label: 'Lift me up', ids: ['weary', 'peaceful', 'excited', 'joyful'] },
   { label: 'Breathe out', ids: ['anxious', 'uneasy', 'peaceful', 'serene'] },
@@ -10887,7 +10918,7 @@ function vcSvg(tag, attrs){ const e = document.createElementNS('http://www.w3.or
 function vcPickList(ol){
   ol.textContent = '';
   if (!vcSel.length){
-    const li = bpMk('li', 'vc-empty', 'Tap feelings on the map. Up to 7, in the order you want the mix to move.');
+    const li = bpMk('li', 'vc-empty', 'Tap feelings on the map. Up to ' + VC_MAX + ', in the order you want the mix to move.');
     ol.appendChild(li); return;
   }
   vcSel.forEach((id, i) => {
@@ -11018,12 +11049,27 @@ function vcMount(list){
   vcNodeEls = {};
   const sec = bpMk('section', 'bp-sec vc-sec');
   sec.appendChild(bpMk('h2', '', 'How do you want to feel?'));
-  sec.appendChild(bpMk('p', 'vc-lead', 'Tap feelings in the order you want the mix to move, up to ' + VC_MAX + '. The line shows your path across the map.'));
+  const modes = bpMk('div', 'vc-modes'); modes.setAttribute('role', 'group'); modes.setAttribute('aria-label', 'Mood or emotion');
+  const mBtns = {};
+  [['moods', 'Moods'], ['emotions', 'Emotions']].forEach(([k, label]) => { const mb = bpMk('button', 'vc-jb vc-mode', label); mb.type = 'button'; mb.addEventListener('click', () => setMode(k)); modes.appendChild(mb); mBtns[k] = mb; });
+  sec.appendChild(modes);
+  const moodsView = bpMk('div', 'vc-moods'); moodsView.setAttribute('role', 'group'); moodsView.setAttribute('aria-label', 'Popular moods');
+  moodsView.appendChild(bpMk('p', 'vc-lead', 'Pick a mood and the music starts.'));
+  const mrow = bpMk('div', 'vc-journeys');
+  VC_MOODS.forEach(([name, sentence]) => {
+    const mb = bpMk('button', 'vc-jb vc-moodb', name); mb.type = 'button';
+    mb.addEventListener('click', () => { statsFeature('browse_vibe_mood'); bpStartVibe(sentence); });
+    mrow.appendChild(mb);
+  });
+  moodsView.appendChild(mrow);
+  sec.appendChild(moodsView);
+  const lead = bpMk('p', 'vc-lead', 'Tap feelings in the order you want the mix to move, up to ' + VC_MAX + '. The line shows your path across the map.');
+  sec.appendChild(lead);
   const lay = bpMk('div', 'vc-layout');
   const col = bpMk('div', 'vc-col');
   const hp = bpMk('div', 'vc-journeys vc-happy'); hp.setAttribute('role', 'group'); hp.setAttribute('aria-label', 'Happy feelings');
   hp.appendChild(bpMk('span', 'vc-jl', 'Happy feelings'));
-  VC_HAPPY.forEach(id => { const hb = bpMk('button', 'vc-jb vc-hb', VC_BY_ID[id].emoji + ' ' + id); hb.type = 'button'; hb.dataset.id = id; hb.setAttribute('aria-pressed', 'false'); hb.addEventListener('click', () => vcSet(id)); hp.appendChild(hb); });
+  VC_HAPPY.forEach(id => { const hb = bpMk('button', 'vc-jb vc-hb', id); hb.type = 'button'; hb.dataset.id = id; hb.setAttribute('aria-pressed', 'false'); hb.addEventListener('click', () => vcSet(id)); hp.appendChild(hb); });
   col.appendChild(hp);
   const jr = bpMk('div', 'vc-journeys'); jr.setAttribute('role', 'group'); jr.setAttribute('aria-label', 'Start from a journey');
   jr.appendChild(bpMk('span', 'vc-jl', 'Start from a journey'));
@@ -11038,7 +11084,6 @@ function vcMount(list){
     b.style.setProperty('--h', vcHeat(n.c, n.r));
     b.setAttribute('aria-pressed', 'false');
     const nn = bpMk('span', 'vc-nn'); nn.setAttribute('aria-hidden', 'true'); b.appendChild(nn);
-    const ne = bpMk('span', 'vc-ne', n.emoji); ne.setAttribute('aria-hidden', 'true'); b.appendChild(ne);
     b.appendChild(bpMk('span', 'vc-nl', n.label));
     const mx = bpMk('span', 'vc-max', 'Max ' + VC_MAX); mx.setAttribute('aria-hidden', 'true'); b.appendChild(mx);
     b.addEventListener('click', () => vcSet(n.id));
@@ -11062,6 +11107,15 @@ function vcMount(list){
   panel.appendChild(ph); panel.appendChild(bpMk('ol', 'vc-list')); panel.appendChild(vcActions());
   vcPanel = panel;
   lay.appendChild(col); lay.appendChild(panel); sec.appendChild(lay); list.appendChild(sec);
+  // Moods first (simple); Emotions is the full map. The heart cart belongs to the map only.
+  function setMode(k){
+    const emo = k === 'emotions';
+    moodsView.hidden = emo; lead.hidden = !emo; lay.hidden = !emo; vcHeart.hidden = !emo;
+    Object.keys(mBtns).forEach(m => { mBtns[m].setAttribute('aria-pressed', String(m === k)); mBtns[m].classList.toggle('is-on', m === k); });
+    try { lsSet(LS_VC_MODE, k); } catch(e){}
+    if (emo) vcApplyLayout();
+  }
+  setMode(lsGet(LS_VC_MODE, 'moods') === 'emotions' ? 'emotions' : 'moods');
   vcApplyLayout();
   if (vcRO) vcRO.disconnect();
   if (window.ResizeObserver){
@@ -13549,6 +13603,19 @@ function settingsRevealEl(el){
     if (i){ const row = i.closest('.settings-row'); i.setAttribute('aria-expanded', String(row.classList.toggle('desc-open'))); }
   });
 })();
+// #847: on desktop the top Home button turns into Player (with a player symbol) while Home is showing
+const HOME_ICO = '<path d="M12 3l9 8h-2.5v9h-5v-6h-3v6h-5v-9H3l9-8z"/>';
+const PLAYER_ICO = '<path d="M9 18V5l12-2v13M9 9l12-2M6 21a3 3 0 100-6 3 3 0 000 6zm12-3a3 3 0 100-6 3 3 0 000 6z" fill="none" stroke="currentColor" stroke-width="1.6"/>';
+function syncHomeNavBtn(name){
+  const b = document.getElementById('navHomeBtn');
+  if (!b) return;
+  const toPlayer = name === 'home' && document.body.classList.contains('split-desktop');
+  const svg = b.querySelector('svg'), label = b.querySelector('span');
+  b.dataset.view = toPlayer ? 'player' : 'home';
+  if (svg) svg.innerHTML = toPlayer ? PLAYER_ICO : HOME_ICO;
+  if (label) label.textContent = toPlayer ? 'Player' : 'Home';
+  b.setAttribute('aria-label', toPlayer ? 'Player' : 'Home');
+}
 function setView(name){
   // Search and Home are one page: 'search' opens Home with the search field focused
   const focusSearch = name === 'search';
@@ -13600,6 +13667,7 @@ function setView(name){
     setVisualMode('art');
   }
   Object.keys(views).forEach(k => { views[k].hidden = k !== name; });
+  syncHomeNavBtn(name);
   document.querySelectorAll('.nav-btn[data-view], #bottom-nav button[data-view]').forEach(b => {
     b.classList.toggle('is-active', b.dataset.view === name || (name === 'home' && b.dataset.view === 'search' && !!b.closest('#bottom-nav')));
   });
@@ -16325,6 +16393,41 @@ async function openAlbumPreview(a, name, backFn){
   if (name) libplBody.appendChild(pageArtistRow([name]));
   const info = document.createElement('div'); info.className = 'currents-hint album-info';
   info.textContent = albumYearOf(a.releaseDate) || '';
+  // #869: the same play actions as a library album, without adding it to the library: the album's songs are matched,
+  // kept as a plain cached list (not in the library), and the queue points at it
+  const acts = document.createElement('div'); acts.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px';
+  const albumList = async () => {
+    let pl = getCachedPlaylist(a.id);
+    if (!pl || !(pl.tracks || []).some(t => t && t.videoId)){
+      showToast('Getting ' + a.name + ' ready...', undefined, 'albumprep');
+      pl = await queueBackgroundLoad(a.id, a.type || 'am_album', (pr) => {
+        if (pr && pr.stage === 'matching' && pr.total) toastUpdate('albumprep', 'Getting ' + a.name + ' ready (' + pr.done + ' of ' + pr.total + ')...');
+      });
+    }
+    if (!pl){ showToast("Couldn't load that album."); return null; }
+    return pl;
+  };
+  [['Play', 'play'], ['Shuffle', 'shuffle'], ['Play next', 'next'], ['Add to queue', 'queue']].forEach(([label, kind]) => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'btn-ghost'; b.textContent = label;
+    b.addEventListener('click', async () => {
+      if (b.disabled) return;
+      b.disabled = true;
+      try {
+        const pl = await albumList();
+        if (!pl) return;
+        if (kind === 'play' || kind === 'shuffle'){
+          loadPlaylistIntoPlayer(pl); setView('player'); buildQueueFrom(-1, pl.id);
+          if (kind === 'shuffle'){ state.queue = shuffleTail(state.queue, 0); renderQueuePanel(); }
+          loadIndex(state.queuePos, true);
+        } else {
+          const n = kind === 'next' ? queuePlayNextCollection(pl.id) : queueAddCollection(pl.id);
+          showToast(n ? (kind === 'next' ? n + ' songs play next' : n + ' songs added to the queue') : 'Nothing to add');
+        }
+      } catch(err){ showToast("Couldn't load that album."); }
+      finally { b.disabled = false; }
+    });
+    acts.appendChild(b);
+  });
   const add = document.createElement('button'); add.type = 'button'; add.className = 'btn-ghost is-active';
   add.style.cssText = 'width:100%;margin-bottom:12px'; add.textContent = 'Add to library';
   add.addEventListener('click', async () => {
@@ -16332,7 +16435,7 @@ async function openAlbumPreview(a, name, backFn){
     if (await addArtistAlbumToLibrary(a, name)){ if (openLibraryPanelId === id) dismissLibraryPlaylistPanel(); } else add.disabled = false;
   });
   const status = document.createElement('div'); status.className = 'currents-status'; status.textContent = 'Loading songs...';
-  libplBody.appendChild(info); libplBody.appendChild(add); libplBody.appendChild(status);
+  libplBody.appendChild(info); libplBody.appendChild(acts); libplBody.appendChild(add); libplBody.appendChild(status);
   libplPanel.classList.add('is-open'); libplScrim.classList.add('is-open');
   syncHistoryBuffer();
   try{
@@ -16554,6 +16657,8 @@ function pageArtistRow(names, title){
 // #533: a song's own page in the library panel. Only data the app already
 // holds (the track, its album in the library, the cached year lookup); the
 // artist name opens the artist page, the album opens the album.
+let songPageArtFn = null;
+libplArtWrap.addEventListener('click', () => { if (songPageArtFn && String(openLibraryPanelId).startsWith('songpage:')) songPageArtFn(); });
 function openSongPage(t, plId, trackIdx){
   if (!t) return;
   const id = 'songpage:' + (t.videoId || t.title);
@@ -16570,6 +16675,7 @@ function openSongPage(t, plId, trackIdx){
   libplTitle.textContent = t.title;
   if (t.art){ attachArtworkFallback(libplArt, { art: t.art }); libplArtWrap.hidden = false; } else { libplArt.removeAttribute('src'); libplArtWrap.hidden = true; }
   libplHeroSync('Song');
+  songPageArtFn = () => openSongAlbumPage(plId ? playlistById(plId) : null, t, () => openSongPage(t, plId, trackIdx));   // #856: the song's art opens its album page
   libplBody.innerHTML = '';
   const sc = libplPanel.querySelector('.queue-scroll'); if (sc) sc.scrollTop = 0;
   libplReturnTo = null; libplResume = null;
@@ -16588,10 +16694,13 @@ function openSongPage(t, plId, trackIdx){
   if (credited.length) libplBody.appendChild(pageArtistRow(credited, t.title));
   if (album) parts.push(addLink(album.name, () => { if (openLibraryPanelId !== album.id) toggleLibraryPlaylistPanel(album.id); }));
   const yearSpan = document.createElement('span');
-  if (dur) parts.push(document.createTextNode(formatTime(dur)));
-  if (t.plays) parts.push(document.createTextNode(t.plays + (t.plays === 1 ? ' play' : ' plays')));
   parts.push(yearSpan);
   parts.forEach((n, i) => { if (i && n !== yearSpan) info.append(' · '); info.append(n); });
+  // #832: length and plays sit in their own small stat tiles instead of being strung along the album line
+  const stats = document.createElement('div'); stats.className = 'song-stats';
+  const stat = (value, label) => { const d = document.createElement('div'); d.className = 'song-stat'; const v = document.createElement('b'); v.textContent = value; const l = document.createElement('span'); l.textContent = label; d.appendChild(v); d.appendChild(l); stats.appendChild(d); };
+  if (dur) stat(formatTime(dur), 'Length');
+  if (t.plays) stat(String(t.plays), t.plays === 1 ? 'Play' : 'Plays');
   const acts = document.createElement('div'); acts.className = 'song-page-acts';
   const mk = (label, fn, primary) => {
     const b = document.createElement('button'); b.type = 'button'; b.className = 'btn-ghost' + (primary ? ' is-active' : '');
@@ -16600,7 +16709,7 @@ function openSongPage(t, plId, trackIdx){
   if (pl && trackIdx != null && t.videoId && getCachedPlaylist(pl.id)) mk('Play', () => { const i = pl.tracks.indexOf(t); playLibraryTrackInline(pl.id, i >= 0 ? i : trackIdx); }, true);
   mk('Add to playlist', () => openAddToPlaylistPicker(t));
   if (pl && trackIdx != null && canonicalLinkForPlaylist(pl)) mk('Share', () => shareTrackAt(pl.id, trackIdx));
-  libplBody.appendChild(info); libplBody.appendChild(acts);
+  libplBody.appendChild(info); if (stats.children.length) libplBody.appendChild(stats); libplBody.appendChild(acts);
   libplPanel.classList.add('is-open'); libplScrim.classList.add('is-open');
   syncHistoryBuffer();
   fetchTrackYear(t.title, t.artist).then(y => {
@@ -18262,6 +18371,7 @@ function openTrackCtxMenuFor(plId, trackIdx, anchorEl, opts){
     if (!isPodcastTrack(t) && t.artist) items.push({ action: 'map', label: 'Music map', icon: CTX_ICON_MAP });   // #597
     if (opts && opts.isNow) items.push({ action: 'sleep', label: sleepTimer ? 'Sleep timer: ' + sleepTimerLabel() : 'Sleep timer', icon: CTX_ICON_SLEEP });
     items.push({ action: 'songpage', label: 'Song page', icon: CTX_ICON_ART });
+    if (!isPodcastTrack(t) && (t.artist || isAlbumEntry(pl))) items.push({ action: 'album', label: 'Album', icon: CTX_ICON_ART });   // #807
     // A track has no canonical source link of its own (see
     // canonicalLinkForPlaylist's comment) - sharing it re-shares the parent
     // playlist/album's link plus this track's position within it, so only
@@ -18311,6 +18421,32 @@ function toggleTrackCtxMenu(plId, trackIdx, anchorEl, opts){
   openTrackCtxMenuFor(plId, trackIdx, anchorEl, opts);
 }
 
+// #807: the album a song is on, from Apple's catalog (quick, and has new releases the song-info sources lack).
+// The title and the first artist must match, so a cover or a same-named song does not send you to the wrong album.
+async function findSongAlbum(t){
+  const tk = artistNameKey(t.title), ak = artistNameKey(String(t.artist || '').split(/\s*(?:,|&|\bfeat\.?|\bft\.?|\bx\b)\s*/i)[0]);
+  if (!tk) return null;
+  const res = await fetch('https://itunes.apple.com/search?' + new URLSearchParams({ term: [t.title, t.artist].filter(Boolean).join(' '), media: 'music', entity: 'song', limit: '15' }));
+  if (!res.ok) return null;
+  const found = ((await res.json()).results || []).filter(r => r && r.collectionId && artistNameKey(r.trackName) === tk && (!ak || artistNameKey(r.artistName).includes(ak)) && !/remix/i.test(r.collectionName || ''));
+  // the artist's own album before a various-artists compilation that happens to include the song
+  const hit = found.find(r => !ak || artistNameKey(r.collectionArtistName || r.artistName).includes(ak)) || found[0];
+  if (!hit) return null;
+  return { id: 'us:' + hit.collectionId, type: 'am_album', name: String(hit.collectionName || '').replace(/\s+-\s+(Single|EP)$/i, ''), art: hit.artworkUrl100 ? hit.artworkUrl100.replace(/\/\d+x\d+bb\./, '/300x300bb.') : '', releaseDate: hit.releaseDate || '' };
+}
+// The album page for a song (#807 menu item, #856 song-page art): a library album opens as it is, any other is found and previewed.
+function openSongAlbumPage(pl, t, backFn){
+  if (!t) return;
+  if (pl && isAlbumEntry(pl) && pl.id !== NP_ID){ if (openLibraryPanelId !== pl.id) toggleLibraryPlaylistPanel(pl.id); return; }
+  showToast('Finding the album...');
+  findSongAlbum(t).then(a => {
+    if (a) openAlbumPreview(a, t.artist, backFn || null);
+    else return fetchSongInfo(t.title, t.artist).then(m => {
+      if (m && m.album) openInfoAlbum(m.album, t.artist, backFn || null);
+      else showToast("Couldn't find this song's album.");
+    });
+  }).catch(() => showToast("Couldn't find this song's album."));
+}
 function handleTrackCtxAction(action, plId, trackIdx){
   const pl = playlistById(plId);
   const t = pl && pl.tracks[trackIdx];
@@ -18325,6 +18461,7 @@ function handleTrackCtxAction(action, plId, trackIdx){
   else if (action === 'map'){ if (t && t.artist) openMusicMap(t.artist); }
   else if (action === 'share'){ if (t) shareTrackAt(plId, trackIdx); }
   else if (action === 'songpage'){ if (t) openSongPage(t, plId, trackIdx); }
+  else if (action === 'album'){ openSongAlbumPage(pl, t); }   // #807
   else if (action === 'decline'){ declineCurrentsTrack(trackIdx); }
   else if (action === 'refresh'){ openRefreshLinkPicker(plId, trackIdx); }
   else if (action === 'wrongsong'){ reportMatchBtn.click(); }
@@ -20471,6 +20608,7 @@ function openAddToPlaylistPicker(track){
     '<button class="btn-ghost" id="plAddSelectedBtn" style="width:100%;margin-bottom:8px" disabled>Add</button>' +
     '<button class="btn-ghost" id="plNewFromPickerBtn" style="width:100%">+ New playlist</button>';
   const addBtn = $('plAddSelectedBtn'), listEl = $('plPickList'), searchEl = $('plPickSearch'), sortEl = $('plPickSort');
+  sortEl.value = 'alpha';   // #839: A to Z by default, Liked Songs stays on top
   const rowHtml = (p) =>
     '<label class="btn-ghost pl-pick" style="width:100%;text-align:left;margin-bottom:8px;display:flex;align-items:center;gap:10px;cursor:pointer">' +
       '<input type="checkbox" class="pl-pick-cb" data-id="' + escapeHtml(p.id) + '"' + (picked.has(p.id) ? ' checked' : '') + ' style="flex:none">' +
@@ -20526,7 +20664,8 @@ function openAddToPlaylistPicker(track){
 // destination for a single song and Liked Songs may not exist yet.
 function openSingleTrackDestinationPicker(track){
   openImportOverlay();
-  const customs = addablePlaylists().filter(p => p.id !== LIKED_ID);
+  const byName = (a, b) => String(a.name || '').localeCompare(String(b.name || ''), undefined, { sensitivity: 'base' });
+  const customs = addablePlaylists().filter(p => p.id !== LIKED_ID).sort(byName);   // #839
   const rowsHtml = customs.map(p =>
     '<button class="btn-ghost pl-pick" data-id="' + p.id + '" style="width:100%;text-align:left;margin-bottom:8px;display:block">' +
       escapeHtml(p.name) + ' <span style="color:var(--faint-2)">(' + p.tracks.length + (p.tracks.length === 1 ? ' song' : ' songs') + ')</span>' +
@@ -21122,7 +21261,8 @@ function looksLikeUrl(input){
 // with the artist on top, but only if the overlay is still on this search.
 let vibeSearchSeq = 0;
 // #799: what kind of thing a search looks for. 'all' is the old behavior; the others filter the same results.
-const SEARCH_TYPES = { all: 'All', songs: 'Songs', artists: 'Artists', albums: 'Albums', playlists: 'Playlists' };
+// #841: no All / Playlists chips any more: tap one chip to narrow the search, tap it again (nothing selected) for everything. Moods = describe a mood, get songs.
+const SEARCH_TYPES = { all: 'All', songs: 'Songs', artists: 'Artists', albums: 'Albums', playlists: 'Playlists', moods: 'Moods' };
 let searchType = 'all';
 try{ const t = sessionStorage.getItem('ebbless:searchType'); if (t && SEARCH_TYPES[t]) searchType = t; }catch(e){}
 function setSearchType(t){
@@ -21295,7 +21435,8 @@ function collectionPlayableTracks(pl){ return (pl.tracks || []).filter(t => t &&
 function openAddCollectionToPlaylistPicker(pl){
   const songs = collectionPlayableTracks(pl);
   openImportOverlay();
-  const customs = addablePlaylists().filter(p => p.id !== pl.id);
+  const byName = (a, b) => String(a.name || '').localeCompare(String(b.name || ''), undefined, { sensitivity: 'base' });
+  const customs = addablePlaylists().filter(p => p.id !== pl.id).sort(byName);   // #839
   const rowsHtml = customs.map(p =>
     '<button class="btn-ghost pl-pick" data-id="' + escapeHtml(p.id) + '" style="width:100%;text-align:left;margin-bottom:8px;display:block">' +
       escapeHtml(p.name) + ' <span style="color:var(--faint-2)">(' + p.tracks.length + (p.tracks.length === 1 ? ' song' : ' songs') + ')</span>' +
@@ -22359,7 +22500,7 @@ importForm.addEventListener('submit', (e) => {
   // conversational-vibe-search: a sentence ("rainy sunday morning, want
   // something warm and slow") goes to the interpreter and comes back as a
   // playlist of songs; a short keyword query keeps the playlist picker.
-  if (searchType === 'all' && looksConversational(val)) beginConversationalVibe(val);
+  if (searchType === 'moods' || (searchType === 'all' && looksConversational(val))) beginConversationalVibe(val);
   else beginVibeSearch(val);
 });
 
@@ -22457,6 +22598,23 @@ function renderHome(){
     if (src){ cover = document.createElement('img'); cover.loading = 'lazy'; cover.alt = ''; attachCardArt(cover, src); }
     else { cover = mk('div', 'hm-ph', (name || '?').charAt(0).toUpperCase()); }
     b.appendChild(cover); b.appendChild(mk('span', 'hm-n', name)); if (sub) b.appendChild(mk('span', 'hm-s', sub));
+    // #848: an artist tile shows the artist's own photo once it is known (the same photo their artist page uses); until then, or when none exists, it keeps the album cover
+    if (round) try {
+      fetchArtistInfo(name, '').then(info => {
+        const u = info && typeof info.image === 'string' && /^https:\/\//.test(info.image) ? info.image : '';
+        if (!u || !b.isConnected) return;
+        // load it off screen first, so the cover (or the letter) stays up until the photo is ready; a photo that fails changes nothing
+        const pre = new Image();
+        pre.onload = () => {
+          if (!b.isConnected) return;
+          let im = b.querySelector('img');
+          if (!im){ im = document.createElement('img'); im.alt = ''; im.loading = 'lazy'; const ph = b.querySelector('.hm-ph'); if (ph) ph.replaceWith(im); else b.insertBefore(im, b.firstChild); }
+          im.onerror = null;
+          im.src = u;
+        };
+        pre.src = u;
+      }).catch(() => {});
+    } catch(e){}
     b.addEventListener('click', onClick); return b;
   };
   const row = (sec, cards) => { const r = mk('div', 'hm-row'); cards.forEach(c => r.appendChild(c)); sec.appendChild(r); };
@@ -22769,7 +22927,7 @@ function openHomeVibe(){
   const i = $('hmVibeInput');
   if (i) i.focus();
 }
-document.querySelectorAll('.st-type').forEach(b => b.addEventListener('click', () => setSearchType(b.dataset.stype)));
+document.querySelectorAll('.st-type').forEach(b => b.addEventListener('click', () => setSearchType(searchType === b.dataset.stype ? 'all' : b.dataset.stype)));
 setSearchType(searchType);
 $('searchTabForm').addEventListener('submit', (e) => { e.preventDefault(); searchTabSubmit(); });
 // Search and Home are one page. The field to type in: the page's own on phones, the top bar on desktop and tablet widths.
@@ -22786,7 +22944,7 @@ function openDesktopSearch(){
   urlInput.focus();   // #800: on desktop the top bar is the one search field; the page's own field is hidden
 }
 urlInput.addEventListener('click', () => { if (window.innerWidth >= 860) openDesktopSearch(); });   // 3-pane desktop and tablet widths
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && state.currentView === 'home' && window.innerWidth >= 860 && !importOverlay.classList.contains('is-open')){ e.preventDefault(); setView(state.preHomeView && state.preHomeView !== 'home' ? state.preHomeView : 'player'); } });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && state.currentView === 'home' && window.innerWidth >= 860 && !importOverlay.classList.contains('is-open')){ e.preventDefault(); setView('player'); } });   // #833: Esc on Home always lands on the player
 searchTabInput.addEventListener('input', () => { searchTabErr.textContent = ''; });
 
 /* ---------- Paste a list of songs ----------
@@ -22927,8 +23085,8 @@ function looksConversational(input){
   return words.length >= 3 && VIBE_TALK_RE.test(s);
 }
 
-/* music-langs: which languages' music a vibe leans toward. Preset from this
-   device (its languages, an Indian time zone), changed with one tap under
+/* music-langs: which languages' music a vibe leans toward. English until the
+   listener turns more on (#871), changed with one tap under
    Home's vibe box, sent to /vibe-interpret as ?langs= (the worker's
    vibe-locale.js). The sentence still wins: "dil toota hai yaar" gets Hindi
    songs with English alone picked. English alone changes nothing. */
@@ -22942,16 +23100,10 @@ function regionLooksIndian(){
     return (navigator.languages || [navigator.language || '']).some(l => /-IN$/i.test(l));
   } catch(e){ return false; }
 }
-function detectedMusicLangs(){
-  const out = ['en'];
-  try { (navigator.languages || []).forEach(l => { const c = String(l).slice(0, 2).toLowerCase(); if (MUSIC_LANG_NAMES[c] && !out.includes(c)) out.push(c); }); } catch(e){}
-  if (out.length === 1 && regionLooksIndian()) out.push('hi');
-  return out.slice(0, 4);
-}
 function musicLangs(){
   const v = lsGet(LS_MUSIC_LANGS, null);
   const list = Array.isArray(v) ? v.filter(l => MUSIC_LANG_NAMES[l]).slice(0, 4) : [];
-  return list.length ? list : detectedMusicLangs();
+  return list.length ? list : ['en'];   // #871: English until the listener turns another language on (was: the device's languages)
 }
 function toggleMusicLang(code){
   let list = musicLangs();
@@ -25656,6 +25808,7 @@ function openYtPanel(){
   closeArtStyleMenu();
   ytOn = true;
   ytPanelBtn.classList.add('is-active');
+  setTimeout(noteLook, 0);
   $('visualTabs').classList.add('yt-on');
   ytPanelBtn.setAttribute('aria-pressed', 'true');
   ytPanelSync();
@@ -25666,6 +25819,7 @@ function closeYtPanel(auto){
   if (!ytPanelOpen()) return;
   ytOn = false;
   ytPanelBtn.classList.remove('is-active');
+  setTimeout(noteLook, 0);
   $('visualTabs').classList.remove('yt-on');
   ytPanelBtn.setAttribute('aria-pressed', 'false');
   clearInterval(ytPanelTimer);
@@ -34839,6 +34993,7 @@ async function openMilk(inline = true){
   try { if (ytPanelOpen()) closeYtPanel(); closeArtStyleMenu(); if (visualMode !== 'art') setVisualMode('art'); } catch(e){}
   milk.open = true;
   milkSetInline(inline);
+  setTimeout(noteLook, 0);
   milk.openedAt = performance.now();
   clearTimeout(milk.closeTimer);
   milkLayer.classList.add('is-open', 'milk-dim');
@@ -34886,6 +35041,7 @@ function closeMilkNow(){
   if (!milk.open) return;
   milk.open = false;
   fluxTasteStop();
+  setTimeout(noteLook, 0);
   clearTimeout(milkCardTimer); $('milkCard').classList.remove('is-on');
   milkStopLoop();
   if (document.fullscreenElement === milkLayer) document.exitFullscreen().catch(() => {});
@@ -35066,6 +35222,7 @@ function setVisualMode(mode){
   if (milk.open && milk.inline) closeMilk();   // #768: picking any tab (even the current one) leaves the inline light show
   if (mode === visualMode) return;
   visualMode = mode;
+  setTimeout(noteLook, 0);
   lsSet(LS_VIZ, mode);
   applyVisualMode();
   capSyncWakeLock();
@@ -37421,6 +37578,20 @@ function lyricsBtnSync(){
   btn.setAttribute('aria-disabled', String(!ok));
 }
 
+// #808: after the listener scrolls the lyrics by hand, the view stays where they put it for a few seconds, then
+// snaps back to the line that is playing (it used to jump on the very next line)
+const LYRICS_SNAP_WAIT = 4000;
+let lyricsManualAt = 0, lyricsSnapTimer = 0;
+function lyricsSnapToCurrent(){
+  if (visualMode !== 'lyrics' || lyricsState.activeIdx < 0) return;
+  const el = lyricsScroller.children[lyricsState.activeIdx];
+  if (el) el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+}
+['wheel', 'touchmove', 'pointerdown'].forEach(ev => lyricsScroller.addEventListener(ev, () => {
+  lyricsManualAt = Date.now();
+  clearTimeout(lyricsSnapTimer);
+  lyricsSnapTimer = setTimeout(lyricsSnapToCurrent, LYRICS_SNAP_WAIT);
+}, { passive: true }));
 function updateLyricsHighlight(cur){
   if (visualMode !== 'lyrics' || !lyricsState.synced || !lyricsState.lines.length) return;
   const lines = lyricsState.lines;
@@ -37455,7 +37626,7 @@ function updateLyricsHighlight(cur){
     const el = lyricsScroller.children[idx];
     if (el){
       el.classList.add('is-current');
-      el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      if (Date.now() - lyricsManualAt >= LYRICS_SNAP_WAIT) el.scrollIntoView({ block: 'center', behavior: 'smooth' });
     }
   }
 }
@@ -38969,6 +39140,24 @@ function kbToggleLibrary(){
 // re-run it through the existing close/open pair to stay in fullscreen.
 // The YouTube card (V) sits over the tabs, so close it first or the
 // switch wouldn't be visible.
+// #815: Z goes back to the look you had before this one. A "look" is Art, Cymatics, fLUX, Lyrics or Video.
+let lookCur = 'art', lookPrev = '';
+function currentLook(){
+  try { if (ytPanelOpen()) return 'video'; if (milk.open && milk.inline) return 'flux'; } catch(e){}
+  return visualMode;
+}
+function noteLook(){
+  const now = currentLook();
+  if (now !== lookCur){ lookPrev = lookCur; lookCur = now; }
+}
+function lookBack(){
+  noteLook();
+  const to = lookPrev || 'art';
+  if (to === 'flux'){ if (ytPanelOpen()) closeYtPanel(); openMilk(); }
+  else if (to === 'video'){ if (milk.open && milk.inline) closeMilk(); videoTabOpen(); }
+  else kbSetVisual(to);
+  setTimeout(noteLook, 50);
+}
 function kbSetVisual(mode){
   if (ytPanelOpen()) closeYtPanel();
   closeArtStyleMenu();
@@ -39062,6 +39251,12 @@ document.addEventListener('keydown', (e) => {
     case 'f': case 'F':
       // video mode too: the same EBBLESS fullscreen as the other modes
       // (the video is placed over its art by ytPanelSync)
+      if (e.repeat) break;
+      // #829: on Home, F makes the page itself fullscreen (the browser's fullscreen), F again leaves it
+      if (state.currentView === 'home' && !state.flowOpen){
+        try { if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen(); } catch(err){}
+        break;
+      }
       if (state.flowOpen) closeFlow();
       else if (currentTrack()) openFlow();
       break;
@@ -39116,6 +39311,9 @@ document.addEventListener('keydown', (e) => {
       // tab is disabled (no YouTube video behind the current track)
       if (!e.repeat){ if (ytPanelOpen()) closeYtPanel(); else videoTabOpen(); }
       break;
+    case 'z': case 'Z':
+      if (!e.repeat && !e.metaKey && !e.ctrlKey) lookBack();
+      break;
     case 'q': case 'Q':
       if (!e.repeat) kbShowPane(document.querySelector('#topnav [data-action="toggle-queue"]'));
       break;
@@ -39132,11 +39330,11 @@ document.addEventListener('keydown', (e) => {
       // every fullscreen layer closed, then setView('player')
       // (closes the queue / playlist panel, steps out of Settings). Settings
       // opened from desktop fullscreen would otherwise restore it.
-      // #762: pressed again from Home, it goes back to the player
+      // #762 / #862: pressed again from Home, it goes back to the player
       if (e.repeat) break;
       leaveFullscreen(true);
       state.settingsFromDeskFs = false;
-      setView(state.currentView === 'home' ? 'player' : 'home'); // not the wordmark click: that returns to the splash where the mini player is supported (#661)
+      setView(state.currentView === 'player' ? 'home' : 'player'); // #862: from anywhere but the player it goes to the player; on the player, to Home. Not the wordmark click: that returns to the splash where the mini player is supported (#661)
       break;
     case 'Escape':
       // The YouTube video card first (Geethub #249: it sits over everything,
