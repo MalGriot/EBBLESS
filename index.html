@@ -1100,6 +1100,7 @@ body.relink-dragging #import-overlay{opacity:0;pointer-events:none}
 html.reduce-motion .lib-grid:not(.is-list) .lib-card .art .title-overlay{display:none}
 html.reduce-motion .lib-grid:not(.is-list) .lib-card .info .name{display:block;white-space:normal;overflow:visible;overflow-wrap:anywhere}
 .lib-card .count{font-size:11.5px;color:var(--faint);margin-top:1px}
+.lib-card .count:empty{display:none}
 .lib-card .lib-desc{color:var(--text);opacity:.8}
 .lib-card.is-refreshing .count,.currents-status{animation:onb-load-pulse 1.4s ease-in-out infinite}
 .currents-status{padding:10px 14px;font-size:12.5px;color:var(--faint)}
@@ -14931,10 +14932,8 @@ function renderLibrary(){
       titleOverlay.appendChild(overlayDot);
     }
     artDiv.appendChild(titleOverlay);
-    const lastPlayedText = formatLastPlayed(getLastPlayed(id));
-    const totalDuration = formatTotalDuration(totalPlaylistDuration(pl.tracks));
+    // #866: no song count, runtime or last-played on the thumb (the playlist page has them); this line only carries status text below
     const count = document.createElement('div'); count.className = 'count';
-    count.textContent = pl.tracks.length + (isPodcast ? (pl.tracks.length === 1 ? ' episode' : ' episodes') : (pl.tracks.length === 1 ? ' song' : ' songs')) + (totalDuration ? ' · ' + totalDuration : '') + (lastPlayedText ? ' · ' + lastPlayedText : '');
     // the two generated mixes keep their branded names; say plainly what
     // they are, and what fills them when they're still empty
     let desc = null;
