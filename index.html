@@ -27311,6 +27311,28 @@ function queuePlayNextCollection(plId){
   schedulePreload(state.queuePos);
   return order.length;
 }
+// #826: Cmd-click (Mac) or Ctrl-click (PC) on a song, episode, album or playlist plays it next. Whole artists and
+// podcasts are too big to drop into the queue, so they get a short explanation instead of doing nothing.
+document.addEventListener('click', (e) => {
+  if (!(e.metaKey || e.ctrlKey) || e.shiftKey || e.altKey || !e.target.closest) return;
+  const row = e.target.closest('.track-row[data-pl-id][data-idx]');
+  const card = row ? null : e.target.closest('.lib-card[data-pl-id]');
+  if (!row && !card) return;
+  const plId = (row || card).dataset.plId, pl = playlistById(plId);
+  e.preventDefault(); e.stopPropagation();
+  if (!pl) return;
+  if (row){
+    const idx = +row.dataset.idx, t = pl.tracks[idx];
+    if (!t || !t.videoId){ showToast('That song isn\u2019t matched yet, so it can\u2019t play next'); return; }
+    queuePlayNext(idx, plId);
+    showToast('Plays next');
+    return;
+  }
+  if (isArtistEntry(pl)){ showToast('An artist is too much to queue at once. Open it and Cmd/Ctrl-click a song or album.'); return; }
+  if (isPodcastEntry(pl)){ showToast('A whole podcast is too much to queue at once. Open it and Cmd/Ctrl-click an episode.'); return; }
+  const n = queuePlayNextCollection(plId);
+  showToast(n ? (n === 1 ? '1 song plays next' : n + ' songs play next') : 'Nothing to play next in there');
+}, true);
 // Whole playlist/album/podcast onto the end of the queue, in order (or
 // shuffled when shuffle is on). Returns the number of tracks added.
 function queueAddCollection(plId){
