@@ -34171,7 +34171,7 @@ function milkSongChanged(){
 // the song" on, the look changes with it.
 function milkWatchSong(){
   const tr = currentTrack(), tid = tr ? (tr.videoId || tr.id || tr.title) : null;
-  if (tid !== milk.cardFor && milkLayer.classList.contains('milk-live')){ milk.cardFor = tid; milkShowCard(); }
+  if (tid !== milk.cardFor && milkLayer.classList.contains('milk-live')){ milk.cardFor = tid; }   // #830: no automatic song title card; C still shows it on demand
   const before = milkSig.metricsFor;
   milkLoadMetrics();
   const acc = document.documentElement.style.getPropertyValue('--player-accent');
