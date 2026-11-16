@@ -541,12 +541,14 @@ video.lib-bg-video.is-playing{opacity:1}
 #view-home .view-scroll{max-width:900px;margin:0 auto}
 #view-home .hm-sec{margin:0 0 26px}
 #view-home .hm-sec h2{font-size:18px;font-weight:700;margin:0 0 12px;color:var(--text)}
-#view-home .hm-row{display:flex;gap:14px;overflow-x:auto;margin:0 calc(-1 * var(--vs-pad,24px));padding:0 var(--vs-pad,24px) 6px;scrollbar-width:none}
+#view-home .hm-row{display:flex;gap:14px;overflow-x:auto;margin:-8px calc(-1 * var(--vs-pad,24px)) -6px;padding:8px var(--vs-pad,24px) 12px;scrollbar-width:none}   /* #840: room for the hover grow and shadow */
 #view-home .hm-row::-webkit-scrollbar{display:none}
 #view-home .hm-card{flex:none;width:128px;display:flex;flex-direction:column;gap:7px;text-align:left;color:var(--text);cursor:pointer}
 #view-home .hm-card img,#view-home .hm-card .hm-ph{width:128px;height:128px;border-radius:14px;object-fit:cover;background:var(--panel-3);box-shadow:0 8px 18px -8px rgba(0,0,0,.6);transition:transform var(--dur-ui) var(--ease-out)}
 #view-home .hm-card:hover img,#view-home .hm-card:hover .hm-ph{transform:scale(1.03)}
 #view-home .hm-card.is-artist img,#view-home .hm-card.is-artist .hm-ph{border-radius:50%}
+#view-home .hm-card.is-artist{text-align:center}   /* #842 */
+#view-home .hm-card.is-artist .hm-n,#view-home .hm-card.is-artist .hm-s{text-align:center}
 #view-home .hm-ph{display:flex;align-items:center;justify-content:center;font-size:34px;font-weight:700;color:var(--faint)}
 #view-home .hm-n{font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #view-home .hm-s{font-size:11.5px;color:var(--faint-2);margin-top:-4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -557,6 +559,7 @@ video.lib-bg-video.is-playing{opacity:1}
 #view-home .hm-song img{flex:none;width:44px;height:44px;border-radius:8px;object-fit:cover;background:var(--panel-3)}
 #view-home .hm-song .hm-t{min-width:0;flex:1}
 #view-home .hm-song .hm-n{font-size:14px}
+#view-home .hm-song .hm-s{margin-top:3px}   /* #843: the artist sat tight under the title */
 #view-home .hm-plays{flex:none;font-size:12px;color:var(--faint-2)}
 #view-home .hm-map{display:flex;align-items:center;gap:14px;width:100%;padding:16px 18px;border-radius:16px;color:#fff;text-align:left;cursor:pointer;background:linear-gradient(120deg,#2e8f8a,#12365a)}
 #view-home .hm-map svg{flex:none;width:34px;height:34px}
@@ -5960,6 +5963,7 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
           <li><span><kbd>3</kbd></span>fLUX (inside it: <kbd>&uarr;</kbd> <kbd>&darr;</kbd> change the look, other keys work as usual)</li>
           <li><span><kbd>4</kbd></span>Lyrics</li>
           <li><span><kbd>5</kbd></span>Video</li>
+          <li><span><kbd>Z</kbd></span>Back to the previous look (Art, Cymatics, fLUX, Lyrics or Video)</li>
           <li><span><kbd>T</kbd></span>With the video showing: cinema mode (dim the rest; the Video button does the same)</li>
           <li><span><kbd>I</kbd></span>Cymatics: hold pattern on / off</li>
           <li><span><kbd>K</kbd></span>Shuffle</li>
@@ -13508,6 +13512,19 @@ function settingsRevealEl(el){
     if (i){ const row = i.closest('.settings-row'); i.setAttribute('aria-expanded', String(row.classList.toggle('desc-open'))); }
   });
 })();
+// #847: on desktop the top Home button turns into Player (with a player symbol) while Home is showing
+const HOME_ICO = '<path d="M12 3l9 8h-2.5v9h-5v-6h-3v6h-5v-9H3l9-8z"/>';
+const PLAYER_ICO = '<path d="M9 18V5l12-2v13M9 9l12-2M6 21a3 3 0 100-6 3 3 0 000 6zm12-3a3 3 0 100-6 3 3 0 000 6z" fill="none" stroke="currentColor" stroke-width="1.6"/>';
+function syncHomeNavBtn(name){
+  const b = document.getElementById('navHomeBtn');
+  if (!b) return;
+  const toPlayer = name === 'home' && document.body.classList.contains('split-desktop');
+  const svg = b.querySelector('svg'), label = b.querySelector('span');
+  b.dataset.view = toPlayer ? 'player' : 'home';
+  if (svg) svg.innerHTML = toPlayer ? PLAYER_ICO : HOME_ICO;
+  if (label) label.textContent = toPlayer ? 'Player' : 'Home';
+  b.setAttribute('aria-label', toPlayer ? 'Player' : 'Home');
+}
 function setView(name){
   // Search and Home are one page: 'search' opens Home with the search field focused
   const focusSearch = name === 'search';
@@ -13559,6 +13576,7 @@ function setView(name){
     setVisualMode('art');
   }
   Object.keys(views).forEach(k => { views[k].hidden = k !== name; });
+  syncHomeNavBtn(name);
   document.querySelectorAll('.nav-btn[data-view], #bottom-nav button[data-view]').forEach(b => {
     b.classList.toggle('is-active', b.dataset.view === name || (name === 'home' && b.dataset.view === 'search' && !!b.closest('#bottom-nav')));
   });
@@ -20430,6 +20448,7 @@ function openAddToPlaylistPicker(track){
     '<button class="btn-ghost" id="plAddSelectedBtn" style="width:100%;margin-bottom:8px" disabled>Add</button>' +
     '<button class="btn-ghost" id="plNewFromPickerBtn" style="width:100%">+ New playlist</button>';
   const addBtn = $('plAddSelectedBtn'), listEl = $('plPickList'), searchEl = $('plPickSearch'), sortEl = $('plPickSort');
+  sortEl.value = 'alpha';   // #839: A to Z by default, Liked Songs stays on top
   const rowHtml = (p) =>
     '<label class="btn-ghost pl-pick" style="width:100%;text-align:left;margin-bottom:8px;display:flex;align-items:center;gap:10px;cursor:pointer">' +
       '<input type="checkbox" class="pl-pick-cb" data-id="' + escapeHtml(p.id) + '"' + (picked.has(p.id) ? ' checked' : '') + ' style="flex:none">' +
@@ -20485,7 +20504,8 @@ function openAddToPlaylistPicker(track){
 // destination for a single song and Liked Songs may not exist yet.
 function openSingleTrackDestinationPicker(track){
   openImportOverlay();
-  const customs = addablePlaylists().filter(p => p.id !== LIKED_ID);
+  const byName = (a, b) => String(a.name || '').localeCompare(String(b.name || ''), undefined, { sensitivity: 'base' });
+  const customs = addablePlaylists().filter(p => p.id !== LIKED_ID).sort(byName);   // #839
   const rowsHtml = customs.map(p =>
     '<button class="btn-ghost pl-pick" data-id="' + p.id + '" style="width:100%;text-align:left;margin-bottom:8px;display:block">' +
       escapeHtml(p.name) + ' <span style="color:var(--faint-2)">(' + p.tracks.length + (p.tracks.length === 1 ? ' song' : ' songs') + ')</span>' +
@@ -21254,7 +21274,8 @@ function collectionPlayableTracks(pl){ return (pl.tracks || []).filter(t => t &&
 function openAddCollectionToPlaylistPicker(pl){
   const songs = collectionPlayableTracks(pl);
   openImportOverlay();
-  const customs = addablePlaylists().filter(p => p.id !== pl.id);
+  const byName = (a, b) => String(a.name || '').localeCompare(String(b.name || ''), undefined, { sensitivity: 'base' });
+  const customs = addablePlaylists().filter(p => p.id !== pl.id).sort(byName);   // #839
   const rowsHtml = customs.map(p =>
     '<button class="btn-ghost pl-pick" data-id="' + escapeHtml(p.id) + '" style="width:100%;text-align:left;margin-bottom:8px;display:block">' +
       escapeHtml(p.name) + ' <span style="color:var(--faint-2)">(' + p.tracks.length + (p.tracks.length === 1 ? ' song' : ' songs') + ')</span>' +
@@ -22745,7 +22766,7 @@ function openDesktopSearch(){
   urlInput.focus();   // #800: on desktop the top bar is the one search field; the page's own field is hidden
 }
 urlInput.addEventListener('click', () => { if (window.innerWidth >= 860) openDesktopSearch(); });   // 3-pane desktop and tablet widths
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && state.currentView === 'home' && window.innerWidth >= 860 && !importOverlay.classList.contains('is-open')){ e.preventDefault(); setView(state.preHomeView && state.preHomeView !== 'home' ? state.preHomeView : 'player'); } });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && state.currentView === 'home' && window.innerWidth >= 860 && !importOverlay.classList.contains('is-open')){ e.preventDefault(); setView('player'); } });   // #833: Esc on Home always lands on the player
 searchTabInput.addEventListener('input', () => { searchTabErr.textContent = ''; });
 
 /* ---------- Paste a list of songs ----------
@@ -22886,8 +22907,8 @@ function looksConversational(input){
   return words.length >= 3 && VIBE_TALK_RE.test(s);
 }
 
-/* music-langs: which languages' music a vibe leans toward. Preset from this
-   device (its languages, an Indian time zone), changed with one tap under
+/* music-langs: which languages' music a vibe leans toward. English until the
+   listener turns more on (#871), changed with one tap under
    Home's vibe box, sent to /vibe-interpret as ?langs= (the worker's
    vibe-locale.js). The sentence still wins: "dil toota hai yaar" gets Hindi
    songs with English alone picked. English alone changes nothing. */
@@ -22901,16 +22922,10 @@ function regionLooksIndian(){
     return (navigator.languages || [navigator.language || '']).some(l => /-IN$/i.test(l));
   } catch(e){ return false; }
 }
-function detectedMusicLangs(){
-  const out = ['en'];
-  try { (navigator.languages || []).forEach(l => { const c = String(l).slice(0, 2).toLowerCase(); if (MUSIC_LANG_NAMES[c] && !out.includes(c)) out.push(c); }); } catch(e){}
-  if (out.length === 1 && regionLooksIndian()) out.push('hi');
-  return out.slice(0, 4);
-}
 function musicLangs(){
   const v = lsGet(LS_MUSIC_LANGS, null);
   const list = Array.isArray(v) ? v.filter(l => MUSIC_LANG_NAMES[l]).slice(0, 4) : [];
-  return list.length ? list : detectedMusicLangs();
+  return list.length ? list : ['en'];   // #871: English until the listener turns another language on (was: the device's languages)
 }
 function toggleMusicLang(code){
   let list = musicLangs();
@@ -25615,6 +25630,7 @@ function openYtPanel(){
   closeArtStyleMenu();
   ytOn = true;
   ytPanelBtn.classList.add('is-active');
+  setTimeout(noteLook, 0);
   $('visualTabs').classList.add('yt-on');
   ytPanelBtn.setAttribute('aria-pressed', 'true');
   ytPanelSync();
@@ -25625,6 +25641,7 @@ function closeYtPanel(auto){
   if (!ytPanelOpen()) return;
   ytOn = false;
   ytPanelBtn.classList.remove('is-active');
+  setTimeout(noteLook, 0);
   $('visualTabs').classList.remove('yt-on');
   ytPanelBtn.setAttribute('aria-pressed', 'false');
   clearInterval(ytPanelTimer);
@@ -34753,6 +34770,7 @@ async function openMilk(inline = true){
   try { if (ytPanelOpen()) closeYtPanel(); closeArtStyleMenu(); if (visualMode !== 'art') setVisualMode('art'); } catch(e){}
   milk.open = true;
   milkSetInline(inline);
+  setTimeout(noteLook, 0);
   milk.openedAt = performance.now();
   clearTimeout(milk.closeTimer);
   milkLayer.classList.add('is-open', 'milk-dim');
@@ -34798,6 +34816,7 @@ function closeMilk(){
 function closeMilkNow(){
   if (!milk.open) return;
   milk.open = false;
+  setTimeout(noteLook, 0);
   clearTimeout(milkCardTimer); $('milkCard').classList.remove('is-on');
   milkStopLoop();
   if (document.fullscreenElement === milkLayer) document.exitFullscreen().catch(() => {});
@@ -34978,6 +34997,7 @@ function setVisualMode(mode){
   if (milk.open && milk.inline) closeMilk();   // #768: picking any tab (even the current one) leaves the inline light show
   if (mode === visualMode) return;
   visualMode = mode;
+  setTimeout(noteLook, 0);
   lsSet(LS_VIZ, mode);
   applyVisualMode();
   capSyncWakeLock();
@@ -37333,6 +37353,20 @@ function lyricsBtnSync(){
   btn.setAttribute('aria-disabled', String(!ok));
 }
 
+// #808: after the listener scrolls the lyrics by hand, the view stays where they put it for a few seconds, then
+// snaps back to the line that is playing (it used to jump on the very next line)
+const LYRICS_SNAP_WAIT = 4000;
+let lyricsManualAt = 0, lyricsSnapTimer = 0;
+function lyricsSnapToCurrent(){
+  if (visualMode !== 'lyrics' || lyricsState.activeIdx < 0) return;
+  const el = lyricsScroller.children[lyricsState.activeIdx];
+  if (el) el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+}
+['wheel', 'touchmove', 'pointerdown'].forEach(ev => lyricsScroller.addEventListener(ev, () => {
+  lyricsManualAt = Date.now();
+  clearTimeout(lyricsSnapTimer);
+  lyricsSnapTimer = setTimeout(lyricsSnapToCurrent, LYRICS_SNAP_WAIT);
+}, { passive: true }));
 function updateLyricsHighlight(cur){
   if (visualMode !== 'lyrics' || !lyricsState.synced || !lyricsState.lines.length) return;
   const lines = lyricsState.lines;
@@ -37367,7 +37401,7 @@ function updateLyricsHighlight(cur){
     const el = lyricsScroller.children[idx];
     if (el){
       el.classList.add('is-current');
-      el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      if (Date.now() - lyricsManualAt >= LYRICS_SNAP_WAIT) el.scrollIntoView({ block: 'center', behavior: 'smooth' });
     }
   }
 }
@@ -38881,6 +38915,24 @@ function kbToggleLibrary(){
 // re-run it through the existing close/open pair to stay in fullscreen.
 // The YouTube card (V) sits over the tabs, so close it first or the
 // switch wouldn't be visible.
+// #815: Z goes back to the look you had before this one. A "look" is Art, Cymatics, fLUX, Lyrics or Video.
+let lookCur = 'art', lookPrev = '';
+function currentLook(){
+  try { if (ytPanelOpen()) return 'video'; if (milk.open && milk.inline) return 'flux'; } catch(e){}
+  return visualMode;
+}
+function noteLook(){
+  const now = currentLook();
+  if (now !== lookCur){ lookPrev = lookCur; lookCur = now; }
+}
+function lookBack(){
+  noteLook();
+  const to = lookPrev || 'art';
+  if (to === 'flux'){ if (ytPanelOpen()) closeYtPanel(); openMilk(); }
+  else if (to === 'video'){ if (milk.open && milk.inline) closeMilk(); videoTabOpen(); }
+  else kbSetVisual(to);
+  setTimeout(noteLook, 50);
+}
 function kbSetVisual(mode){
   if (ytPanelOpen()) closeYtPanel();
   closeArtStyleMenu();
@@ -39028,6 +39080,9 @@ document.addEventListener('keydown', (e) => {
       // tab is disabled (no YouTube video behind the current track)
       if (!e.repeat){ if (ytPanelOpen()) closeYtPanel(); else videoTabOpen(); }
       break;
+    case 'z': case 'Z':
+      if (!e.repeat && !e.metaKey && !e.ctrlKey) lookBack();
+      break;
     case 'q': case 'Q':
       if (!e.repeat) kbShowPane(document.querySelector('#topnav [data-action="toggle-queue"]'));
       break;
@@ -39044,11 +39099,11 @@ document.addEventListener('keydown', (e) => {
       // every fullscreen layer closed, then setView('player')
       // (closes the queue / playlist panel, steps out of Settings). Settings
       // opened from desktop fullscreen would otherwise restore it.
-      // #762: pressed again from Home, it goes back to the player
+      // #762 / #862: pressed again from Home, it goes back to the player
       if (e.repeat) break;
       leaveFullscreen(true);
       state.settingsFromDeskFs = false;
-      setView(state.currentView === 'home' ? 'player' : 'home'); // not the wordmark click: that returns to the splash where the mini player is supported (#661)
+      setView(state.currentView === 'player' ? 'home' : 'player'); // #862: from anywhere but the player it goes to the player; on the player, to Home. Not the wordmark click: that returns to the splash where the mini player is supported (#661)
       break;
     case 'Escape':
       // The YouTube video card first (Geethub #249: it sits over everything,
