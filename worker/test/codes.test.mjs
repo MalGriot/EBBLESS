@@ -62,7 +62,7 @@ test('timed grants carry an end date, never extend on repeat, and expire', async
   assert.equal(entTier(rec), 'flow');
   assert.equal(entTier(rec, until + 1), 'free');
   env.PROFILES.m.set('ent:ua', JSON.stringify({ ...rec, until: Date.now() - 1 }));
-  assert.equal(await voiceTierFor(env, 'ua'), 'free');
+  assert.equal(await voiceTierFor({ ...env, PAYWALL: 'on' }, 'ua'), 'free');   // paywall on: an expired grant drops to free
   assert.equal((await redeem(env, 'a', c)).status, 400);   // expired grant cannot be revived with the same code
 });
 test('an expired, unknown, short or malformed code is the same generic 400; bad token 401; throttled 429', async () => {

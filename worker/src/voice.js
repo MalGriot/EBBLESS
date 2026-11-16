@@ -13,6 +13,7 @@
 // Privacy: the sentence and context are not logged or stored (no KV write, no
 // cache). Only a per-user per-day counter is kept.
 
+import { paywallOn } from './paywall.js';
 export const VOICE_MODEL = '@cf/meta/llama-3.1-8b-instruct-fast'; // Workers AI, free tier; same model as /vibe-interpret (shares its daily neuron budget)
 export const VOICE_AI_TIMEOUT_MS = 6000;
 export const VOICE_CAPS = { free: 7, paid: 100 };    // LLM requests per signed-in user per UTC day (owner decision 4)
@@ -44,15 +45,18 @@ export const SET_MIN = 10, SET_MAX = 240, SET_DEFAULT = 60, SET_MAX_STEPS = 8;  
 // ---- tier ----------------------------------------------------------------
 // Entitlement lives in PROFILES as `ent:<sub>` = {"tier":"free|flow|horizon|paid",...}, written by hand / an
 // admin route later (docs/PROPOSAL-voice-dj.md section 6). Absent, unreadable or unknown = 'free'.
+// Paywall off (src/paywall.js): everyone is 'paid', except the owner's Plan tester record, which is honoured.
 export async function voiceTierFor(env, sub) {
+  const open = !paywallOn(env);
   try {
-    if (!env.PROFILES || !sub) return 'free';
+    if (!env.PROFILES || !sub) return open ? 'paid' : 'free';
     const raw = await env.PROFILES.get('ent:' + sub);
-    if (!raw) return 'free';
-    const rec = JSON.parse(raw);
+    const rec = raw ? JSON.parse(raw) : null;
+    if (open && !(rec && rec.src === 'owner')) return 'paid';
+    if (!rec) return 'free';
     const t = (rec && rec.until && Number(rec.until) <= Date.now()) ? 'free' : String((rec && rec.tier) || '').toLowerCase();
     return t === 'flow' || t === 'deep' || t === 'horizon' || t === 'paid' ? 'paid' : 'free';
-  } catch (e) { return 'free'; }
+  } catch (e) { return open ? 'paid' : 'free'; }
 }
 
 // ---- validation ----------------------------------------------------------

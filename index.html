@@ -4751,6 +4751,9 @@ body.desktop-fs #milkLayer.milk-inline .milk-bar{bottom:calc(236px + var(--safe-
 .milk-brand{font-size:11.5px;font-weight:700;letter-spacing:.04em;color:var(--text);text-shadow:0 1px 3px #000}
 .milk-brand span{font-weight:400;color:var(--faint)}
 .milk-signal{font-size:11.5px;color:var(--faint);text-shadow:0 1px 3px #000}
+/* the daily fLUX taste countdown below flowwww: always visible, static (no animation) */
+.milk-taste{position:absolute;top:calc(env(safe-area-inset-top,0px) + 10px);left:50%;transform:translateX(-50%);z-index:2;padding:3px 10px;border-radius:999px;background:rgba(0,0,0,.45);color:var(--text);font-size:11.5px;font-variant-numeric:tabular-nums;white-space:nowrap;pointer-events:none}
+.milk-taste[hidden]{display:none}
 .milk-signal.is-live{color:var(--text)}
 .milk-btn{pointer-events:auto;width:40px;height:40px;border-radius:50%;border:0;display:flex;align-items:center;justify-content:center;flex:none;
   background:rgba(18,18,18,.82);color:var(--text);cursor:pointer}
@@ -6448,6 +6451,7 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
   <!-- LIGHT SHOW: MilkDrop presets via butterchurn, see the LIGHT SHOW script section -->
   <div id="milkLayer" role="dialog" aria-label="fLUX, Generative Visual Universe" aria-hidden="true">
     <canvas id="milkCanvas"></canvas>
+    <div class="milk-taste" id="milkTaste" role="status" hidden></div>
     <div class="milk-card" id="milkCard" aria-hidden="true"><div class="milk-card-title" id="milkCardTitle"></div><div class="milk-card-artist" id="milkCardArtist"></div></div>
     <div class="milk-ui">
       <div class="milk-top">
@@ -8547,34 +8551,69 @@ function renderPlanBadge(){
   if (sp){ sp.textContent = name || ''; sp.hidden = !name; }
   if (!profileIdToken) tierOwner = tierTesting = false;
   renderPlanTester();
+  planChanged();
 }
+/* The paywall switch lives on the worker (var PAYWALL, worker/src/paywall.js); /entitlement says
+   paywall:true only when it is on. Off (open beta): everyone gets everything, as on horizonnn. The owner's
+   Plan tester always feels the real limits of the plan being tested. */
+const LS_PAYWALL = 'ebbless:paywall';   // '1' while on, last known; raw localStorage, never synced
+let paywallOn = false;
+try { paywallOn = localStorage.getItem(LS_PAYWALL) === '1'; } catch(e){}
+function setPaywall(on){
+  on = !!on;
+  if (on === paywallOn) return;
+  paywallOn = on;
+  try { if (on) localStorage.setItem(LS_PAYWALL, '1'); else localStorage.removeItem(LS_PAYWALL); } catch(e){}
+  renderPlanBadge();
+}
+// Everything gated with can() that is on screen right now re-checks itself here.
+function planChanged(){ try { milkPlanChanged(); } catch(e){} }
+// Signed in or not, read the switch once per start (GET /flags, cached 60 s at the edge).
+setTimeout(() => {
+  fetch(BACKEND + '/flags').then(r => r.ok ? r.json() : null).then(d => { if (d) setPaywall(d.paywall === true); }).catch(() => {});
+}, 0);
+function planTier(){ return (paywallOn || tierTesting) && TIER_RANK[state.tier] !== undefined ? state.tier : 'horizon'; }
 function hasTier(min){
   const need = TIER_RANK[min];
-  return need !== undefined && (TIER_RANK[state.tier] || 0) >= need;
+  return need !== undefined && (TIER_RANK[planTier()] || 0) >= need;
 }
+/* Which plan each feature starts on. The one place to assign a feature: gate it with can('key'),
+   and give it a PLAN_FEATURES row with the same key so the Plan tester lists it. */
+const PLAN_FOR = {
+  voicePlus: 'flow',        // 100 smart voice requests a day (the worker enforces it)
+  flux: 'flow',             // fLUX all day; below flowwww it is a 7-minute taste a day
+  fluxLook: 'flow',         // cover-color tint, title cards, curated moods
+  offline: 'deep',          // offline queue (docs/DOWNLOADS-PLAN.md)
+  keep: 'horizon',          // keep any song on this device, storage slider
+  videoLayer: 'horizon',    // video layer and song info kept with each song
+  fluxInteractive: 'horizon',
+};
+function can(key){ return hasTier(PLAN_FOR[key]); }
 /* ---------- PLAN TESTER (owner only, Settings > Plan tester) ----------
-   One list of what each plan gets. `min` is the lowest plan that has it; `live` means the app or worker
-   already gates it, so switching changes it at once. Keep this list in step with hasTier() calls and the
-   worker's tier checks (voice.js VOICE_CAPS). Owner flags come from POST /entitlement. */
+   One list of what each plan gets. A row's plan comes from PLAN_FOR via its key (`min` only for rows that
+   apply to one plan); `live` means the app or worker already gates it, so switching changes it at once.
+   Keep it in step with can() calls and the worker's tier checks (voice.js VOICE_CAPS). Owner flags come
+   from POST /entitlement. */
 let tierOwner = false, tierTesting = false, ptBusy = false;
 const PLAN_FEATURES = [
   { min: 'discovery', live: true, t: 'Every playlist, import, Discover, lyrics and the light show', s: 'The whole player, free' },
   { min: 'discovery', live: true, t: 'Voice: 7 smart requests a day', s: 'Simple commands are always unlimited', only: 'discovery' },
-  { min: 'flow', live: true, t: 'Voice: 100 smart requests a day', s: 'Checked by the server on every request' },
-  { min: 'flow', live: false, t: 'fLUX without the daily limit', s: 'discover gets a 7-minute taste a day' },
-  { min: 'flow', live: false, t: 'fLUX Flow look: cover-color tint, title cards, curated moods', s: 'In progress (fLUX lane)' },
-  { min: 'deep', live: false, t: 'Offline queue: your next 10 songs held close', s: 'Keeps playing when the signal drops (docs/DOWNLOADS-PLAN.md)' },
-  { min: 'horizon', live: false, t: 'Keep any song on this device, with a storage slider', s: 'Default 2 GB' },
-  { min: 'horizon', live: false, t: 'Video layer and song info kept with each song', s: 'Picture, artist, album, credits' },
-  { min: 'horizon', live: false, t: 'fLUX interactive: ripples, ghost artwork, poster capture, film pass', s: 'Planned' },
-];
+  { min: 'discovery', live: true, t: 'fLUX: a 7-minute taste a day', s: 'A small countdown shows what is left', only: 'discovery' },
+  { key: 'voicePlus', live: true, t: 'Voice: 100 smart requests a day', s: 'Checked by the server on every request' },
+  { key: 'flux', live: true, t: 'fLUX all day', s: 'No daily limit' },
+  { key: 'fluxLook', live: true, t: 'fLUX Flow look: cover-color tint, title cards, curated moods', s: 'Turns on with fLUX' },
+  { key: 'offline', live: false, t: 'Offline queue: your next 10 songs held close', s: 'Keeps playing when the signal drops (docs/DOWNLOADS-PLAN.md)' },
+  { key: 'keep', live: false, t: 'Keep any song on this device, with a storage slider', s: 'Default 2 GB' },
+  { key: 'videoLayer', live: false, t: 'Video layer and song info kept with each song', s: 'Picture, artist, album, credits' },
+  { key: 'fluxInteractive', live: false, t: 'fLUX interactive: ripples, ghost artwork, poster capture, film pass', s: 'Planned' },
+].map(f => f.key ? { ...f, min: PLAN_FOR[f.key] } : f);
 function renderPlanTester(){
   const hub = document.getElementById('hubPlanTester'), block = document.getElementById('settingsPlansBlock');
   if (!hub || !block) return;
   const on = !!(tierOwner && profileIdToken);
   hub.hidden = !on; block.hidden = !on;
   if (!on){ const v = document.getElementById('view-settings'); if (v && v.dataset.page === 'plans') settingsShowPage(''); return; }
-  const cur = TIER_RANK[state.tier] !== undefined ? state.tier : 'discovery';
+  const cur = planTier();
   const sub = document.getElementById('hubPlanTesterSub');
   if (sub) sub.textContent = 'Now on ' + PLAN_NAMES[cur] + (tierTesting ? ' (test)' : '') + '. Switch plans and see what changes.';
   block.querySelectorAll('[data-pt]').forEach(b => { b.setAttribute('aria-pressed', String(b.dataset.pt === cur)); b.disabled = ptBusy; });
@@ -8592,7 +8631,9 @@ function renderPlanTester(){
     li.append(mark, txt, tag); list.appendChild(li);
   });
   const st = document.getElementById('ptStatus');
-  if (st && !ptBusy) st.textContent = tierTesting ? 'Testing ' + PLAN_NAMES[cur] + '. Your real plan comes back with the button below.' : 'This is your real plan. Pick another to try it.';
+  if (st && !ptBusy) st.textContent = tierTesting ? 'Testing ' + PLAN_NAMES[cur] + '. Your real plan comes back with the button below.'
+    : paywallOn ? 'This is your real plan. Pick another to try it.'
+    : 'Paywall is off, so everyone gets everything (' + PLAN_NAMES.horizon + '). Pick a plan to feel its limits.';
   document.getElementById('ptReal').hidden = !tierTesting;
 }
 async function ptSwitch(tier){
@@ -8676,7 +8717,7 @@ async function refreshTier(){
     if (!res.ok) return;
     const d = await res.json();
     if (!d || TIER_RANK[d.tier] === undefined) return;
-    tierOwner = d.owner === true; tierTesting = d.testing === true;
+    tierOwner = d.owner === true; tierTesting = d.testing === true; setPaywall(d.paywall === true);
     state.tier = d.tier; renderPlanBadge();
     const s = sessionLoad();
     if (s && s.sub) try { localStorage.setItem(LS_TIER, JSON.stringify({ t: d.tier, sub: s.sub })); } catch(e){}
@@ -34168,8 +34209,52 @@ const MILK_Q = [0.35, 0.5, 0.7, 0.85, 1];   // render scale steps, as a share of
 
 const milkPrefs = Object.assign({ sel: { e: [], b: [], c: [], k: [] }, match: true, favOnly: false, every: 16, blend: 2.7 }, lsGet(LS_MILK, {}));
 // Flow tier: the premium fLUX (curated looks, cover-art tint, title card, quiet chrome, named moods).
-// On for everyone until the tier helper from the patreon-tiers lane lands; then this becomes hasTier('flow').
-function milkFlowOn(){ return true; }
+function milkFlowOn(){ return can('fluxLook'); }
+/* fLUX starts on flowwww. Below it, a 7-minute taste a day on this device, counted only while fLUX is
+   open and the page is visible, with a small countdown. Paywall off: everyone has flowwww or better. */
+const LS_FLUX_TASTE = 'ebbless:fluxtaste';   // { d: day, ms: used }; raw localStorage, never synced
+const FLUX_TASTE_MS = 7 * 60000;
+let fluxTasteTimer = 0, fluxTasteLast = 0;
+function fluxTasteDay(){ return new Date().toDateString(); }
+function fluxTasteUsed(){
+  try { const t = JSON.parse(localStorage.getItem(LS_FLUX_TASTE) || 'null'); return t && t.d === fluxTasteDay() ? Math.max(0, Number(t.ms) || 0) : 0; }
+  catch(e){ return 0; }
+}
+function fluxTasteLeft(){ return can('flux') ? Infinity : Math.max(0, FLUX_TASTE_MS - fluxTasteUsed()); }
+function fluxTasteOutToast(){ showToast("That's today's 7 minutes of fLUX. " + PLAN_NAMES.flow + ' keeps it on all day.'); }
+function fluxTasteRender(){
+  const el = $('milkTaste');
+  if (!el) return;
+  const left = fluxTasteLeft();
+  if (!milk.open || left === Infinity){ el.hidden = true; return; }
+  const sec = Math.ceil(left / 1000);
+  el.textContent = 'fLUX taste: ' + Math.floor(sec / 60) + ':' + String(sec % 60).padStart(2, '0') + ' left today';
+  el.hidden = false;
+}
+function fluxTasteTick(){
+  const now = performance.now(), dt = Math.min(5000, now - fluxTasteLast);
+  fluxTasteLast = now;
+  if (!milk.open || can('flux')){ fluxTasteStop(); return; }
+  if (!document.hidden){
+    try { localStorage.setItem(LS_FLUX_TASTE, JSON.stringify({ d: fluxTasteDay(), ms: fluxTasteUsed() + dt })); } catch(e){}
+  }
+  fluxTasteRender();
+  if (fluxTasteLeft() <= 0){ fluxTasteStop(); closeMilkNow(); fluxTasteOutToast(); }
+}
+function fluxTasteStart(){
+  fluxTasteStop();
+  if (can('flux')){ fluxTasteRender(); return; }
+  fluxTasteLast = performance.now();
+  fluxTasteTimer = setInterval(fluxTasteTick, 1000);   // a 1 s timer only while fLUX is open below flowwww
+  fluxTasteRender();
+}
+function fluxTasteStop(){ clearInterval(fluxTasteTimer); fluxTasteTimer = 0; fluxTasteRender(); }
+// The plan or the paywall changed (sign-in, Plan tester, /flags): fLUX picks up its look and limit at once.
+function milkPlanChanged(){
+  if (!milk.open) return;
+  milkLayer.classList.toggle('milk-flow', milkFlowOn());
+  fluxTasteStart();
+}
 // Curated for Flow: mid brightness and calm motion, so nothing is washed out, muddy or frantic.
 function milkFlowKeep(p){ return p.l >= 0.15 && p.l <= 0.5 && p.m <= 0.10; }
 const MILK_MOODS = [
@@ -34749,6 +34834,7 @@ function milkSetInline(on){
 if (window.ResizeObserver) new ResizeObserver(() => { if (milk.open) milkApplySize(); }).observe(milkLayer);
 async function openMilk(inline = true){
   if (milk.open) return;
+  if (fluxTasteLeft() <= 0){ fluxTasteOutToast(); return; }
   // #838/#809: fLUX takes over from whatever mode is up (video card, cymatics, lyrics), so it always appears on the first press
   try { if (ytPanelOpen()) closeYtPanel(); closeArtStyleMenu(); if (visualMode !== 'art') setVisualMode('art'); } catch(e){}
   milk.open = true;
@@ -34757,6 +34843,7 @@ async function openMilk(inline = true){
   clearTimeout(milk.closeTimer);
   milkLayer.classList.add('is-open', 'milk-dim');
   milkLayer.classList.toggle('milk-flow', milkFlowOn());
+  fluxTasteStart();
   milk.cardFor = null;
   milkLayer.setAttribute('aria-hidden', 'false');
   vizStop();                       // covered: the cymatics loop stops underneath
@@ -34798,6 +34885,7 @@ function closeMilk(){
 function closeMilkNow(){
   if (!milk.open) return;
   milk.open = false;
+  fluxTasteStop();
   clearTimeout(milkCardTimer); $('milkCard').classList.remove('is-on');
   milkStopLoop();
   if (document.fullscreenElement === milkLayer) document.exitFullscreen().catch(() => {});

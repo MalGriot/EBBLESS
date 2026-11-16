@@ -60,7 +60,7 @@ function fakeQuota(opts = {}) {
 const json = (b, status = 200) => new Response(JSON.stringify(b), { status });
 const verifyIdentity = async (t) => { if (t !== 'ebs1.good') throw new Error('bad'); return { sub: 'u1' }; };
 const call = (env, body, extra = {}) => handleVoicePlan(new Request('https://w.test/voice/plan', { method: 'POST', body: JSON.stringify(body) }), env, {}, { json, verifyIdentity, openSets: false, ...extra }).then(async (r) => ({ status: r.status, body: await r.json() }));
-const mkEnv = (ai, profiles = {}, quota = fakeQuota()) => ({ PROFILES: fakeKV(profiles), GOOGLE_CLIENT_ID: 'cid', VOICE_QUOTA: quota, AI: ai });
+const mkEnv = (ai, profiles = {}, quota = fakeQuota()) => ({ PROFILES: fakeKV(profiles), GOOGLE_CLIENT_ID: 'cid', VOICE_QUOTA: quota, AI: ai, PAYWALL: 'on' });
 const goodAi = { run: async () => ({ response: '{"kind":"command","ops":[{"op":"volume","dir":-1}],"seeds":[],"tags":[],"energy":3,"text":"","say":"Quieter"}' }) };
 
 test('handler: signed out and bad token are 401 signedOut', async () => {
@@ -252,4 +252,14 @@ test('beta: with sets open, a free listener gets the set itself, no upsell', asy
   const r = await call(mkEnv(setAi(goodSet)), { idToken: 'ebs1.good', text: 'ecstatic dance for 90 minutes, build to a peak' }, { openSets: true });
   assert.equal(r.body.tier, 'free');
   assert.equal(r.body.plan.kind, 'set'); assert.equal(r.body.upsell, undefined);
+});
+
+test('paywall off: everyone gets the paid voice cap, except the owner testing a plan', async () => {
+  const off = (profiles) => ({ ...mkEnv(goodAi, profiles), PAYWALL: undefined });
+  assert.equal(await voiceTierFor(off(), 'u1'), 'paid');
+  assert.equal(await voiceTierFor(off({ 'ent:u1': 'not json' }), 'u1'), 'paid');
+  assert.equal(await voiceTierFor(off({ 'ent:u1': '{"tier":"free","src":"code"}' }), 'u1'), 'paid');
+  assert.equal(await voiceTierFor(off({ 'ent:u1': '{"tier":"free","src":"owner"}' }), 'u1'), 'free');
+  assert.equal(await voiceTierFor(off({ 'ent:u1': '{"tier":"deep","src":"owner"}' }), 'u1'), 'paid');
+  assert.equal(await voiceTierFor({ ...off(), PAYWALL: 'ON ' }, 'u1'), 'free', 'on is read loosely');
 });
