@@ -7739,6 +7739,16 @@ const LS_LIB_SORT_REV = 'ebbless:librarySortReversed'; // #569: true = the activ
 const LS_LIB_FILTER = 'ebbless:libraryFilter'; // 'all' | 'playlists' | 'artists' | 'albums' | 'podcasts'
 const UPLOADS_ID = 'uploads';                // #621: the local-only Uploads playlist, never synced
 const LIKED_ID = 'liked';                    // fixed id for the built-in Liked Songs playlist
+// #822: videoIds unhearted while still queued from Liked (see unlikeKeepingQueue)
+const likeGhosts = new Set();
+// What may be written for a playlist: Liked Songs without the songs unhearted while still queued (#822).
+// A ghost that is back in the saved list (re-liked another way) stops being one.
+function playlistForWrite(pl){
+  if (!pl || pl.id !== LIKED_ID || !likeGhosts.size) return pl;
+  const stored = lsGet(LS_PL(LIKED_ID), null), have = new Set(((stored && stored.tracks) || []).map(t => t && t.videoId));
+  likeGhosts.forEach(v => { if (have.has(v)) likeGhosts.delete(v); });
+  return likeGhosts.size ? Object.assign({}, pl, { tracks: pl.tracks.filter(t => !(t && likeGhosts.has(t.videoId))) }) : pl;
+}
 const SWELL_ID = 'swell';                    // fixed id for the built-in daily-discovery playlist
 const BLEND_ID = 'blend';                    // fixed id for the built-in SwiiiRrrLL daily blend of the library
 const BLEND_NAME = 'SwiiiRrrLL';
@@ -9893,7 +9903,7 @@ function playlistById(id){
   return getCachedPlaylist(id);
 }
 function persistPlaylistObj(pl, knownChange){
-  if (pl && pl.id !== UNLIKED_ID) lsSet(LS_PL(pl.id), pl, knownChange);
+  if (pl && pl.id !== UNLIKED_ID) lsSet(LS_PL(pl.id), playlistForWrite(pl), knownChange);
 }
 
 // Tracks playlists that are playing on their first resolved track while the
@@ -19531,15 +19541,34 @@ function removeTrackFromPlaylistByVideoId(playlistId, videoId){
   removeTrackFromPlaylistAt(playlistId, idx);
 }
 
+// #822: videoIds unhearted while queued from the Liked playlist. The queue points into state.playlist by index,
+// so the song stays there (and keeps playing); only the saved Liked Songs list loses it.
+function unlikeKeepingQueue(videoId){
+  const pl = state.playlist;
+  const inQueue = pl && pl.id === LIKED_ID && pl.tracks.some(t => t && t.videoId === videoId) &&
+    state.queue.some(e => e.plId === LIKED_ID && pl.tracks[e.idx] && pl.tracks[e.idx].videoId === videoId);
+  if (!inQueue) return false;
+  likeGhosts.add(videoId);
+  const stored = getCachedPlaylist(LIKED_ID);
+  if (stored){ stored.tracks = stored.tracks.filter(t => !(t && t.videoId === videoId)); lsSet(LS_PL(LIKED_ID), stored); recordLastEdited(LIKED_ID); }
+  renderLibrary();
+  return true;
+}
 function toggleLikeTrack(track){
   ensureLikedPlaylist();
   if (isTrackLiked(track.videoId)){
-    removeTrackFromPlaylistByVideoId(LIKED_ID, track.videoId);
+    if (!unlikeKeepingQueue(track.videoId)) removeTrackFromPlaylistByVideoId(LIKED_ID, track.videoId);
     recordListenSignal(track, -1);
     try { const vt = currentVibeText(); if (vt) vibeTasteNote(vt, track, 'unlike'); } catch(e){}
     showToast('Removed from Liked Songs');
   } else {
-    addTracksToPlaylist(LIKED_ID, [track]);
+    if (likeGhosts.has(track.videoId) && state.playlist && state.playlist.id === LIKED_ID){
+      // #822: hearting it again while it is still in the queue: put it back in the saved list at its old place
+      likeGhosts.delete(track.videoId);
+      lsSet(LS_PL(LIKED_ID), playlistForWrite(state.playlist));
+      recordLastEdited(LIKED_ID);
+      renderLibrary();
+    } else addTracksToPlaylist(LIKED_ID, [track]);
     recordListenSignal(track, 2);
     try { const vt = currentVibeText(); if (vt) vibeTasteNote(vt, track, 'like'); } catch(e){}
     const streak = noteLikeStreak();
@@ -27130,7 +27159,7 @@ renderCrossfadeUI();
    PLAYLIST + TRACK LIST RENDER
    ========================================================================= */
 function persistPlaylist(){
-  if (state.playlist) lsSet(LS_PL(state.playlist.id), state.playlist);
+  if (state.playlist) lsSet(LS_PL(state.playlist.id), playlistForWrite(state.playlist));
 }
 
 function loadPlaylistIntoPlayer(pl){
