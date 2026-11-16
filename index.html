@@ -34489,6 +34489,8 @@ function milkSetInline(on){
 if (window.ResizeObserver) new ResizeObserver(() => { if (milk.open) milkApplySize(); }).observe(milkLayer);
 async function openMilk(inline = true){
   if (milk.open) return;
+  // #838/#809: fLUX takes over from whatever mode is up (video card, cymatics, lyrics), so it always appears on the first press
+  try { if (ytPanelOpen()) closeYtPanel(); closeArtStyleMenu(); if (visualMode !== 'art') setVisualMode('art'); } catch(e){}
   milk.open = true;
   milkSetInline(inline);
   milk.openedAt = performance.now();
