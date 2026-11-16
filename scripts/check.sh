@@ -10,3 +10,4 @@ if git diff --cached --name-only | grep -q '^worker/'; then (cd worker && npm te
 node scripts/test-manual-carry.js >/dev/null
 node scripts/test-home-order.js >/dev/null
 node scripts/test-blend-gains.js >/dev/null
+node scripts/test-official-video.js >/dev/null

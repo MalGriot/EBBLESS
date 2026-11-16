@@ -1876,6 +1876,8 @@ body:has(#import-overlay.is-open) #fsBtn{display:none}
 .player-stage:has(> #artworkWrap.yt-video) #ytPanelBtn.is-active :is(svg:not(.yt-cin-ico),.v-tab-label:not(.yt-cin-label)){display:none}
 .player-stage:has(> #artworkWrap.yt-video) #ytPanelBtn.is-active .yt-cin-ico{display:block}
 .player-stage:has(> #artworkWrap.yt-video) #ytPanelBtn.is-active .yt-cin-label{display:inline}
+#ytPanelBtn[data-ov="none"]:not(:disabled):not(.is-active),#ytPanelBtn[data-ov="pending"]:not(:disabled):not(.is-active){opacity:.45}
+#ytPanelBtn[data-ov="none"]:not(:disabled):hover,#ytPanelBtn[data-ov="pending"]:not(:disabled):hover{opacity:.8}
 #ytPanelBtn.is-active[data-cinema="1"]{color:var(--accent)}
 #cinemaDim{position:fixed;inset:0;z-index:46;background:rgba(0,0,0,.86);opacity:0;visibility:hidden;pointer-events:none;
   transition:opacity var(--dur-surface) var(--ease-in-out),visibility 0s var(--dur-surface)}
@@ -18848,6 +18850,7 @@ function refreshLinkCandidateThumb(videoId){
 }
 
 function openRefreshLinkPicker(plId, trackIdx){
+  const forVideo = relinkForVideo; relinkForVideo = false;   // #870: the Video tab's own search
   const pl = playlistById(plId) || getCachedPlaylist(plId);
   const t = pl && pl.tracks[trackIdx];
   if (!t) return;
@@ -18874,7 +18877,7 @@ function openRefreshLinkPicker(plId, trackIdx){
   // them. Everything else keeps the YouTube-only list. Each search can fail
   // on its own without taking the other down; only both failing is an error.
   const wantsSC = isSoundCloudVideoId(t.videoId) || sourceKindForType(pl.type) === 'soundcloud';
-  const ytSearch = searchYouTube(t.title, t.artist, t.srcDuration ? t.srcDuration * 1000 : 0, RELINK_CANDIDATE_COUNT).then(data =>
+  const ytSearch = searchYouTube(t.title, t.artist, forVideo ? 0 : (t.srcDuration ? t.srcDuration * 1000 : 0), RELINK_CANDIDATE_COUNT).then(data =>
     (data.candidates && data.candidates.length) ? data.candidates
       : (data.videoId ? [{ videoId: data.videoId, title: data.title, channel: data.channel, duration: data.duration }] : []));
   const scSearch = wantsSC ? searchSoundCloudTracks([t.title, t.artist].filter(Boolean).join(' '), RELINK_SC_CANDIDATE_COUNT) : Promise.resolve([]);
@@ -18886,7 +18889,7 @@ function openRefreshLinkPicker(plId, trackIdx){
       return;
     }
     const candidates = (sc.status === 'fulfilled' ? sc.value : []).concat(yt.status === 'fulfilled' ? yt.value : []);
-    stageRelinkCandidates(candidates, plId, trackIdx, t);
+    stageRelinkCandidates(candidates, plId, trackIdx, t, forVideo);
   });
 }
 
@@ -18910,7 +18913,7 @@ async function searchSoundCloudTracks(query, limit){
 // a SoundCloud-sourced track. Each row reads its thumbnail/source off the
 // candidate itself when present (c.image / c.source) and only falls back to
 // YouTube's, so both kinds share this one renderer.
-function stageRelinkCandidates(candidates, plId, trackIdx, t){
+function stageRelinkCandidates(candidates, plId, trackIdx, t, forVideo){
   const currentVideoId = t.videoId;
   const list = candidates.filter((c, i) => c && c.videoId && candidates.findIndex(x => x && x.videoId === c.videoId) === i);
   // The track's current link, if the fresh search didn't return it, goes
@@ -18949,7 +18952,7 @@ function stageRelinkCandidates(candidates, plId, trackIdx, t){
     return searchPickRowHtml(i, image, c.title || '(untitled)', subHtml, (source === 'youtube' ? 'is-video' : '') + (isCurrent ? ' is-current' : ''));
   }).join('');
   importStage.innerHTML =
-    '<div class="step">Pick a new link for &ldquo;' + escapeHtml(label) + '&rdquo;</div>' +
+    '<div class="step">' + (forVideo ? 'Pick a video for &ldquo;' : 'Pick a new link for &ldquo;') + escapeHtml(label) + '&rdquo;</div>' +
     '<div class="search-results" id="relinkCandidates">' + rows + '</div>' +
     albumChkHtml +
     '<button class="btn-ghost" id="relinkBackBtn" style="width:100%">Cancel</button>';
@@ -18958,7 +18961,12 @@ function stageRelinkCandidates(candidates, plId, trackIdx, t){
     btn.addEventListener('click', () => {
       const c = list[parseInt(btn.dataset.i, 10)];
       const chk = $('relinkAlbumChk');
-      if (c){
+      if (c && forVideo){
+        // #870: choosing a video is not a "wrong match" correction, so it skips the link-fix feedback
+        closeImportOverlay();
+        if (c.videoId !== currentVideoId) switchSongLink(plId, trackIdx, c, 'Switched to that video');
+        openYtPanel();
+      } else if (c){
         if (c.videoId !== currentVideoId) logLinkFix(plId, t, list, c, currentVideoId);
         applyRelinkChoice(plId, trackIdx, c, !!(chk && chk.checked));
       }
@@ -25364,6 +25372,121 @@ function ytPanelAvailable(){
   const deck = activeDeck();
   return !(deck && deck.videoId === t.videoId && deck.ytErrorFor === t.videoId);
 }
+/* ---------- official video (#870, #781) ----------
+   The Video tab used to show whatever link the song matched to, which is often an "official audio" or lyric upload
+   (a still image). Now the tab says what is behind it: lit when the song's link already is an official video, lit
+   with a one-tap switch when EBBLESS found one, greyed when it did not (tapping then opens a search list like the
+   link fixer). An official video means the title says "official (music) video" or the channel is VEVO, and never
+   audio, lyric, visualizer, live, cover or remix uploads. */
+/* OV-BEGIN */
+const OV_YES_RE = /\bofficial\s+(?:hd\s+)?(?:music\s+)?video\b|\bmusic\s+video\b/i;
+const OV_NO_RE = /\b(?:official\s+audio|audio|lyrics?|lyric\s+video|visuali[sz]er|topic|live|reaction|cover|remix|karaoke|instrumental|slowed|sped\s+up|full\s+album|behind\s+the\s+scenes|making\s+of|teaser|trailer)\b/i;
+function ovNorm(s){ return String(s || '').toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/\([^)]*\)|\[[^\]]*\]/g, ' ').replace(/[^a-z0-9]+/g, ' ').trim(); }
+// 0 = not an official video of this song; higher = better
+function officialVideoScore(c, t){
+  const title = String((c && c.title) || ''), chan = String((c && c.channel) || '');
+  if (!t || !title) return 0;
+  const vevo = /vevo$/i.test(chan.replace(/\s+/g, ''));
+  const yes = OV_YES_RE.test(title);
+  if (!yes && !vevo) return 0;
+  // words that belong to the song's own title ("Live Forever") must not count against the upload
+  const rest = title.replace(OV_YES_RE, ' ').toLowerCase().split(String(t.title || '').toLowerCase()).join(' ');
+  if (OV_NO_RE.test(rest)) return 0;
+  const sn = ovNorm(t.title), cn = ovNorm(title);
+  if (!sn || cn.indexOf(sn) < 0) return 0;
+  const an = ovNorm(String(t.artist || '').split(/\s*(?:,|&|\bfeat\.?|\bft\.?|\bfeaturing\b|\bx\b)\s*/i)[0]);
+  const chn = ovNorm(chan);
+  const artistInTitle = !!an && cn.indexOf(an) >= 0, artistChannel = !!an && chn.indexOf(an) >= 0;
+  if (an && !artistInTitle && !artistChannel) return 0;
+  const sd = +t.srcDuration || 0, cd = +(c && c.duration) || 0;
+  if (sd && cd && Math.abs(sd - cd) > 120) return 0;   // a different cut or a stream
+  return 10 + (vevo ? 6 : 0) + (yes ? 4 : 0) + (artistChannel ? 3 : 0);
+}
+function pickOfficialVideo(cands, t){
+  let best = null, bs = 0;
+  (cands || []).forEach(c => { const sc = officialVideoScore(c, t); if (sc > bs){ bs = sc; best = c; } });
+  return best;
+}
+function isOfficialVideoLink(t){
+  return !!t && officialVideoScore({ title: t.matchedTitle || '', channel: t.channel || '', duration: t.duration }, Object.assign({}, t, { srcDuration: 0 })) > 0;
+}
+/* OV-END */
+// per matched link: { c: candidate | 0 (none found), ts }. Kept for a while so a song costs one search, not one per play.
+const LS_OFFVID = 'ebbless:offvid';
+const OV_POS_TTL = 14 * 86400000, OV_NEG_TTL = 3 * 86400000, OV_MAX = 300;
+let ovCache = (() => { const o = lsGet(LS_OFFVID, {}); return o && typeof o === 'object' ? o : {}; })();
+const ovPending = new Set(), ovFailedAt = new Map();
+function ovFresh(e){ return !!e && Date.now() - (e.ts || 0) < (e.c ? OV_POS_TTL : OV_NEG_TTL); }
+function ovSave(){
+  const keys = Object.keys(ovCache);
+  if (keys.length > OV_MAX) keys.sort((a, b) => (ovCache[a].ts || 0) - (ovCache[b].ts || 0)).slice(0, keys.length - OV_MAX).forEach(k => delete ovCache[k]);
+  lsSet(LS_OFFVID, ovCache);
+}
+// 'video' (link already is one) | 'found' | 'none' | 'pending' (still looking)
+function officialVideoState(t){
+  if (isOfficialVideoLink(t)) return 'video';
+  const e = ovCache[t.videoId];
+  if (ovFresh(e)) return e.c ? 'found' : 'none';
+  ovLookup(t);
+  return 'pending';
+}
+// One search per song, a few seconds after it starts, only while it is still the playing song.
+function ovLookup(t){
+  const vid = t.videoId;
+  if (!vid || ovPending.has(vid) || Date.now() - (ovFailedAt.get(vid) || 0) < 60000) return;
+  ovPending.add(vid);
+  setTimeout(async () => {
+    const cur = trackAt(state.queuePos);
+    if (!cur || cur.videoId !== vid){ ovPending.delete(vid); return; }
+    try {
+      // the same ranked search the link fixer uses (the raw free-text search comes back empty for these queries)
+      const d = await searchYouTube(cur.title, cur.artist, 0, 16);
+      const list = (d.candidates && d.candidates.length) ? d.candidates : (d.videoId ? [{ videoId: d.videoId, title: d.title, channel: d.channel, duration: d.duration }] : []);
+      const hit = pickOfficialVideo(list.filter(c => c && c.videoId && /^[\w-]{11}$/.test(c.videoId)), cur);
+      ovCache[vid] = { c: hit ? { videoId: hit.videoId, title: hit.title || '', channel: hit.channel || '', duration: hit.duration || 0 } : 0, ts: Date.now() };
+      ovSave();
+    } catch(e){ ovFailedAt.set(vid, Date.now()); }   // search down: stay pending, retry after a minute
+    ovPending.delete(vid);
+    try { ytPanelBtnSync(); } catch(e){}
+  }, 4000);
+}
+// Point the playing song at another link (an official video) without touching the "wrong match" feedback the link
+// fixer records, keeping the old link so Undo can put it back.
+function switchSongLink(plId, idx, cand, label){
+  const pl = getCachedPlaylist(plId), t = pl && pl.tracks[idx];
+  if (!t) return;
+  const old = { videoId: t.videoId, matchedTitle: t.matchedTitle || '', channel: t.channel || '', duration: t.duration || 0 };
+  const apply = (c) => {
+    const p2 = getCachedPlaylist(plId), t2 = p2 && p2.tracks[idx];
+    if (!t2) return;
+    t2.videoId = c.videoId; t2.matchedTitle = c.matchedTitle !== undefined ? c.matchedTitle : (c.title || ''); t2.channel = c.channel || ''; t2.duration = c.duration || 0;
+    lsSet(LS_PL(plId), p2);
+    if (state.playlist && state.playlist.id === plId) state.playlist = p2;
+    renderLibrary();
+    repaintOpenLibPanelTrack(plId, idx, p2);
+    const q = state.queue[state.queuePos];
+    if (q && q.plId === plId && q.idx === idx) loadIndex(state.queuePos, true);
+  };
+  apply(cand);
+  showToast(label || 'Switched to the official video', { label: 'Undo', run: () => apply(old) });
+}
+// the Video tab, when no video is open yet
+function videoTabOpen(){
+  if (!ytPanelBtnSync()) return;   // SoundCloud, podcasts, casting: no video tab
+  const q = state.queue[state.queuePos], t = trackAt(state.queuePos);
+  if (!q || !t) return;
+  const st = officialVideoState(t);
+  if (st === 'found'){
+    switchSongLink(q.plId, q.idx, ovCache[t.videoId].c);
+    openYtPanel();
+  } else if (st === 'video'){
+    openYtPanel();
+  } else {
+    relinkForVideo = true;
+    openRefreshLinkPicker(q.plId, q.idx);
+  }
+}
+let relinkForVideo = false;
 let lastVideoPip = null;
 function ytPanelBtnSync(){
   let ok = false;
@@ -25380,6 +25503,12 @@ function ytPanelBtnSync(){
   btn.disabled = !ok;
   btn.setAttribute('aria-disabled', String(!ok));
   if (!ok && ytOn) closeYtPanel(true);
+  // #870: say what the tab will do (watch / switch to the official video / search for one)
+  let ov = '';
+  try { const t = ok ? trackAt(state.queuePos) : null; if (t) ov = ytOn ? 'video' : officialVideoState(t); } catch(e){}
+  btn.dataset.ov = ov;
+  const tip = ov === 'found' ? 'Watch the official video' : (ov === 'none' || ov === 'pending') ? 'No official video found yet. Tap to search for one' : 'Watch the video';
+  btn.title = tip;
   return ok;
 }
 // #750: cross-dissolve of the video when the song changes. ytFade holds the two
@@ -25501,8 +25630,9 @@ function closeYtPanel(auto){
   clearInterval(ytPanelTimer);
   ytPanelTimer = null;
   ytPanelSync();
+  ytPanelBtnSync();   // #870: the tab's lit/grey state was frozen at 'video' while the card was open
 }
-ytPanelBtn.addEventListener('click', (e) => { e.stopPropagation(); if (ytOn && artworkWrap.classList.contains('yt-video') && !state.flowOpen) cinemaBtn.click(); else if (ytOn) closeYtPanel(); else openYtPanel(); }); // #776: showing the video, this button is Cinema
+ytPanelBtn.addEventListener('click', (e) => { e.stopPropagation(); if (ytOn && artworkWrap.classList.contains('yt-video') && !state.flowOpen) cinemaBtn.click(); else if (ytOn) closeYtPanel(); else videoTabOpen(); }); // #776: showing the video, this button is Cinema
 // #751: a click on the video puts keyboard focus inside YouTube's iframe, where
 // the app's shortcuts never arrive (#467). Once the click has landed, focus
 // comes back to the page; the click itself still reaches YouTube's controls.
@@ -38896,7 +39026,7 @@ document.addEventListener('keydown', (e) => {
     case '5':
       // toggles the YouTube tab's card; openYtPanel is a no-op while the
       // tab is disabled (no YouTube video behind the current track)
-      if (!e.repeat){ if (ytPanelOpen()) closeYtPanel(); else openYtPanel(); }
+      if (!e.repeat){ if (ytPanelOpen()) closeYtPanel(); else videoTabOpen(); }
       break;
     case 'q': case 'Q':
       if (!e.repeat) kbShowPane(document.querySelector('#topnav [data-action="toggle-queue"]'));
