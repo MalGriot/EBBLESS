@@ -22,4 +22,10 @@ Then rest of Phase 1 (#836 #822 #827 #826 #824, #853 #837 #845, #872 #865 #866 #
 - Smoke test: partial (play, next, previous, fLUX, cymatics, video card ran; seek, pause, queue, library, reload NOT run).
 
 ## Next action
-#861 (fLUX shares cymatics controls + mood menu), #855 (fLUX freeze, needs repro), #831 (melt-in; needs clarity).
+#824 queue auto-scroll, #826 cmd/ctrl-click play next, #836 trailer in queue, then #853/#837/#845 art fade + color, #872/#865/#866/#867/#863 library.
+
+## Blocked on a decision (analysis done, no code changed)
+- #822 unheart skips + erases from queue: cause found. Unliking calls removeTrackFromPlaylistAt (index.html ~19500), which splices the Liked playlist and filters the queue entry; when the playing song was the removed entry, queuePos now points at the NEXT song, so the next advance skips one. Queue entries are (playlist id, index) pointers, so a song cannot stay in the queue once it leaves its playlist. Options: (a) keep the playing song audible and just fix queuePos so the advance does not skip (song leaves queue list); (b) defer the removal from Liked until the song leaves the queue (touches the data model, risk of silent re-like via persistPlaylistObj). Needs owner pick.
+- #827 double-click plays: single click on a library card already opens it, so a dblclick fires after navigation. Needs a decision on single-click behavior (delay navigation ~250ms, or play on dblclick of the opened page's tile).
+- #861 fLUX shares Cymatics controls + livelier mood menu: a design brainstorm, not a bugfix. #855 fLUX freeze: no repro steps. #831 melt-in: fLUX layer already fades over 1.6s; unclear what is missing.
+- Fullscreen variants of #838 untested.
