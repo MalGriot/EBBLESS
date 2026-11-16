@@ -418,3 +418,7 @@ export function songMatchScore({ sourceTitle, artist, duration }, { title, chann
   if (avg <= 85) avg = (avg + timePct) / 2;
   return Math.min(avg, 100);
 }
+
+// #836: film/game trailers are never a song's match (an "Avengers: Doomsday" trailer got queued as a track). Used as an
+// exclude group in index.js, waived when the source song's own title says "trailer".
+export const TRAILER_EXCLUDE_HINTS = ['official trailer', 'teaser trailer', 'movie trailer', 'final trailer', 'launch trailer', 'gameplay trailer', '(trailer', '[trailer', '- trailer', 'official teaser', 'trailer #', 'trailer 1', 'trailer 2'];

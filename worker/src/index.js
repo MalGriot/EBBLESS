@@ -11,7 +11,7 @@
 //      site's own discover-weekly refresh script does.
 
 import {
-  titleOverlapRatio, nameSimilarity, versionPenalty, songMatchScore, foldMatchText, matchKey, popularityBonus, artistKeys, candidateNamesArtist, channelNamesArtist, isCleanArtistTitle, genreConflict,
+  titleOverlapRatio, TRAILER_EXCLUDE_HINTS, nameSimilarity, versionPenalty, songMatchScore, foldMatchText, matchKey, popularityBonus, artistKeys, candidateNamesArtist, channelNamesArtist, isCleanArtistTitle, genreConflict,
   crossScriptIncomparable, nonAsciiCacheTag, hasTranslitScript, looseTranslitKey,
 } from './match-text.js';
 import { handleBeta, betaInAppReport } from './beta.js';
@@ -309,6 +309,7 @@ const EXCLUDE_GROUPS = [
   { keyword: 'rehearsal', hints: ['rehearsal'] },
   { keyword: 'cover', hints: ['cover)', 'cover]', '- cover'] },
   { keyword: 'karaoke', hints: ['karaoke'] },
+  { keyword: 'trailer', hints: TRAILER_EXCLUDE_HINTS },   // #836
   { keyword: 'instrumental', hints: ['instrumental', '(instrumental)', '[instrumental]', '- instrumental'] },
   // "Slow Motion" (Lynnic) resolved to its [Extended Mix] for tester #20
   { keyword: 'extended', hints: ['extended mix', 'extended version', 'extended edit', 'extended club', '(extended)', '[extended]', '- extended'] },
