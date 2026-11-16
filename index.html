@@ -37768,7 +37768,8 @@ let skipFade = null;
 // #745: how long a manual skip fades across with crossfade off
 const SKIP_FADE_MS = 1000;
 // longest the old song covers for a new one that never starts sounding
-const SKIP_WAIT_MAX_MS = UNMUTE_MAX_WAIT_MS + UNMUTE_DELAY_MS;
+// #846: was UNMUTE_MAX_WAIT_MS + UNMUTE_DELAY_MS (25s), which left the old song playing for up to 25s after a "previous"
+const SKIP_WAIT_MAX_MS = 8000;
 // Is a skip still holding the old song while the new one loads?
 function skipWaiting(){ return !!(skipFade && swapInProgress && !skipFade.fadeStart && activeDeck() === skipFade.nd); }
 // The new song is really playing with sound: past its ad check, not held
@@ -37879,6 +37880,8 @@ function startSkipCrossfade(pos, t){
       vol(nd, 0);
       if (!skipIncomingSounds(nd) && t1 - f.waitStart < SKIP_WAIT_MAX_MS) return;
       f.fadeStart = t1;
+      // #846: the incoming song ran muted while it waited out its ad check, so it can be far past 0:00 - start it from the top
+      try { if (nd.player && nd.player.getCurrentTime && nd.player.seekTo && (nd.player.getCurrentTime() || 0) > 1.5) nd.player.seekTo(0, true); } catch(e){}
       f.outFrom = f.outGain;
       ytFadeStart(old, nd, f.fadeMs);   // #750: picture dissolves with the sound; the old picture was held until now
       if (!ytFade && ytPanelOpen()) ytPanelSync();
