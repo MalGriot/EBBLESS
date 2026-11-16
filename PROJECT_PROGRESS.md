@@ -18,7 +18,7 @@ Then rest of Phase 1 (#836 #822 #827 #826 #824, #853 #837 #845, #872 #865 #866 #
 - #838/#809: VERIFIED LIVE. Cymatics -> key 3 and video card -> key 3 both showed fLUX (milk-live) on the first press, with the other tab de-activated. Not covered: art-style cycling, fullscreen.
 - #830: VERIFIED LIVE. After 6s of fLUX the title card never got is-on. C key not retested.
 - #846: PARTLY VERIFIED. Warm previous: new song shows in 0.5s, starts at 0:00. Cold previous (pressed 2s after next): title switched at once, old song held ~8s (was up to 25s), incoming song's clock reset to 0:00 when the fade began (the seek fix firing). NOT verified: audible audio/volume (no ears in the harness), real ads. Side effect seen: the clock shows 0:00-0:04, then jumps back to 0:00 at fade start.
-- Console: no errors from these changes (only the pre-existing 403 and empty accounts list at load).
+- Console: 82 errors, none from the three changes. One 403 from Google sign-in on localhost, the rest (80+) are 502s from the production worker `/ytmix?videoId=...` (a worker-side failure, repeated per song; not touched by this lane, needs its own look).
 - Smoke test: partial (play, next, previous, fLUX, cymatics, video card ran; seek, pause, queue, library, reload NOT run).
 
 ## Next action
