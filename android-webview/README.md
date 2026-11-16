@@ -102,6 +102,47 @@ lists three SIGNALED kills of the app at 16:27 to 16:28 that do not match the si
 earlier that day was invalid: the tester week-up screen (`ebblessWrapped.bypass()` fixes it) stopped playback after one song.
 Rerun with a working logger only if a kill shows up in normal use.
 
+## Release soak 2026-11-14 (TECNO POP 9, app 2.19.0 / versionCode 37): FAILED as published; PASSED with the AudioInterrupts fix (debug build, not yet released)
+
+Phone off USB (wireless debugging), not charging, 92 to 94%. The published build did not play YouTube with the screen on, so the soak
+could not start. **Do not tell testers to update to the published build.** The fix (`REQUEST_FOCUS = false` in `AudioInterrupts.java`,
+uncommitted at the time of writing) passed the soak below; it still has to be committed, released and rechecked from the release APK.
+Not done: non-owner Google sign-in check, long-idle app-switcher check, a SoundCloud track in the soak, other-app audio and a real
+call with the fix (the page's play button and notification must follow a pause; only the media-button pause was checked: the
+page's `mediaSession.playbackState` went paused then playing).
+
+Evidence:
+- Owner reported a YouTube track freezing and skipping after under a second of audio (run 1), then flipping between two songs with
+  no audio (run 2, after a clean force-stop and relaunch).
+- Run 1 logcat: repeated `Failed Create component: c2.mtk.avc.decoder, error=12` / `Failed to initialize c2.mtk.avc.decoder ... NO_MEMORY`
+  from the WebView, with 8 live `c2.mtk.avc.decoder` clients, all owned by the EBBLESS pid (`dumpsys media.resource_manager`).
+- Run 2: no `NO_MEMORY`, but the decoder count jumped from 1 to 8 when playback started, then fell to 3. The page console showed the
+  zero-ads gate cycling `gate-hold`, `status`, `dodge`, `unstick`, `dodge-return`, with `wait-cap reason: not-moving` (the YouTube
+  player's clock was not advancing). That is the swap between two songs the owner saw. Audio focus was requested and abandoned
+  repeatedly; no audio stream was ever in `state:started`.
+- The 8 decorative `<video>` elements are not the cause (all paused and hidden; unloading them left the decoder count unchanged).
+  The page keeps three YouTube decks (`yt-deck-a/b/c`, autoplay muted) alive at once. Ad blocking was on and healthy (rules v3, live,
+  kill switch off).
+
+A/B on the same phone and track: Brave plays it (audio `state:started`, 3 decoders, no `NO_MEMORY`). With ad blocking switched off in the
+app (`EbbNative.setAdblock(false)`, restored afterwards) the app still played about one second, so the ad script is not the cause.
+
+**Most likely cause (logcat, run 3):** `AudioInterrupts` (#755, commit e14d564, 2026-11-05) takes its own audio focus. In every play the
+WebView's own focus request (`org.chromium...AudioFocusDelegate`) is followed 15 ms later by the app's request
+(`AudioInterrupts`, CONTENT_TYPE_MUSIC), the WebView gets `onAudioFocusChange(-1)` (loss), pauses the YouTube media and abandons focus.
+The player clock stops, the zero-ads gate reads `not-moving` as an ad and swaps songs. The class comment says "the WebView asks for no
+audio focus of its own"; on this WebView (157) that is wrong. Not yet proven by a fix: the rebuild needs the JDK/SDK, and
+`~/android-tools` does not exist on this Mac (`local.properties` points there). Suggested fix: do not request focus while the WebView
+already holds it (or drop the request and keep the noisy-output receiver), then rebuild, install and rerun the soak.
+
+### Soak with the fix (debug build `io.github.malgriot.ebbless.debug`, same code plus the fix)
+Screen off 07:27:12 to 08:00:01 (PowerManagerService), unplugged, battery 83% to 79%. One YouTube stream (AAudio piid 839, started
+07:27:45) ran without a stop or restart until 07:58:40: 30 min 55 s, screen off, app pid 29664 alive, foreground service up,
+`REQUEST_FOCUS` off. Across the whole run: 0 app focus requests, 0 focus-loss events, 0 `NO_MEMORY`, no song swapping. The stream stopped at
+07:58:40 for a reason I did not find (queue end is the likely one); the phone's own alarm woke the screen at 08:00. The 30 s poller
+failed after 07:31 (its adb mDNS lookup returned nothing, the phone stayed reachable), so this is reconstructed from the continuous
+logcat and `dumpsys audio` player events, not from poll samples. Debug package removed from the phone afterwards.
+
 ## 2.11.0 (not yet tested on the phone)
 - **Lock screen / notification player (#581, #634):** `PlaybackService` owns a `MediaSession` and a media-style notification
   (previous, play/pause, next, heart). The page mirrors `navigator.mediaSession` into `EbbNative.media(json)` (shim in `index.html`)
