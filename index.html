@@ -9803,10 +9803,10 @@ async function resolvePlaylistInner(playlistId, type, onProgress, onFirstTrack){
 // each waits for the previous to settle. Resolves to the playlist, or null
 // (dead link: threw, or no playable songs), so callers skip saving it.
 let bgLoadChain = Promise.resolve();
-function queueBackgroundLoad(id, type){
+function queueBackgroundLoad(id, type, onProgress){
   const run = async () => {
     try{
-      const pl = await resolvePlaylist(id, type, () => {});
+      const pl = await resolvePlaylist(id, type, onProgress || (() => {}));
       return pl && (pl.tracks || []).some(t => t && t.videoId) ? pl : null;
     } catch(e){ return null; }
   };
@@ -16336,6 +16336,41 @@ async function openAlbumPreview(a, name, backFn){
   if (name) libplBody.appendChild(pageArtistRow([name]));
   const info = document.createElement('div'); info.className = 'currents-hint album-info';
   info.textContent = albumYearOf(a.releaseDate) || '';
+  // #869: the same play actions as a library album, without adding it to the library: the album's songs are matched,
+  // kept as a plain cached list (not in the library), and the queue points at it
+  const acts = document.createElement('div'); acts.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px';
+  const albumList = async () => {
+    let pl = getCachedPlaylist(a.id);
+    if (!pl || !(pl.tracks || []).some(t => t && t.videoId)){
+      showToast('Getting ' + a.name + ' ready...', undefined, 'albumprep');
+      pl = await queueBackgroundLoad(a.id, a.type || 'am_album', (pr) => {
+        if (pr && pr.stage === 'matching' && pr.total) toastUpdate('albumprep', 'Getting ' + a.name + ' ready (' + pr.done + ' of ' + pr.total + ')...');
+      });
+    }
+    if (!pl){ showToast("Couldn't load that album."); return null; }
+    return pl;
+  };
+  [['Play', 'play'], ['Shuffle', 'shuffle'], ['Play next', 'next'], ['Add to queue', 'queue']].forEach(([label, kind]) => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'btn-ghost'; b.textContent = label;
+    b.addEventListener('click', async () => {
+      if (b.disabled) return;
+      b.disabled = true;
+      try {
+        const pl = await albumList();
+        if (!pl) return;
+        if (kind === 'play' || kind === 'shuffle'){
+          loadPlaylistIntoPlayer(pl); setView('player'); buildQueueFrom(-1, pl.id);
+          if (kind === 'shuffle'){ state.queue = shuffleTail(state.queue, 0); renderQueuePanel(); }
+          loadIndex(state.queuePos, true);
+        } else {
+          const n = kind === 'next' ? queuePlayNextCollection(pl.id) : queueAddCollection(pl.id);
+          showToast(n ? (kind === 'next' ? n + ' songs play next' : n + ' songs added to the queue') : 'Nothing to add');
+        }
+      } catch(err){ showToast("Couldn't load that album."); }
+      finally { b.disabled = false; }
+    });
+    acts.appendChild(b);
+  });
   const add = document.createElement('button'); add.type = 'button'; add.className = 'btn-ghost is-active';
   add.style.cssText = 'width:100%;margin-bottom:12px'; add.textContent = 'Add to library';
   add.addEventListener('click', async () => {
@@ -16343,7 +16378,7 @@ async function openAlbumPreview(a, name, backFn){
     if (await addArtistAlbumToLibrary(a, name)){ if (openLibraryPanelId === id) dismissLibraryPlaylistPanel(); } else add.disabled = false;
   });
   const status = document.createElement('div'); status.className = 'currents-status'; status.textContent = 'Loading songs...';
-  libplBody.appendChild(info); libplBody.appendChild(add); libplBody.appendChild(status);
+  libplBody.appendChild(info); libplBody.appendChild(acts); libplBody.appendChild(add); libplBody.appendChild(status);
   libplPanel.classList.add('is-open'); libplScrim.classList.add('is-open');
   syncHistoryBuffer();
   try{
@@ -16565,6 +16600,8 @@ function pageArtistRow(names, title){
 // #533: a song's own page in the library panel. Only data the app already
 // holds (the track, its album in the library, the cached year lookup); the
 // artist name opens the artist page, the album opens the album.
+let songPageArtFn = null;
+libplArtWrap.addEventListener('click', () => { if (songPageArtFn && String(openLibraryPanelId).startsWith('songpage:')) songPageArtFn(); });
 function openSongPage(t, plId, trackIdx){
   if (!t) return;
   const id = 'songpage:' + (t.videoId || t.title);
@@ -16581,6 +16618,7 @@ function openSongPage(t, plId, trackIdx){
   libplTitle.textContent = t.title;
   if (t.art){ attachArtworkFallback(libplArt, { art: t.art }); libplArtWrap.hidden = false; } else { libplArt.removeAttribute('src'); libplArtWrap.hidden = true; }
   libplHeroSync('Song');
+  songPageArtFn = () => openSongAlbumPage(plId ? playlistById(plId) : null, t, () => openSongPage(t, plId, trackIdx));   // #856: the song's art opens its album page
   libplBody.innerHTML = '';
   const sc = libplPanel.querySelector('.queue-scroll'); if (sc) sc.scrollTop = 0;
   libplReturnTo = null; libplResume = null;
@@ -18336,6 +18374,19 @@ async function findSongAlbum(t){
   if (!hit) return null;
   return { id: 'us:' + hit.collectionId, type: 'am_album', name: String(hit.collectionName || '').replace(/\s+-\s+(Single|EP)$/i, ''), art: hit.artworkUrl100 ? hit.artworkUrl100.replace(/\/\d+x\d+bb\./, '/300x300bb.') : '', releaseDate: hit.releaseDate || '' };
 }
+// The album page for a song (#807 menu item, #856 song-page art): a library album opens as it is, any other is found and previewed.
+function openSongAlbumPage(pl, t, backFn){
+  if (!t) return;
+  if (pl && isAlbumEntry(pl) && pl.id !== NP_ID){ if (openLibraryPanelId !== pl.id) toggleLibraryPlaylistPanel(pl.id); return; }
+  showToast('Finding the album...');
+  findSongAlbum(t).then(a => {
+    if (a) openAlbumPreview(a, t.artist, backFn || null);
+    else return fetchSongInfo(t.title, t.artist).then(m => {
+      if (m && m.album) openInfoAlbum(m.album, t.artist, backFn || null);
+      else showToast("Couldn't find this song's album.");
+    });
+  }).catch(() => showToast("Couldn't find this song's album."));
+}
 function handleTrackCtxAction(action, plId, trackIdx){
   const pl = playlistById(plId);
   const t = pl && pl.tracks[trackIdx];
@@ -18350,18 +18401,7 @@ function handleTrackCtxAction(action, plId, trackIdx){
   else if (action === 'map'){ if (t && t.artist) openMusicMap(t.artist); }
   else if (action === 'share'){ if (t) shareTrackAt(plId, trackIdx); }
   else if (action === 'songpage'){ if (t) openSongPage(t, plId, trackIdx); }
-  else if (action === 'album'){   // #807: the song's album page. An album in the library opens as it is; otherwise the song's album is looked up
-    if (!t) return;
-    if (pl && isAlbumEntry(pl) && plId !== NP_ID){ toggleLibraryPlaylistPanel(plId); return; }
-    showToast('Finding the album...');
-    findSongAlbum(t).then(a => {
-      if (a) openAlbumPreview(a, t.artist, null);
-      else return fetchSongInfo(t.title, t.artist).then(m => {
-        if (m && m.album) openInfoAlbum(m.album, t.artist, null);
-        else showToast("Couldn't find this song's album.");
-      });
-    }).catch(() => showToast("Couldn't find this song's album."));
-  }
+  else if (action === 'album'){ openSongAlbumPage(pl, t); }   // #807
   else if (action === 'decline'){ declineCurrentsTrack(trackIdx); }
   else if (action === 'refresh'){ openRefreshLinkPicker(plId, trackIdx); }
   else if (action === 'wrongsong'){ reportMatchBtn.click(); }
