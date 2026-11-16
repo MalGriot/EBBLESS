@@ -22471,6 +22471,23 @@ function renderHome(){
     if (src){ cover = document.createElement('img'); cover.loading = 'lazy'; cover.alt = ''; attachCardArt(cover, src); }
     else { cover = mk('div', 'hm-ph', (name || '?').charAt(0).toUpperCase()); }
     b.appendChild(cover); b.appendChild(mk('span', 'hm-n', name)); if (sub) b.appendChild(mk('span', 'hm-s', sub));
+    // #848: an artist tile shows the artist's own photo once it is known (the same photo their artist page uses); until then, or when none exists, it keeps the album cover
+    if (round) try {
+      fetchArtistInfo(name, '').then(info => {
+        const u = info && typeof info.image === 'string' && /^https:\/\//.test(info.image) ? info.image : '';
+        if (!u || !b.isConnected) return;
+        // load it off screen first, so the cover (or the letter) stays up until the photo is ready; a photo that fails changes nothing
+        const pre = new Image();
+        pre.onload = () => {
+          if (!b.isConnected) return;
+          let im = b.querySelector('img');
+          if (!im){ im = document.createElement('img'); im.alt = ''; im.loading = 'lazy'; const ph = b.querySelector('.hm-ph'); if (ph) ph.replaceWith(im); else b.insertBefore(im, b.firstChild); }
+          im.onerror = null;
+          im.src = u;
+        };
+        pre.src = u;
+      }).catch(() => {});
+    } catch(e){}
     b.addEventListener('click', onClick); return b;
   };
   const row = (sec, cards) => { const r = mk('div', 'hm-row'); cards.forEach(c => r.appendChild(c)); sec.appendChild(r); };
