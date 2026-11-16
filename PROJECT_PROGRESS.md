@@ -27,10 +27,12 @@ Then rest of Phase 1 (#836 #822 #827 #826 #824, #853 #837 #845, #872 #865 #866 #
 - Smoke test: partial (play, next, previous, fLUX, cymatics, video card ran; seek, pause, queue, library, reload NOT run).
 
 ## Next action
-#826 cmd/ctrl-click play next, #836 trailer in queue, then #853/#837/#845 art fade + color, #872/#865/#866/#867/#863 library.
+#826 cmd/ctrl-click play next, #836 trailer in queue, then #872/#865/#866/#867/#863 library.
 
 ## Blocked on a decision (analysis done, no code changed)
 - (#822 moved to Done below; decided: unheart keeps playing, thumbs down skips.)
 - #827 double-click plays: single click on a library card already opens it, so a dblclick fires after navigation. Needs a decision on single-click behavior (delay navigation ~250ms, or play on dblclick of the opened page's tile).
 - #861 fLUX shares Cymatics controls + livelier mood menu: a design brainstorm, not a bugfix. #855 fLUX freeze: no repro steps. #831 melt-in: fLUX layer already fades over 1.6s; unclear what is missing.
 - Fullscreen variants of #838 untested.
+- #853/#837 art fade on skip: NOT REPRODUCED. Live check on default art, desktop: on Next the old cover cross-fades into the new over 1s (A 1.00 to 0.00, B 0.00 to 1.00), and going back (prev) shows the right cover. I tried a fix (re-fire the swap when an <img> already holds the URL) and it changed nothing in a before/after test, so I dropped it. Still unchecked: CD/cassette/LP styles, fullscreen flow art, mini player, mobile, slow networks. Needs the tester's device or steps.
+- #845 UI color does not follow the song: CAUSE FOUND, by design. For gray/dull covers ensureLegibleAccent returns null and the UI uses the time-of-day clock color (#757 chose this on purpose). Live: "Before" (avg sat 0.08) and "Sex on the Beach" (sat 0.00) got the clock pink, colorful covers got their own color. Options for the owner: (a) keep, (b) use a neutral light gray taken from the cover for gray art.
