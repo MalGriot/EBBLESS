@@ -42475,7 +42475,8 @@ function updateSeekUI(){
   // previous sound (SC/YT report the old position/duration until the load
   // lands) or playing muted through the ad wait, which onDeckConfirmed then
   // snaps back to 0:00 - hold at 0 rather than showing either (issue #213).
-  if (!ad.confirmed){
+  // #846: same while a skip's new song waits out its muted ad check - the old song still sounds, so show 0:00 until the fade starts
+  if (!ad.confirmed || skipWaiting()){
     const t = trackAt(state.queuePos);
     const dur = (t && t.duration) || 0;
     paintSeekUI(0, dur);
