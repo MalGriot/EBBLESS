@@ -18273,6 +18273,7 @@ function openTrackCtxMenuFor(plId, trackIdx, anchorEl, opts){
     if (!isPodcastTrack(t) && t.artist) items.push({ action: 'map', label: 'Music map', icon: CTX_ICON_MAP });   // #597
     if (opts && opts.isNow) items.push({ action: 'sleep', label: sleepTimer ? 'Sleep timer: ' + sleepTimerLabel() : 'Sleep timer', icon: CTX_ICON_SLEEP });
     items.push({ action: 'songpage', label: 'Song page', icon: CTX_ICON_ART });
+    if (!isPodcastTrack(t) && (t.artist || isAlbumEntry(pl))) items.push({ action: 'album', label: 'Album', icon: CTX_ICON_ART });   // #807
     // A track has no canonical source link of its own (see
     // canonicalLinkForPlaylist's comment) - sharing it re-shares the parent
     // playlist/album's link plus this track's position within it, so only
@@ -18322,6 +18323,19 @@ function toggleTrackCtxMenu(plId, trackIdx, anchorEl, opts){
   openTrackCtxMenuFor(plId, trackIdx, anchorEl, opts);
 }
 
+// #807: the album a song is on, from Apple's catalog (quick, and has new releases the song-info sources lack).
+// The title and the first artist must match, so a cover or a same-named song does not send you to the wrong album.
+async function findSongAlbum(t){
+  const tk = artistNameKey(t.title), ak = artistNameKey(String(t.artist || '').split(/\s*(?:,|&|\bfeat\.?|\bft\.?|\bx\b)\s*/i)[0]);
+  if (!tk) return null;
+  const res = await fetch('https://itunes.apple.com/search?' + new URLSearchParams({ term: [t.title, t.artist].filter(Boolean).join(' '), media: 'music', entity: 'song', limit: '15' }));
+  if (!res.ok) return null;
+  const found = ((await res.json()).results || []).filter(r => r && r.collectionId && artistNameKey(r.trackName) === tk && (!ak || artistNameKey(r.artistName).includes(ak)) && !/remix/i.test(r.collectionName || ''));
+  // the artist's own album before a various-artists compilation that happens to include the song
+  const hit = found.find(r => !ak || artistNameKey(r.collectionArtistName || r.artistName).includes(ak)) || found[0];
+  if (!hit) return null;
+  return { id: 'us:' + hit.collectionId, type: 'am_album', name: String(hit.collectionName || '').replace(/\s+-\s+(Single|EP)$/i, ''), art: hit.artworkUrl100 ? hit.artworkUrl100.replace(/\/\d+x\d+bb\./, '/300x300bb.') : '', releaseDate: hit.releaseDate || '' };
+}
 function handleTrackCtxAction(action, plId, trackIdx){
   const pl = playlistById(plId);
   const t = pl && pl.tracks[trackIdx];
@@ -18336,6 +18350,18 @@ function handleTrackCtxAction(action, plId, trackIdx){
   else if (action === 'map'){ if (t && t.artist) openMusicMap(t.artist); }
   else if (action === 'share'){ if (t) shareTrackAt(plId, trackIdx); }
   else if (action === 'songpage'){ if (t) openSongPage(t, plId, trackIdx); }
+  else if (action === 'album'){   // #807: the song's album page. An album in the library opens as it is; otherwise the song's album is looked up
+    if (!t) return;
+    if (pl && isAlbumEntry(pl) && plId !== NP_ID){ toggleLibraryPlaylistPanel(plId); return; }
+    showToast('Finding the album...');
+    findSongAlbum(t).then(a => {
+      if (a) openAlbumPreview(a, t.artist, null);
+      else return fetchSongInfo(t.title, t.artist).then(m => {
+        if (m && m.album) openInfoAlbum(m.album, t.artist, null);
+        else showToast("Couldn't find this song's album.");
+      });
+    }).catch(() => showToast("Couldn't find this song's album."));
+  }
   else if (action === 'decline'){ declineCurrentsTrack(trackIdx); }
   else if (action === 'refresh'){ openRefreshLinkPicker(plId, trackIdx); }
   else if (action === 'wrongsong'){ reportMatchBtn.click(); }
