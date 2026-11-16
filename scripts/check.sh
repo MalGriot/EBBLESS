@@ -9,3 +9,4 @@ node tools/genre-map-layout.js --check >/dev/null
 if git diff --cached --name-only | grep -q '^worker/'; then (cd worker && npm test --silent); fi
 node scripts/test-manual-carry.js >/dev/null
 node scripts/test-home-order.js >/dev/null
+node scripts/test-blend-gains.js >/dev/null

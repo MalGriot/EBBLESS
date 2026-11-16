@@ -1100,6 +1100,10 @@ body.relink-dragging #import-overlay{opacity:0;pointer-events:none}
 html.reduce-motion .lib-grid:not(.is-list) .lib-card .art .title-overlay{display:none}
 html.reduce-motion .lib-grid:not(.is-list) .lib-card .info .name{display:block;white-space:normal;overflow:visible;overflow-wrap:anywhere}
 .lib-card .count{font-size:11.5px;color:var(--faint);margin-top:1px}
+.blend-styles{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end}
+.blend-styles .btn-ghost{padding:6px 12px}
+.blend-styles .btn-ghost[aria-checked="true"]{background:var(--accent);color:var(--on-accent,#151107);border-color:transparent}
+#crossfadeStyleRow.is-off .blend-styles{opacity:.45}
 .lib-card .count:empty{display:none}
 .lib-card .lib-desc{color:var(--text);opacity:.8}
 .lib-card.is-refreshing .count,.currents-status{animation:onb-load-pulse 1.4s ease-in-out infinite}
@@ -5802,6 +5806,18 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
           </div>
           <input type="range" class="slider" id="crossfadeDurSlider" min="1000" max="10000" step="500" value="4000">
         </div>
+        <div class="settings-row" id="crossfadeStyleRow">
+          <div>
+            <div class="label">Blend style</div>
+            <div class="desc">How one song gives way to the next. Smooth is the classic fade. Warp whooshes across, Spikes pulses between the two songs, Glitch stutters.</div>
+          </div>
+          <div class="blend-styles" role="radiogroup" aria-label="Blend style">
+            <button type="button" class="btn-ghost" role="radio" data-style="smooth">Smooth</button>
+            <button type="button" class="btn-ghost" role="radio" data-style="warp">Warp</button>
+            <button type="button" class="btn-ghost" role="radio" data-style="spikes">Spikes</button>
+            <button type="button" class="btn-ghost" role="radio" data-style="glitch">Glitch</button>
+          </div>
+        </div>
         <div class="settings-row">
           <div>
             <div class="label">Even out volume</div>
@@ -7802,6 +7818,23 @@ function lsSet(key, val, knownChange){
   if (key === LS_LIB && typeof scheduleIpodPush === 'function') scheduleIpodPush();
 }
 let crossfadePrefs = Object.assign({ on: false, ms: 4000 }, lsGet(LS_CROSSFADE, {}));
+// #805: blend styles are extra options; 'smooth' is the original linear fade and the default
+const BLEND_STYLES = ['smooth', 'warp', 'spikes', 'glitch'];
+function blendStyle(){ return crossfadePrefs.on && BLEND_STYLES.indexOf(crossfadePrefs.style) >= 0 ? crossfadePrefs.style : 'smooth'; }
+// [outgoing gain, incoming gain] (0..1) at progress p of a blend that has run elapsedMs; both ends land on 0 and 1
+function blendGains(p, style, elapsedMs, durationMs){
+  if (p >= 1) return [0, 1];
+  if (style === 'warp') return [Math.pow(1 - p, 3), Math.cbrt(p)];
+  if (style === 'spikes'){
+    const pulses = Math.max(2, Math.round(durationMs / 500)), sp = Math.abs(Math.cos(p * pulses * Math.PI));
+    return [(1 - p) * (0.2 + 0.8 * sp), p * (0.2 + 0.8 * (1 - sp))];
+  }
+  if (style === 'glitch'){
+    const slot = Math.floor(elapsedMs / 100), h = (n) => (Math.imul(n | 0, 2654435761) >>> 0) / 4294967296;
+    return [h(slot * 2 + 1) < 1 - p ? 1 - p : 0.04, h(slot * 2 + 2) < p ? p : 0.04];
+  }
+  return [1 - p, p];
+}
 function lsDel(key){
   const synced = isProfileSyncedKey(key) && localStorage.getItem(key) !== null && noteProfileWrite(key, undefined);
   try { localStorage.removeItem(key); } catch(e){}
@@ -27085,7 +27118,15 @@ function renderCrossfadeUI(){
   crossfadeDurSlider.disabled = !crossfadePrefs.on;
   crossfadeDurVal.textContent = fmtCrossfadeMs(crossfadePrefs.ms);
   crossfadeDurRow.style.opacity = crossfadePrefs.on ? '1' : '.45';
+  const st = BLEND_STYLES.indexOf(crossfadePrefs.style) >= 0 ? crossfadePrefs.style : 'smooth';
+  document.querySelectorAll('#crossfadeStyleRow [data-style]').forEach(b => b.setAttribute('aria-checked', String(b.dataset.style === st)));
+  $('crossfadeStyleRow').classList.toggle('is-off', !crossfadePrefs.on);
 }
+document.querySelectorAll('#crossfadeStyleRow [data-style]').forEach(b => b.addEventListener('click', () => {
+  crossfadePrefs.style = b.dataset.style;
+  lsSet(LS_CROSSFADE, crossfadePrefs);
+  renderCrossfadeUI();
+}));
 crossfadeBtn.addEventListener('click', () => {
   crossfadePrefs.on = !crossfadePrefs.on;
   if (!crossfadePrefs.on && cancelCrossfade()) schedulePreload(state.queuePos);
@@ -37799,11 +37840,12 @@ function runCrossfade(nd, nextPos){
     swapFlowArt(nextTrack, durationMs);
     crossfadeAltArt(nextTrack, durationMs);
   }
-  const start = Date.now();
+  const start = Date.now(), bStyle = blendStyle();
   old.fadeTimer = setInterval(() => {
     const p = Math.min(1, (Date.now() - start) / durationMs);
-    if (old.player && old.player.setVolume) old.player.setVolume(Math.round(effectiveVolume(old) * (1 - p)));
-    if (nd.player && nd.player.setVolume) nd.player.setVolume(Math.round(effectiveVolume(nd) * p));
+    const bg = blendGains(p, bStyle, Date.now() - start, durationMs);
+    if (old.player && old.player.setVolume) old.player.setVolume(Math.round(effectiveVolume(old) * bg[0]));
+    if (nd.player && nd.player.setVolume) nd.player.setVolume(Math.round(effectiveVolume(nd) * bg[1]));
     // nd.pos, not nextPos: a queue edit mid-fade (#769) may have re-indexed the incoming song
     if (p >= 1){ clearInterval(old.fadeTimer); old.fadeTimer = null; finishCrossfade(old, nd, nd.pos >= 0 ? nd.pos : nextPos); }
   }, 100);
@@ -37958,7 +38000,7 @@ function startSkipCrossfade(pos, t){
   setPlayingUI(true);
 
   const now = Date.now();
-  const f = skipFade = { old, nd, fadeMs, oldTs, waitStart: now, rampStart: now, fromGain, outGain: fromGain, outFrom: 0, inGain: 0, fadeStart: 0, timer: null };
+  const f = skipFade = { old, nd, fadeMs, style: blendStyle(), oldTs, waitStart: now, rampStart: now, fromGain, outGain: fromGain, outFrom: 0, inGain: 0, fadeStart: 0, timer: null };
   const vol = (d, g) => { if (d.player && d.player.setVolume) d.player.setVolume(Math.round(effectiveVolume(d) * g)); };
   f.timer = nd.fadeTimer = setInterval(() => {
     if (skipFade !== f || activeDeck() !== nd || nd.fadeTimer !== f.timer){ clearInterval(f.timer); if (skipFade === f) skipFade = null; return; }
@@ -37978,8 +38020,9 @@ function startSkipCrossfade(pos, t){
       if (!ytFade && ytPanelOpen()) ytPanelSync();
     }
     const p = Math.min(1, (t1 - f.fadeStart) / f.fadeMs);
-    f.outGain = f.outFrom * (1 - p);
-    f.inGain = p;
+    const bg = blendGains(p, f.style, t1 - f.fadeStart, f.fadeMs);
+    f.outGain = f.outFrom * bg[0];
+    f.inGain = bg[1];
     vol(old, f.outGain);
     vol(nd, f.inGain);
     if (p < 1) return;
