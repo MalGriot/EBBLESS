@@ -13,3 +13,7 @@ Baseline: main @ 08d49e2, tree clean, scripts/check.sh passes.
 ## Next action
 #838 remainder: key 1 / art button cycling with fLUX as backdrop; fullscreen equivalent. Then #861, #855, #831.
 Then rest of Phase 1 (#836 #822 #827 #826 #824, #853 #837 #845, #872 #865 #866 #867 #863).
+
+## QA status
+All three fixes above: UNVERIFIED. Rule 3 live check is the next action, before any new ticket.
+Smoke tests run: none yet.
