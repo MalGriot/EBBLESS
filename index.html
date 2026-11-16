@@ -4731,6 +4731,10 @@ body.desktop-fs #milkLayer.milk-inline .milk-bar{bottom:calc(236px + var(--safe-
 /* #792: with the record or cassette picked, fLUX is the backdrop: the disc/tape draws over it (clicks fall through to fLUX's buttons) */
 .artwork-wrap[data-mode="art"]:is([data-art-style="record"],[data-art-style="cassette"]) > #milkLayer.milk-inline{z-index:0}
 .artwork-wrap[data-mode="art"]:is([data-art-style="record"],[data-art-style="cassette"]):has(> #milkLayer.milk-inline) :is(.art-record,.art-cassette){z-index:1;pointer-events:none}
+/* #838: the plain cover stays too, faded, over fLUX (the 4th stop of the 1-key cycle: art, CD, cassette, LP, back to this) */
+.artwork-wrap[data-mode="art"][data-art-style="default"] > #milkLayer.milk-inline{z-index:0}
+.artwork-wrap[data-mode="art"][data-art-style="default"]:has(> #milkLayer.milk-inline) .art{z-index:1;pointer-events:none}
+.artwork-wrap[data-mode="art"][data-art-style="default"]:has(> #milkLayer.milk-inline) .art.is-active{opacity:.4}
 #milkCanvas{position:absolute;inset:0;width:100%;height:100%;display:block}
 .milk-ui{position:absolute;inset:0;pointer-events:none;opacity:1;visibility:visible;transition:opacity var(--dur-surface,.25s) var(--ease-in-out,ease-in-out),visibility 0s}
 #milkLayer.milk-idle .milk-ui{opacity:0;visibility:hidden;transition:opacity .4s var(--ease-in-out,ease-in-out),visibility 0s .4s}
