@@ -234,6 +234,7 @@ html.ebb-android{background:#000}
 /* faster reveal in the app: black fades to the video in 0.7s (web: 2.6s), then logo, then buttons */
 html.ebb-android #splash.is-active .splash-black{animation-duration:700ms}
 html.ebb-android #splash.is-active img{animation:splash-logo-in 700ms var(--ease-out) 350ms forwards}
+html.ebb-android #splash.is-active .splash-plan{animation:splash-logo-in 500ms var(--ease-out) 900ms forwards}
 html.ebb-android #splash.is-choice .splash-choice{transition-delay:1000ms}
 html.ebb-android #splash.is-choice.is-return .splash-choice{transition-delay:250ms}
 /* the splash opens on the plain accent and eases into its final (lighter) colour over 3s */
@@ -2173,6 +2174,13 @@ text.cs-pen{font:600 17px 'Bradley Hand','Segoe Print','Marker Felt','Comic Sans
 .cs-reel-mass{fill:url(#csPackGrad);transition:r 90ms linear}
 .cs-reel-mass-line{fill:none;stroke:rgba(255,255,255,.06);stroke-width:.75;transition:r 90ms linear}
 .cs-hub{transform-box:fill-box;transform-origin:center;will-change:transform}
+/* #813: a reel swells under the mouse to show it can be grabbed or tapped. The hubs sit under the shell and cannot grow past their holes,
+   so a copy of the hub is drawn above the shell and fades in, a little larger */
+.cs-reel-over{opacity:0;pointer-events:none;transform-box:fill-box;transform-origin:center;transition:opacity 140ms var(--ease-out),transform 180ms var(--ease-out)}
+.cs-reel-over.is-hot{opacity:1;transform:scale(1.2)}
+/* #812: a faint lifted corner on the sticker, the hint that it can be peeled */
+.cs-peel-hint{fill:rgba(255,255,255,.2);stroke:rgba(0,0,0,.35);stroke-width:.5;pointer-events:none}
+.art-cassette[data-state="playing"] .cs-peel-hint{opacity:.8}
 .cs-hub-ring{fill:url(#csHubGrad)}
 .cs-hub-groove{fill:none;stroke:rgba(60,55,48,.28);stroke-width:.8}
 .cs-hub-slot{fill:#16140f}
@@ -4149,6 +4157,9 @@ body.split-desktop .install-banner{padding-left:24px;padding-right:12px}
 #splash.is-active img{animation:splash-logo-in 1800ms var(--ease-out) 900ms forwards}
 #splash .splash-plan{font-size:16px;font-weight:600;letter-spacing:.12em;line-height:1;text-transform:lowercase;color:rgba(255,255,255,.9);margin-top:-4px}
 #splash .splash-plan[hidden]{display:none}
+/* #810: the plan name arrives after the wordmark (which fades in over 900ms to 2.7s) instead of sitting there from the first frame */
+#splash .splash-plan{opacity:0}
+#splash.is-active .splash-plan{animation:splash-logo-in 900ms var(--ease-out) 2400ms forwards}
 #splash .splash-install-label{opacity:0;font-size:13px;letter-spacing:.4px;color:var(--text);background:rgba(255,255,255,.12);padding:9px 20px;border-radius:20px;transition:opacity 600ms var(--ease-out)}
 #splash.is-install #splashLogoBtn{cursor:pointer}
 #splash.is-install .splash-install-label{opacity:1}
@@ -5530,6 +5541,7 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
                 </g>
                 <path class="cs-label-recess" d="M40,18 H360 L378,36 V184 L366,196 H34 L22,184 V36 Z"/>
                 <path class="cs-label-lip" d="M34,196.8 H366 L378.8,184"/>
+                <path class="cs-peel-hint" d="M378,184 L366,196 L368.5,186.5 Z"/>
                 <!-- pen marks, drawn by long-pressing the label: a star for liked, "repeat" for repeat-one -->
                 <g id="csPenStar" class="cs-pen"><g transform="translate(338 50) scale(.62) translate(-200 -88)" fill="none" stroke-linejoin="round" stroke-linecap="round"><path d="M200,70 l7,16 17,2 -13,11 4,17 -15,-9 -15,9 4,-17 -13,-11 17,-2 z" stroke="#fff" stroke-opacity=".7" stroke-width="7"/><path d="M200,70 l7,16 17,2 -13,11 4,17 -15,-9 -15,9 4,-17 -13,-11 17,-2 z" stroke="#d6453a" stroke-width="3.2"/></g></g>
                 <text id="csPenLoop" class="cs-pen" x="200" y="174" text-anchor="middle" transform="rotate(-2 200 174)">&#8734; repeat</text>
@@ -5548,6 +5560,8 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
               <circle class="cs-housing" cx="281" cy="112" r="21.2"/>
               <circle class="cs-hub-gleam" cx="119" cy="112" r="17.2"/>
               <circle class="cs-hub-gleam" cx="281" cy="112" r="17.2"/>
+              <use class="cs-reel-over" id="reelOverL" href="#hubL"/>
+              <use class="cs-reel-over" id="reelOverR" href="#hubR"/>
               <!-- narrow tape window: glass + frame -->
               <rect class="cs-glass" x="165" y="95" width="70" height="34"/>
               <rect class="cs-window-edge" x="164.5" y="94.5" width="71" height="35" rx="1"/>
@@ -5571,8 +5585,7 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
               <circle class="cs-boss" cx="200" cy="220" r="7.4"/>
               <circle class="cs-boss-in" cx="200" cy="220" r="3.4"/>
 
-              <!-- the E mark, small and faint on the lower shell -->
-              <image class="cs-mark" href="brand/assets/mark-white.png" x="44" y="214" width="15.3" height="14"/>
+              <!-- #811: the small mark on the lower shell is gone -->
 
               <!-- four corner screws -->
               <g class="cs-screws">
@@ -36699,6 +36712,13 @@ function csUp(e){
     return;
   }
 }
+// #813: the reel under a mouse pointer grows (mouse only: touch has no hover)
+(function(){
+  const grow = { hubL: document.getElementById('reelOverL'), hubR: document.getElementById('reelOverR') };
+  const set = (z, on) => { const g = z && grow[z.dataset.z]; if (g) g.classList.toggle('is-hot', on); };
+  csSvg.addEventListener('pointerover', (e) => { if (e.pointerType === 'mouse') set(e.target.closest && e.target.closest('.cs-zone'), true); });
+  csSvg.addEventListener('pointerout', (e) => { if (e.pointerType === 'mouse') set(e.target.closest && e.target.closest('.cs-zone'), false); });
+})();
 csSvg.addEventListener('pointerdown', csDown);
 csSvg.addEventListener('pointermove', csMove);
 csSvg.addEventListener('pointerup', csUp);
