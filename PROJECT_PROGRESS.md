@@ -16,10 +16,6 @@ Baseline: main @ 08d49e2, tree clean, scripts/check.sh passes.
 ## Findings
 - #831 melt-in: milkLayer already fades opacity 1.6s over the page; ticket may mean over the *art style* in the inline box. Needs a live look before changing.
 
-## Next action
-#838 remainder: key 1 / art button cycling with fLUX as backdrop; fullscreen equivalent. Then #861, #855, #831.
-Then rest of Phase 1 (#836 #822 #827 #826 #824, #853 #837 #845, #872 #865 #866 #867 #863).
-
 ## QA status (live check, 2026-11-16, localhost worktree, test playlist, in-app browser)
 - #838/#809: VERIFIED LIVE. Cymatics -> key 3 and video card -> key 3 both showed fLUX (milk-live) on the first press, with the other tab de-activated. Not covered: art-style cycling, fullscreen.
 - #830: VERIFIED LIVE. After 6s of fLUX the title card never got is-on. C key not retested.
@@ -27,13 +23,11 @@ Then rest of Phase 1 (#836 #822 #827 #826 #824, #853 #837 #845, #872 #865 #866 #
 - Console: 82 errors, none from the three changes. One 403 from Google sign-in on localhost, the rest (80+) are 502s from the production worker `/ytmix?videoId=...` (a worker-side failure, repeated per song; not touched by this lane, needs its own look).
 - Smoke test: partial (play, next, previous, fLUX, cymatics, video card ran; seek, pause, queue, library, reload NOT run).
 
-## Next action
-#826 cmd/ctrl-click play next, #836 trailer in queue, then #872/#865/#866/#867/#863 library.
+## Library batch status (checked live at 1440x900, 'lib-wide' = the widened library column)
+- #865 art does not fade in wide library: NOT REPRODUCED. In lib-wide the player cover cross-fades over 1s (A 1.00 to 0.00, B 0.00 to 1.00). One run right after toggling lib-wide showed no cover for ~2s, then it appeared (a layout-change timing effect, not isolated). May mean a different art surface (Recents thumbs, now-playing tiles); needs the owner's description.
+- #872 home page in the slim column: lib-wide gives the home column 340px; Recently played tiles are ~120px and Top artists circles run off the edge as a normal horizontal scroll. What 'accommodate' should look like is a design call; not changed.
+- #867 filter menu glitchy: clicking the filter icon in the Library header only changed the grid tile size in a still screenshot; the glitch is not visible in a still. Needs a screen recording or exact steps.
+- #863 sequential thumb loading: engineering task, not started (needs a repro of the freeze to verify; risk of regressions in library render).
 
-## Blocked on a decision (analysis done, no code changed)
-- (#822 moved to Done below; decided: unheart keeps playing, thumbs down skips.)
-- #827 double-click plays: single click on a library card already opens it, so a dblclick fires after navigation. Needs a decision on single-click behavior (delay navigation ~250ms, or play on dblclick of the opened page's tile).
-- #861 fLUX shares Cymatics controls + livelier mood menu: a design brainstorm, not a bugfix. #855 fLUX freeze: no repro steps. #831 melt-in: fLUX layer already fades over 1.6s; unclear what is missing.
-- Fullscreen variants of #838 untested.
-- #853/#837 art fade on skip: NOT REPRODUCED. Live check on default art, desktop: on Next the old cover cross-fades into the new over 1s (A 1.00 to 0.00, B 0.00 to 1.00), and going back (prev) shows the right cover. I tried a fix (re-fire the swap when an <img> already holds the URL) and it changed nothing in a before/after test, so I dropped it. Still unchecked: CD/cassette/LP styles, fullscreen flow art, mini player, mobile, slow networks. Needs the tester's device or steps.
-- #845 UI color does not follow the song: CAUSE FOUND, by design. For gray/dull covers ensureLegibleAccent returns null and the UI uses the time-of-day clock color (#757 chose this on purpose). Live: "Before" (avg sat 0.08) and "Sex on the Beach" (sat 0.00) got the clock pink, colorful covers got their own color. DECIDED by owner: neutral gray. DONE (neutralAccentFor in index.html): gray/black/white covers now give a light neutral gray (62-88% lightness, following the cover), unreadable images still use the clock color. VERIFIED LIVE: two gray covers gave rgb(158,158,158), colorful covers kept their own colors, on-accent text stays readable. Not checked: the look on every surface (CD ring, fLUX tint, mini player, light themes).
+## Next action
+Phase 1 is done except the items above and the fLUX decisions (#861, #855, #831). Run the phase smoke test (QA section of PROJECT_PLAN.md), then merge agent/backlog-phase1 to main, then Phase 2 (#746, #781/#870, #805).
