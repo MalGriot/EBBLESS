@@ -8,6 +8,7 @@ Baseline: main @ 08d49e2, tree clean, scripts/check.sh passes.
 - #838/#809 fLUX: openMilk closes video card, cymatics, lyrics first (index.html ~34490). Unverified live. Art-style cycling: key 1 already cycled art, CD, cassette, LP with fLUX staying open behind the disc/tape (VERIFIED LIVE, no change needed). Added: plain art now sits faded (40%) over fLUX instead of covering it (VERIFIED LIVE, inline buttons still clickable). Fullscreen variant NOT tested (CSS shared; needs a real fullscreen check).
 
 - #822 unheart: the playing song stays in the queue and keeps playing, no skip; only the saved Liked list loses it (likeGhosts, playlistForWrite in index.html). VERIFIED LIVE: unheart keeps title, reheart restores original order, next goes to the right song, later plays do not re-add it. Thumbs down (CuRRentSSsss decline) already plays next; unchanged. Not tested: signed-in sync, unheart from the queue panel or library rows.
+- #824 queue: Played songs now sit above Now (was below the upcoming list), Now is lined up at the top of the view, and the list slides back to it 4s after scrolling stops (smooth unless reduced motion). VERIFIED LIVE on a 37-row queue: opens with Now at offset 0, scrolled away, back at 0 after 5.5s idle, follows on next. Not tested: mobile width, reduced motion, long-press/swipe rows. This reverses the earlier #730 choice (Played at the bottom).
 
 ## Findings
 - #831 melt-in: milkLayer already fades opacity 1.6s over the page; ticket may mean over the *art style* in the inline box. Needs a live look before changing.
@@ -24,7 +25,7 @@ Then rest of Phase 1 (#836 #822 #827 #826 #824, #853 #837 #845, #872 #865 #866 #
 - Smoke test: partial (play, next, previous, fLUX, cymatics, video card ran; seek, pause, queue, library, reload NOT run).
 
 ## Next action
-#824 queue auto-scroll, #826 cmd/ctrl-click play next, #836 trailer in queue, then #853/#837/#845 art fade + color, #872/#865/#866/#867/#863 library.
+#826 cmd/ctrl-click play next, #836 trailer in queue, then #853/#837/#845 art fade + color, #872/#865/#866/#867/#863 library.
 
 ## Blocked on a decision (analysis done, no code changed)
 - (#822 moved to Done below; decided: unheart keeps playing, thumbs down skips.)
