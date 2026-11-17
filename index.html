@@ -1291,11 +1291,11 @@ html.reduce-motion .lib-grid:not(.is-list) .lib-card .info .name{display:block;w
 #browsePage{position:fixed;inset:0;z-index:54;background:var(--bg);display:flex;flex-direction:column}
 #browsePage[hidden]{display:none}
 /* the footer nav and the footer player stay visible and tappable: these pages and the artists window stop above them (like #503) */
-body:has(#mini-bar:not([hidden])) :is(#browsePage,#addSongsPage,#findMusic){bottom:57px}
-body.split-desktop:has(#mini-bar:not([hidden])) :is(#browsePage,#addSongsPage,#findMusic){bottom:55px}
+body:has(#mini-bar:not([hidden])) :is(#browsePage,#addSongsPage,#rsPage,#findMusic){bottom:57px}
+body.split-desktop:has(#mini-bar:not([hidden])) :is(#browsePage,#addSongsPage,#rsPage,#findMusic){bottom:55px}
 @media (max-width:859.98px){
-  body:not(.split-desktop) :is(#browsePage,#addSongsPage,#findMusic){bottom:calc(var(--nav-h) + var(--safe-b))}
-  body:not(.split-desktop):has(#mini-bar:not([hidden])) :is(#browsePage,#addSongsPage,#findMusic){bottom:calc(57px + var(--nav-h) + var(--safe-b))}
+  body:not(.split-desktop) :is(#browsePage,#addSongsPage,#rsPage,#findMusic){bottom:calc(var(--nav-h) + var(--safe-b))}
+  body:not(.split-desktop):has(#mini-bar:not([hidden])) :is(#browsePage,#addSongsPage,#rsPage,#findMusic){bottom:calc(57px + var(--nav-h) + var(--safe-b))}
   body:not(.split-desktop) :is(.bp-scroll,.fm-scroll){padding-bottom:20px}
 }
 .bp-head{flex:none;display:flex;align-items:center;gap:8px;padding:10px 14px;padding-top:calc(10px + var(--safe-t))}
@@ -1535,33 +1535,90 @@ body.split-desktop:has(#mini-bar:not([hidden])) :is(#browsePage,#addSongsPage,#f
 .rm-status[hidden]{display:none}
 .rm-status button{font:inherit;font-size:12.5px;font-weight:700;color:var(--accent);background:none;border:0;padding:0;cursor:pointer;text-decoration:underline}
 .rm-off{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:24px;color:var(--faint);font-size:14px;line-height:1.5}
-.rm-sheet{position:absolute;left:10px;right:10px;bottom:28px;z-index:3;max-width:460px;margin:0 auto;padding:14px 16px 16px;border-radius:18px;background:#1b1b1b;border:1px solid var(--border-2);box-shadow:0 10px 30px rgba(0,0,0,.5)}
-.rm-sheet[hidden]{display:none}
-.rm-sheet h2{margin:0 36px 2px 0;font-size:18px;font-weight:800;color:var(--text);overflow-wrap:anywhere}
-.rm-sheet h2:focus{outline:none}
-.rm-place{margin:0 0 8px;font-size:13.5px;color:var(--faint);overflow-wrap:anywhere}
-.rm-tags{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 12px}
-.rm-tags span{padding:3px 10px;border-radius:999px;background:var(--panel-3);color:var(--text);font-size:12px}
-.rm-x{position:absolute;right:8px;top:8px;width:36px;height:36px;border-radius:50%;border:0;background:var(--panel-3);color:var(--text);font-size:18px;cursor:pointer}
-.rm-act{display:flex;flex-wrap:wrap;gap:8px}
-.rm-act button,.rm-act a{min-height:44px;padding:0 18px;border-radius:999px;font:inherit;font-size:14.5px;font-weight:700;display:inline-flex;align-items:center;cursor:pointer;text-decoration:none;border:1px solid var(--border-2);background:var(--panel-2);color:var(--text)}
-.rm-act .rm-go{background:var(--accent);border-color:var(--accent);color:var(--on-accent,#151107)}
-.rm-act :focus-visible,.rm-x:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.rm-note{margin:10px 0 0;font-size:12.5px;line-height:1.4;color:var(--faint)}
 .rm-find{margin:0 0 12px}
+.rs-li{display:flex;align-items:stretch;gap:6px}
+.rs-li-open{flex:1;min-width:0;text-align:left;padding:10px 14px;border-radius:14px;border:1px solid var(--border);background:var(--panel);color:var(--text);font:inherit;font-size:14.5px;cursor:pointer;overflow-wrap:anywhere}
+.rs-li-open small{display:block;color:var(--faint);font-size:12.5px;margin-top:2px}
+.rs-li-open{display:flex;align-items:center;gap:10px}
+.rm-mk{width:38px;height:38px;padding:0;border-radius:50%;border:2.5px solid var(--accent);background:#151107;overflow:hidden;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.5)}
+.rm-mk img{display:block;width:100%;height:100%;object-fit:cover}
+.rm-mk:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.rs-li-img{flex:none;width:40px;height:40px;border-radius:10px;object-fit:cover;background:var(--panel-3)}
+.rs-li-txt{min-width:0;flex:1}
+.rs-li-name{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rs-li-play,.rs-li-save{flex:none;width:46px;border-radius:14px;border:1px solid var(--border-2);background:var(--panel-2);color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;font:inherit;font-size:22px;line-height:1}
+.rs-li-play{background:var(--accent);border-color:var(--accent);color:var(--on-accent,#151107)}
+.rs-li-play svg{width:22px;height:22px}
+.rs-li-save.is-saved{border-color:var(--accent);color:var(--accent)}
+.rs-li-open:focus-visible,.rs-li-play:focus-visible,.rs-li-save:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.rm-ctl .is-armed{background:var(--accent);color:var(--on-accent,#151107);border-color:var(--accent)}
+.rm-ctl svg{width:22px;height:22px}
+.rm-map.is-armed canvas{cursor:crosshair}
+.rm-pinfig{width:34px;height:46px;color:var(--accent);cursor:grab;display:block}
+.rm-here-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 10px}
+.rm-here-head h2{margin:0}
+.rm-clear{min-height:40px;padding:0 16px;border-radius:999px;border:1px solid var(--border-2);background:var(--panel-2);color:var(--text);font:inherit;font-size:14px;font-weight:700;cursor:pointer}
+.rm-clear[hidden]{display:none}
+.rm-clear:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.rm-found .rm-pl{border-color:var(--border-2)}
+.rm-found .rm-pl small{color:var(--accent)}
+.rm-found .rm-geo{text-align:center;color:var(--accent);font-weight:700}
+#rsPage{position:fixed;inset:0;z-index:54;background:var(--bg);display:flex;flex-direction:column}
+#rsPage[hidden]{display:none}
+.rs-scroll{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:0 0 calc(28px + var(--safe-b))}
+.rs-inner{max-width:640px;margin:0 auto}
+.rs-back{position:absolute;left:10px;top:calc(10px + var(--safe-t));z-index:5;width:44px;height:44px;border-radius:50%;border:0;background:rgba(0,0,0,.45);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.rs-back svg{width:22px;height:22px}
+.rs-back:focus-visible,.rs-bigplay:focus-visible,.rs-row :focus-visible,.rs-near button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.rs-cover{position:relative;height:clamp(250px,40vh,340px);border-radius:0 0 50% 50% / 0 0 38px 38px;overflow:hidden;display:flex;align-items:flex-start;justify-content:center;padding-top:calc(54px + var(--safe-t));box-sizing:border-box;background:linear-gradient(165deg,hsl(var(--rs-h,220),45%,34%),hsl(var(--rs-h,220),40%,12%))}
+.rs-cover::after{content:'';position:absolute;inset:0;pointer-events:none;background:linear-gradient(to bottom,rgba(0,0,0,.2),rgba(0,0,0,0) 30%,rgba(0,0,0,0) 45%,rgba(0,0,0,.72))}
+.rs-cover img{position:relative;z-index:1;width:124px;height:124px;border-radius:26px;object-fit:cover;box-shadow:0 8px 24px rgba(0,0,0,.4);background:rgba(255,255,255,.08)}
+.rs-heroText{position:absolute;z-index:2;left:20px;right:104px;bottom:26px;color:#fff;text-shadow:0 1px 8px rgba(0,0,0,.5)}
+.rs-meta{font-size:12px;opacity:.88}
+.rs-heroText h2{margin:4px 0 0;font-size:28px;font-weight:800;line-height:1.1;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.rs-heroText h2:focus{outline:none}
+.rs-heroWrap{position:relative;margin-bottom:46px}
+.rs-bigplay{position:absolute;right:22px;bottom:-32px;z-index:3;width:64px;height:64px;border-radius:50%;border:0;background:var(--accent);color:var(--on-accent,#151107);display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 0 0 5px var(--bg),0 6px 18px rgba(0,0,0,.45)}
+.rs-bigplay svg{width:28px;height:28px}
+.rs-pad{padding:0 16px}
+.rs-note{margin:0 0 12px;font-size:13px;line-height:1.45;color:var(--faint)}
+.rs-row{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px}
+.rs-row button,.rs-row a{min-height:44px;padding:0 18px;border-radius:999px;border:1px solid var(--border-2);background:var(--panel-2);color:var(--text);font:inherit;font-size:14.5px;font-weight:700;display:inline-flex;align-items:center;cursor:pointer;text-decoration:none}
+.rs-row .is-saved{border-color:var(--accent);color:var(--accent)}
+.rs-sec{margin:22px 0 0}
+.rs-sec h3{margin:0 0 10px;font-size:17px;font-weight:700;color:var(--text)}
+.rs-sec p{margin:0;font-size:15px;line-height:1.5;color:var(--text);overflow-wrap:anywhere}
+.rs-sec a{color:var(--accent)}
+.rs-tags{display:flex;flex-wrap:wrap;gap:8px}
+.rs-tags span{padding:6px 14px;border-radius:999px;background:var(--panel-3);color:var(--text);font-size:13.5px}
+.rs-near ul{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.rs-near li>button{display:block;width:100%;text-align:left;padding:10px 14px;border-radius:14px;border:1px solid var(--border);background:var(--panel);color:var(--text);font:inherit;font-size:14.5px;cursor:pointer;overflow-wrap:anywhere}
+.rs-near small{display:block;color:var(--faint);font-size:12.5px;margin-top:2px}
+.lib-radio{margin:6px 0 14px}
+.lib-radio h3{margin:0 0 8px;font-size:15px;font-weight:700;color:var(--text)}
+.lib-radio-row{display:flex;gap:12px;overflow-x:auto;padding-bottom:6px;scrollbar-width:none}
+.lib-radio-row::-webkit-scrollbar{display:none}
+.lib-radio-card{flex:none;width:104px;position:relative;text-align:left}
+.lib-radio-open{display:block;width:100%;padding:0;border:0;background:none;color:var(--text);font:inherit;cursor:pointer;text-align:left}
+.lib-radio-open img{display:block;width:104px;height:104px;border-radius:16px;object-fit:cover;background:var(--panel-3)}
+.lib-radio-open span{display:block;margin-top:6px;font-size:13px;font-weight:600;line-height:1.25;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.lib-radio-open small{display:block;color:var(--faint);font-size:11.5px;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lib-radio-play{position:absolute;right:6px;top:70px;width:40px;height:40px;border-radius:50%;border:0;background:var(--accent);color:var(--on-accent,#151107);cursor:pointer;display:flex;align-items:center;justify-content:center}
+.lib-radio-play svg{width:20px;height:20px}
+.lib-radio-open:focus-visible,.lib-radio-play:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .rm-q{width:100%;box-sizing:border-box;height:46px;padding:0 16px;border-radius:999px;border:1px solid var(--border-2);background:var(--panel);color:var(--text);font:inherit;font-size:16px}
 .rm-q:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .rm-found-msg{margin:8px 4px 0;font-size:13px;color:var(--faint)}
 .rm-found-msg:empty{display:none}
 .rm-found{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:6px;max-height:min(46vh,360px);overflow:auto}
 .rm-found:empty{display:none}
-.rm-found li button{display:block;width:100%;text-align:left;padding:10px 14px;border-radius:14px;border:1px solid var(--border);background:var(--panel);color:var(--text);font:inherit;font-size:14.5px;cursor:pointer}
+.rm-found li>button{display:block;width:100%;text-align:left;padding:10px 14px;border-radius:14px;border:1px solid var(--border);background:var(--panel);color:var(--text);font:inherit;font-size:14.5px;cursor:pointer}
 .rm-found li button small{display:block;color:var(--faint);font-size:12.5px;margin-top:2px}
 .rm-found li button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .rm-here{margin:0 0 22px}
 .rm-here h2{font-size:18px;font-weight:700;margin:0 0 10px;color:var(--text)}
 .rm-here ul{list-style:none;margin:0;padding:0;display:grid;gap:6px}
-.rm-here li button{display:block;width:100%;text-align:left;padding:10px 14px;border-radius:14px;border:1px solid var(--border);background:var(--panel);color:var(--text);font:inherit;font-size:14.5px;cursor:pointer;overflow-wrap:anywhere}
+.rm-here li>button{display:block;width:100%;text-align:left;padding:10px 14px;border-radius:14px;border:1px solid var(--border);background:var(--panel);color:var(--text);font:inherit;font-size:14.5px;cursor:pointer;overflow-wrap:anywhere}
 .rm-here li button small{display:block;color:var(--faint);font-size:12.5px;margin-top:2px}
 .rm-here li button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .rm-wrap .maplibregl-ctrl-attrib,.rm-wrap .maplibregl-ctrl-attrib.maplibregl-compact{background:rgba(24,24,24,.94)!important;color:#c9c9c9!important}
@@ -1571,7 +1628,6 @@ body.split-desktop:has(#mini-bar:not([hidden])) :is(#browsePage,#addSongsPage,#f
 .live-tag{display:none}
 body.is-live-radio .seek-row>.t,body.is-live-radio .seek-row>.seek-track{display:none}
 body.is-live-radio .seek-row>.live-tag{display:block;flex:1;text-align:center;font-size:13px;font-weight:700;letter-spacing:.4px;color:var(--accent)}
-.rm-act .rm-live{background:transparent}
 /* Add songs: Home block and its own page. Static fills; only a one-shot transform/opacity entrance on the page and press feedback on cards.
    The page is display:none when closed, nothing here loops or blurs (GPU budget). */
 #addSongsPage{position:fixed;inset:0;z-index:53;background:var(--bg);display:flex;flex-direction:column}
@@ -3888,9 +3944,9 @@ body.split-desktop .install-banner{padding-left:24px;padding-right:12px}
      bottom padding (38px art + 8px*2 padding + 1px border) only while it's
      actually shown, so the 1fr pane row shrinks to sit above it instead of
      being overlapped - and normal (non-Settings) desktop view is untouched. */
-  body.split-desktop:not(.view-settings-active):not(.view-home-active):not(:has(#import-overlay.is-open)):not(:has(#browsePage:not([hidden]))):not(:has(#addSongsPage:not([hidden]))):not(:has(#findMusic:not([hidden]))) #mini-bar{display:none!important}
+  body.split-desktop:not(.view-settings-active):not(.view-home-active):not(:has(#import-overlay.is-open)):not(:has(#browsePage:not([hidden]))):not(:has(#addSongsPage:not([hidden]))):not(:has(#rsPage:not([hidden]))):not(:has(#findMusic:not([hidden]))) #mini-bar{display:none!important}
   body.split-desktop:is(.view-settings-active,.view-home-active,:has(#import-overlay.is-open)):has(#mini-bar:not([hidden])) #app{padding-bottom:55px}
-  body.split-desktop:is(:has(#import-overlay.is-open),:has(#browsePage:not([hidden])),:has(#addSongsPage:not([hidden])),:has(#findMusic:not([hidden]))) #mini-bar:not([hidden]){display:flex}   /* #665: the search window keeps the footer player, like Settings */
+  body.split-desktop:is(:has(#import-overlay.is-open),:has(#browsePage:not([hidden])),:has(#addSongsPage:not([hidden])),:has(#rsPage:not([hidden])),:has(#findMusic:not([hidden]))) #mini-bar:not([hidden]){display:flex}   /* #665: the search window keeps the footer player, like Settings */
   /* :not(.desktop-fs) on .view-scroll only: without it, this override
      survives into the desktop-fs full-width #view-player and cancels the
      margin:0 auto centering .view-scroll gets from its base rule (line
@@ -5121,6 +5177,7 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
   <main class="view" id="view-library">
     <!-- the library no longer has its own background video: the player's ambient artwork background (#ambient) shows on every screen -->
     <div class="view-scroll">
+      <div id="libraryRadio" class="lib-radio hidden"><h3>Radio</h3><div class="lib-radio-row" id="libraryRadioRow"></div></div>
       <div id="libraryEmpty" class="empty-lib hidden">
         <div class="queue-head"><h2>Library</h2></div>
         Paste a playlist, album, song, or podcast link to begin.
@@ -6229,6 +6286,9 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
         <li><a href="https://soundcloud.com" target="_blank" rel="noopener">SoundCloud</a><span>Playback and SoundCloud links</span></li>
         <li><a href="https://open.spotify.com" target="_blank" rel="noopener" id="creditsSpotifyLink">Spotify</a><span id="creditsSpotifyDesc">Playlist, album and song links, cover art</span></li>
         <li><a href="https://music.apple.com" target="_blank" rel="noopener">Apple Music</a><span>Playlist, album and song links, cover art</span></li>
+        <li><a href="https://open-meteo.com/en/docs/geocoding-api" target="_blank" rel="noopener">Open-Meteo Geocoding</a><span>Town and zip code suggestions on the region map (GeoNames data)</span></li>
+        <li><a href="https://photon.komoot.io" target="_blank" rel="noopener">Photon</a><span>Town, street and zip code suggestions on the region map, from OpenStreetMap data</span></li>
+        <li><a href="https://nominatim.openstreetmap.org" target="_blank" rel="noopener">OpenStreetMap Nominatim</a><span>Place search on the region map and a station's street-level place, only when you ask for it or open a station</span></li>
         <li><a href="https://www.radio-browser.info" target="_blank" rel="noopener">Radio Browser</a><span>Community radio station directory for the region map</span></li>
         <li><a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a><span>Map tiles for the region map, with data from <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors</a></span></li>
         <li><a href="https://maplibre.org" target="_blank" rel="noopener">MapLibre</a><span>Open source map renderer</span></li>
@@ -10670,7 +10730,7 @@ function bpBuild(){
   document.body.appendChild(bpEl);
   $('bpBack').addEventListener('click', closeBrowsePage);
   document.addEventListener('keydown', (e) => {
-    if (e.key !== 'Escape' || bpEl.hidden || (fmEl && !fmEl.hidden) || musicMapOpen() || importOverlay.classList.contains('is-open')) return;
+    if (e.key !== 'Escape' || bpEl.hidden || (fmEl && !fmEl.hidden) || rsOpenNow() || musicMapOpen() || importOverlay.classList.contains('is-open')) return;
     e.preventDefault();
     if (bpFilterEl && document.activeElement === bpFilterEl && bpFilterEl.value){ bpFilterEl.value = ''; bpFilter = ''; bpRender(); return; }
     closeBrowsePage();
@@ -10720,12 +10780,12 @@ function bpRenderTop(){
     top.appendChild(box);
     return;
   }
+  if (bpKind === 'region'){ rmMount(top); return; }   // one search box, on the map: towns, zip codes, regions and stations
   const f = bpMk('label', 'bp-field');
   f.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>';
   const input = bpMk('input'); input.type = 'search'; input.maxLength = 60; input.placeholder = BP_KINDS[bpKind].filter;
   input.setAttribute('aria-label', BP_KINDS[bpKind].filter); input.autocomplete = 'off'; input.spellcheck = false; input.setAttribute('enterkeyhint', 'search');
   input.addEventListener('input', () => { bpFilter = input.value; bpRender(); });
-  if (bpKind === 'region') rmMount(top);
   f.appendChild(input); top.appendChild(f); bpFilterEl = input;
   if (bpKind === 'genre') gmTopControls(top);
 }
@@ -11959,7 +12019,8 @@ function rmNormalize(r, loose){
   const seen = {}, tags = [];
   String(r.tags || '').split(',').forEach(t => { t = t.trim().toLowerCase().slice(0, 24); if (t.length > 1 && !seen[t] && tags.length < 6){ seen[t] = 1; tags.push(t); } });
   return { id, name, url, lat, lng, cc: /^[A-Za-z]{2}$/.test(String(r.countrycode || '')) ? String(r.countrycode).toUpperCase() : '', state: String(r.state || '').trim().slice(0, 60), country: rmCountry(r.country).slice(0, 60),
-    tags, bitrate: Math.max(0, Math.min(2000, Math.round(Number(r.bitrate) || 0))), votes: Math.max(0, Number(r.votes) || 0), home: rmHttps(r.homepage) };
+    tags, bitrate: Math.max(0, Math.min(2000, Math.round(Number(r.bitrate) || 0))), votes: Math.max(0, Number(r.votes) || 0), home: rmHttps(r.homepage),
+    favicon: rmHttps(r.favicon), lang: String(r.language || '').replace(/\s+/g, ' ').trim().slice(0, 40), codec: String(r.codec || '').slice(0, 12), clicks: Math.max(0, Number(r.clickcount) || 0), checked: String(r.lastcheckoktime_iso8601 || '').slice(0, 25) };
 }
 // a search term for EBBLESS songs from the station's place and genre (same search the region cards use)
 function rmSongsTerm(st){
@@ -11978,13 +12039,120 @@ function rmSongsTerms(st){
   return out.slice(0, 6);
 }
 // the shared snapshot (data/radio/stations.json) stores one station as a short array; read it back defensively
-function rmToRow(s){ return [s.id, s.name, s.url, +s.lat.toFixed(4), +s.lng.toFixed(4), s.state, s.country, s.cc, s.tags.join('|'), s.bitrate, s.votes]; }
+function rmToRow(s, full){
+  const row = [s.id, s.name, s.url, s.lat == null ? null : +s.lat.toFixed(4), s.lng == null ? null : +s.lng.toFixed(4), s.state, s.country, s.cc, s.tags.join('|'), s.bitrate, s.votes];
+  if (full) row.push(s.home || '', s.favicon || '', s.lang || '', s.codec || '');
+  return row;
+}
 function rmFromRow(a){
   if (!Array.isArray(a) || a.length < 11) return null;
-  const url = rmHttps(a[2]), lat = Number(a[3]), lng = Number(a[4]), id = String(a[0] || '').slice(0, 64), name = String(a[1] || '').replace(/\s+/g, ' ').trim().slice(0, 80);
-  if (!url || !name || !/^[\w-]+$/.test(id) || !isFinite(lat) || !isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) return null;
+  const url = rmHttps(a[2]), id = String(a[0] || '').slice(0, 64), name = String(a[1] || '').replace(/\s+/g, ' ').trim().slice(0, 80);
+  const noPin = a[3] === null || a[3] === '' || a[4] === null || a[4] === '';
+  const lat = noPin ? null : Number(a[3]), lng = noPin ? null : Number(a[4]);
+  if (!url || !name || !/^[\w-]+$/.test(id)) return null;
+  if (!noPin && (!isFinite(lat) || !isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180)) return null;
   return { id, name, url, lat, lng, state: String(a[5] || '').slice(0, 60), country: String(a[6] || '').slice(0, 60), cc: /^[A-Z]{2}$/.test(String(a[7] || '')) ? a[7] : '',
-    tags: String(a[8] || '').split('|').filter(Boolean).slice(0, 6).map(t => t.slice(0, 24)), bitrate: Math.max(0, Math.min(2000, Math.round(Number(a[9]) || 0))), votes: Math.max(0, Number(a[10]) || 0), home: '' };
+    tags: String(a[8] || '').split('|').filter(Boolean).slice(0, 6).map(t => t.slice(0, 24)), bitrate: Math.max(0, Math.min(2000, Math.round(Number(a[9]) || 0))), votes: Math.max(0, Number(a[10]) || 0),
+    home: rmHttps(a[11]), favicon: rmHttps(a[12]), lang: String(a[13] || '').slice(0, 40), codec: String(a[14] || '').slice(0, 12), clicks: 0, checked: '' };
+}
+// letters and numbers only, so a station's initials can go straight into a drawn logo
+function rmInitials(name){
+  const w = String(name || '').match(/[\p{L}\p{N}]+/gu) || [];
+  return (w.length > 1 ? w[0][0] + w[1][0] : (w[0] || '?').slice(0, 2)).toUpperCase();
+}
+// a drawn logo for a station that has none (or whose logo will not load): its initials on a colour taken from its name
+function rmHue(name){ let h = 0; String(name || '').split('').forEach(c => { h = (h * 31 + c.charCodeAt(0)) >>> 0; }); return h % 360; }
+function rmTileUrl(name){
+  const h = rmHue(name);
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300"><rect width="300" height="300" fill="hsl(' + h + ',42%,30%)"/><text x="150" y="150" font-family="sans-serif" font-size="110" font-weight="800" fill="#fff" text-anchor="middle" dominant-baseline="central">' + rmInitials(name) + '</text></svg>';
+  return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+}
+// tags as genres people would name: generic ones dropped, a tag inside a longer one folded into it ("pop" into "hindi pop"), words capitalised
+function rmGenres(tags, max){
+  const generic = RM_GENERIC_TAGS, seen = new Set(), t = [];
+  (tags || []).forEach(x => { x = String(x || '').trim().toLowerCase().replace(/\s+/g, ' ').slice(0, 30); if (x.length > 1 && generic.indexOf(x) < 0 && !seen.has(x)){ seen.add(x); t.push(x); } });
+  const keep = t.filter(x => !t.some(y => y !== x && y.length > x.length && (' ' + y + ' ').indexOf(' ' + x + ' ') >= 0));
+  return keep.slice(0, max || 8).map(x => x.replace(/(^|[\s-])(\p{L})/gu, (m, a, b) => a + b.toUpperCase()));
+}
+// a street-level-to-country line from a geocoder address: neighbourhood, city, state, country, each once
+function rmPlaceLine(a){
+  if (!a || typeof a !== 'object') return '';
+  const pick = (...k) => { for (const x of k){ if (a[x]) return String(a[x]); } return ''; };
+  const parts = [pick('suburb', 'neighbourhood', 'city_district', 'quarter'), pick('city', 'town', 'village', 'municipality', 'county'), pick('state', 'region'), pick('country')];
+  const out = [];
+  parts.forEach(x => { x = x.trim().slice(0, 50); if (x && !out.some(y => rmFold(y) === rmFold(x))) out.push(x); });
+  return out.slice(0, 4).join(', ');
+}
+function rmFold(t){ return String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim(); }
+// the places that stations sit in (countries, then regions), with a centre and a box, built from any list of stations
+function rmBuildPlaces(list){
+  const by = new Map();
+  const add = (key, base, s) => {
+    let p = by.get(key);
+    if (!p){ p = Object.assign({ n: 0, la: 0, lo: 0, s: 90, w: 180, nn: -90, e: -180 }, base); by.set(key, p); }
+    p.n++; p.la += s.lat; p.lo += s.lng; p.s = Math.min(p.s, s.lat); p.nn = Math.max(p.nn, s.lat); p.w = Math.min(p.w, s.lng); p.e = Math.max(p.e, s.lng);
+  };
+  list.forEach(s => {
+    if (!s || s.lat == null || !s.country) return;
+    add('c|' + (s.cc || s.country), { name: s.country, kind: 'country', sub: '' }, s);
+    if (s.state && rmFold(s.state) !== rmFold(s.country)) add('r|' + (s.cc || s.country) + '|' + rmFold(s.state), { name: s.state, kind: 'region', sub: s.country }, s);
+  });
+  return [...by.values()].map(p => ({ name: p.name, kind: p.kind, sub: p.sub, n: p.n, lat: +(p.la / p.n).toFixed(3), lng: +(p.lo / p.n).toFixed(3), box: [p.w, p.s, p.e, p.nn] }));
+}
+function rmPlaceSearch(places, q, max){
+  q = rmFold(q);
+  if (q.length < 2) return [];
+  const hit = [];
+  places.forEach(p => { const n = rmFold(p.name); const at = n.startsWith(q) ? 0 : n.split(/[\s,-]+/).some(w => w.startsWith(q)) ? 1 : n.includes(q) ? 2 : -1; if (at >= 0) hit.push({ p, at }); });
+  hit.sort((a, b) => a.at - b.at || (a.p.kind === b.p.kind ? b.p.n - a.p.n : a.p.kind === 'country' ? -1 : 1));
+  return hit.slice(0, max || 5).map(x => x.p);
+}
+// one OpenStreetMap geocoder row -> a place the map can fly to, or null
+function rmGeoPlace(r){
+  if (!r || typeof r !== 'object') return null;
+  const lat = Number(r.lat), lng = Number(r.lon), b = Array.isArray(r.boundingbox) ? r.boundingbox.map(Number) : null;
+  if (!isFinite(lat) || !isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) return null;
+  const parts = String(r.display_name || '').split(',').map(x => x.trim()).filter(Boolean);
+  const name = String(r.name || parts[0] || '').slice(0, 80);
+  if (!name) return null;
+  const box = b && b.length === 4 && b.every(isFinite) ? [b[2], b[0], b[3], b[1]] : [lng - 0.2, lat - 0.2, lng + 0.2, lat + 0.2];   // Nominatim gives south, north, west, east
+  return { name, kind: 'place', sub: parts.slice(1).slice(-2).join(', ').slice(0, 80), n: 0, lat, lng, box };
+}
+// the stations nearest a spot, closest first, each with its distance in metres
+function rmNearest(list, lat, lng, max){
+  const out = [];
+  (list || []).forEach(s => { if (s && s.lat != null && s.lng != null) out.push({ s, d: rmDistM(lat, lng, s.lat, s.lng) }); });
+  out.sort((a, b) => a.d - b.d || b.s.votes - a.s.votes);
+  return out.slice(0, max || 30);
+}
+function rmKm(m){ return m < 1000 ? Math.round(m / 10) * 10 + ' m' : m < 10000 ? (m / 1000).toFixed(1) + ' km' : Math.round(m / 1000) + ' km'; }
+// one Photon (OpenStreetMap search-as-you-type) feature -> a place the map can fly to, or null
+function rmPhotonPlace(f){
+  if (!f || !f.geometry || !Array.isArray(f.geometry.coordinates) || !f.properties) return null;
+  const lng = Number(f.geometry.coordinates[0]), lat = Number(f.geometry.coordinates[1]), p = f.properties;
+  if (!isFinite(lat) || !isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) return null;
+  const name = String(p.name || p.postcode || p.street || '').trim().slice(0, 80);
+  if (!name) return null;
+  const type = String(p.type || '');
+  const kind = type === 'country' ? 'country' : /^(state|county|region)$/.test(type) ? 'region' : 'place';
+  const sub = [];
+  [p.postcode && String(p.postcode) !== name ? p.postcode : '', p.district, p.city, p.county, p.state, p.country].forEach(x => { x = String(x || '').trim(); if (x && x !== name && sub.indexOf(x) < 0) sub.push(x.slice(0, 40)); });
+  const e = Array.isArray(p.extent) && p.extent.length === 4 ? p.extent.map(Number) : null;
+  const box = e && e.every(isFinite) ? [e[0], e[3], e[2], e[1]] : [lng - 0.01, lat - 0.01, lng + 0.01, lat + 0.01];   // Photon gives west, north, east, south
+  return { name, kind, sub: sub.slice(0, 3).join(', '), n: 0, lat, lng, box };
+}
+// one Open-Meteo geocoding row (GeoNames towns and zip areas; quick and steady) -> a place, or null
+function rmOpenMeteoPlace(r, q){
+  if (!r || typeof r !== 'object') return null;
+  const lat = Number(r.latitude), lng = Number(r.longitude), name = String(r.name || '').trim().slice(0, 80);
+  if (!name || !isFinite(lat) || !isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) return null;
+  const code = String(r.feature_code || '');
+  const kind = /^PCL/.test(code) ? 'country' : /^ADM[12]/.test(code) ? 'region' : 'place';
+  const zip = (Array.isArray(r.postcodes) ? r.postcodes : []).map(String).find(z => q && String(q).replace(/\s+/g, '').length >= 3 && z.toLowerCase().indexOf(String(q).replace(/\s+/g, '').toLowerCase()) === 0) || '';
+  const sub = [];
+  [zip, r.admin2, r.admin1, r.country].forEach(x => { x = String(x || '').trim(); if (x && x !== name && sub.indexOf(x) < 0) sub.push(x.slice(0, 40)); });
+  const d = kind === 'country' ? 5 : kind === 'region' ? 1.2 : 0.12;
+  return { name, kind, sub: sub.slice(0, 3).join(', '), n: 0, lat, lng, box: [lng - d, lat - d, lng + d, lat + d] };
 }
 function rmGeo(list){
   const f = [];
@@ -12002,7 +12170,7 @@ const RM_STYLE = 'https://tiles.openfreemap.org/styles/dark';
 const RM_FALLBACK_HOSTS = ['de1', 'de2', 'fi1'].map(h => 'https://' + h + '.api.radio-browser.info');
 const RM_LIMIT = 120, RM_MAX_STATIONS = 14000, RM_PARALLEL = 2;
 let rmMap = null, rmWrap = null, rmLoadP = null, rmGen = 0, rmView = null, rmSel = null, rmServersP = null, rmServerAt = 0;
-let rmQT = 0, rmQSeq = 0, rmMoveT = 0, rmPushT = 0, rmQueue = [], rmBusy = 0, rmFail = false, rmVisBound = false;
+let rmPin = null, rmPinMk = null, rmPinSeq = 0, rmArmed = false, rmQT = 0, rmQSeq = 0, rmMoveT = 0, rmPushT = 0, rmQueue = [], rmBusy = 0, rmFail = false, rmVisBound = false;
 const rmSt = new Map(), rmDone = new Set(), rmFlight = new Set();
 // Shared snapshot of the world's stations, refreshed by scripts/refresh-radio.js on a schedule (data/radio/). The map shows it at once and only
 // asks the live directory for detail when zoomed in, so opening the map does not hit Radio Browser (or iTunes, for the artist lists) every time.
@@ -12094,7 +12262,9 @@ function rmPump(){
 }
 function rmSettle(){
   if (!rmWrap) return;
-  if (rmBusy || rmQueue.length) rmStatus('Loading stations…');
+  if (rmArmed) rmStatus('Tap the map to drop the pin. Tap the pin button again to drop it at the centre.');
+  else if (rmPin && rmPin.loading) rmStatus('Finding stations near your pin\u2026');
+  else if (rmBusy || rmQueue.length) rmStatus('Loading stations…');
   else if (rmFail) rmStatus('Could not reach the radio directory.', true);
   else if (!rmListNow().length) rmStatus('No stations here yet. Zoom out or try another area.');
   else rmStatus('');
@@ -12117,89 +12287,385 @@ function rmListNow(){
 function rmListRender(){
   const box = rmWrap && rmWrap.querySelector('.rm-here');
   if (!box) return;
-  const ul = box.querySelector('ul'), items = rmListNow();
+  const ul = box.querySelector('ul'), clear = box.querySelector('.rm-clear'), head = box.querySelector('h2');
   ul.textContent = '';
-  box.hidden = !items.length;
-  items.forEach(s => {
-    const li = document.createElement('li'), b = bpMk('button', '', s.name); b.type = 'button';
-    b.appendChild(bpMk('small', '', [s.state, s.country].filter(Boolean).join(', ') + (s.tags.length ? ' · ' + s.tags.slice(0, 3).join(', ') : '')));
-    b.addEventListener('click', () => rmSelect(s, b));
-    li.appendChild(b); ul.appendChild(li);
-  });
+  let rows;
+  if (rmPin){
+    rows = rmNearest([...rmSt.values()], rmPin.lat, rmPin.lng, 30);
+    head.textContent = 'Near your pin'; clear.hidden = false;
+  } else {
+    rows = rmListNow().map(s => ({ s, d: null }));
+    head.textContent = 'Stations in view'; clear.hidden = true;
+  }
+  box.hidden = !rows.length && !rmPin;
+  rows.forEach(({ s, d }) => ul.appendChild(rsRow(s, (d != null ? rmKm(d) + ' away \u00b7 ' : '') + [s.state, s.country].filter(Boolean).join(', ') + (s.tags.length ? ' \u00b7 ' + s.tags.slice(0, 3).join(', ') : ''))));
   rmSettle();
 }
-function rmSearchRun(q){
+// ---- the pin: a little figure you place anywhere; the map zooms to it and lists the stations nearest that spot ----
+function rmArmSync(){
+  const b = rmWrap && rmWrap.querySelector('[data-rm="pin"]'), m = rmWrap && rmWrap.querySelector('.rm-map');
+  if (b){ b.classList.toggle('is-armed', rmArmed); b.setAttribute('aria-pressed', String(rmArmed)); }
+  if (m) m.classList.toggle('is-armed', rmArmed);
+  rmSettle();
+}
+function rmPinButton(){
+  if (!rmMap) return;
+  if (rmArmed){ rmDropPin(rmMap.getCenter()); return; }   // a second press (or no pointer) drops it at the centre
+  rmArmed = true; rmArmSync();
+}
+function rmMountPin(){
+  if (!rmMap || !rmPin || typeof maplibregl === 'undefined') return;
+  if (rmPinMk){ rmPinMk.setLngLat([rmPin.lng, rmPin.lat]); return; }
+  const el = document.createElement('div');
+  el.setAttribute('aria-hidden', 'true');
+  el.innerHTML = '<svg class="rm-pinfig" viewBox="0 0 34 46"><path d="M17 45C9 33 3 27 3 17a14 14 0 0 1 28 0c0 10-6 16-14 28z" fill="currentColor" stroke="#151107" stroke-width="2"/><circle cx="17" cy="11" r="3.6" fill="#151107"/><path d="M17 16c-3.6 0-5.8 1.8-5.8 4.2v2.4h2.2v6h7.2v-6h2.2v-2.4c0-2.4-2.2-4.2-5.8-4.2z" fill="#151107"/></svg>';
+  rmPinMk = new maplibregl.Marker({ element: el, anchor: 'bottom', draggable: true }).setLngLat([rmPin.lng, rmPin.lat]).addTo(rmMap);
+  rmPinMk.on('dragend', () => { const ll = rmPinMk.getLngLat(); rmDropPin(ll, true); });
+}
+function rmDropPin(ll, dragged){
+  if (!rmMap) return;
+  rmArmed = false; rmArmSync();
+  rmPin = { lat: ll.lat, lng: ll.lng, loading: true, seq: ++rmPinSeq };
+  rmMountPin();
+  try { rmMap.easeTo({ center: [ll.lng, ll.lat], zoom: dragged ? rmMap.getZoom() : 10, duration: dragged ? 0 : 500 }); } catch(e){}
+  statsFeature('region_map_pin');
+  rmPinLoad(rmPin);
+  rmListRender();
+}
+function rmClearPin(){
+  rmPin = null; rmPinSeq++;
+  if (rmPinMk){ try { rmPinMk.remove(); } catch(e){} rmPinMk = null; }
+  rmListRender(); rmFetchView();
+}
+// stations around the pin: ask the directory in widening rings until enough turn up, then everything known is ranked by distance
+async function rmPinLoad(pin){
+  const rings = [25000, 100000, 400000];
+  try {
+    for (const m of rings){
+      const rows = await rmGet('/json/stations/search?has_geo_info=true&hidebroken=true&is_https=true&order=votes&reverse=true&limit=60&geo_lat=' + pin.lat.toFixed(4) + '&geo_long=' + pin.lng.toFixed(4) + '&geo_distance=' + m);
+      if (pin !== rmPin) return;
+      let n = 0;
+      (Array.isArray(rows) ? rows : []).forEach(r => { const st = rmNormalize(r); if (st){ n++; if (!rmSt.has(st.id)) rmSt.set(st.id, st); } });
+      if (n >= 8) break;
+    }
+  } catch(e){ if (pin === rmPin) rmFail = true; }
+  if (pin !== rmPin) return;
+  pin.loading = false;
+  rmPushSoon();
+  rmListRender();
+  if (rmMap && rmPin === pin){
+    const near = rmNearest([...rmSt.values()], pin.lat, pin.lng, 8);
+    const far = near.length ? near[near.length - 1].d : 0;
+    if (far > 60000){ try { rmMap.easeTo({ center: [pin.lng, pin.lat], zoom: far > 250000 ? 5 : 7, duration: 500 }); } catch(e){} }   // nothing close: pull back to where the nearest ones are
+  }
+}
+let rmPlacesAt = -1, rmPlacesList = [];
+function rmPlaces(){
+  if (rmSt.size !== rmPlacesAt){ rmPlacesAt = rmSt.size; rmPlacesList = rmBuildPlaces([...rmSt.values()]); }
+  return rmPlacesList;
+}
+// fly the map to a place: a country, a region of stations, or anywhere the geocoder found
+function rmGoPlace(p){
+  if (!rmWrap) return;
+  if (!rmMap){ rmStatus('The map is not running here, so there is nothing to move.'); return; }
+  const cap = p.kind === 'country' ? 6 : p.kind === 'region' ? 9 : 12;
+  let [w, s, e, n] = p.box;
+  if (e - w < 0.3){ w -= 0.15; e += 0.15; }
+  if (n - s < 0.3){ s -= 0.15; n += 0.15; }
+  try { rmMap.fitBounds([[w, s], [e, n]], { padding: 30, maxZoom: cap, duration: 600 }); } catch(e2){ rmMap.easeTo({ center: [p.lng, p.lat], zoom: cap - 2, duration: 600 }); }
+  const mp = rmWrap.querySelector('.rm-wrap'); if (mp) mp.scrollIntoView({ block: 'nearest' });
+  statsFeature('region_map_place');
+}
+function rmPlaceRow(p){
+  const li = document.createElement('li'), b = bpMk('button', 'rm-pl', p.name); b.type = 'button';
+  b.appendChild(bpMk('small', '', (p.kind === 'country' ? 'Country' : p.kind === 'region' ? 'Region' : 'Place') + (p.sub ? ' · ' + p.sub : '') + (p.n ? ' · ' + p.n + ' stations' : '')));
+  b.addEventListener('click', () => rmGoPlace(p));
+  li.appendChild(b);
+  // #850: a country is also a place people want artists from, not only stations (Ethiopia found nobody before)
+  if (p.kind === 'country'){
+    const a = bpMk('button', 'rm-pl rm-pl-art', 'Artists from ' + p.name); a.type = 'button';
+    a.addEventListener('click', () => {
+      bpLastEl = a;
+      const terms = [p.name + ' music', p.name + ' pop', p.name + ' hip hop', p.name + ' traditional'];
+      fmOpenResults(terms, p.name, null, null, '', null);   // no store country: many countries have no music store of their own, so searching only their store found nobody
+    });
+    li.appendChild(a);
+  }
+  return li;
+}
+// search as you type: the map's own index of regions, then any town, street or zip code in the world (Photon, OpenStreetMap data), then stations by name.
+// Each source paints as soon as it answers, so a slow one never holds up the others.
+function rmSearchRun(q, ask){
   const box = rmWrap && rmWrap.querySelector('.rm-find');
   if (!box) return;
   const ul = box.querySelector('ul'), msg = box.querySelector('.rm-found-msg'), seq = ++rmQSeq;
   q = String(q || '').replace(/\s+/g, ' ').trim().slice(0, 60);
   ul.textContent = '';
   if (q.length < 2){ msg.textContent = ''; return; }
-  msg.textContent = 'Searching\u2026';
-  rmGet('/json/stations/search?name=' + encodeURIComponent(q) + '&hidebroken=true&is_https=true&order=votes&reverse=true&limit=30').then(rows => {
+  const places = rmPlaceSearch(rmPlaces(), q, 3);
+  const st = { geo: undefined, om: undefined, rows: undefined };   // undefined = still waiting, null = failed
+  const paint = () => {
     if (seq !== rmQSeq || !rmWrap) return;
+    ul.textContent = '';
+    const seenP = new Set(), shown = [];
+    const pushPlace = (p) => { const k = rmFold(p.name + '|' + p.sub); if (!seenP.has(k)){ seenP.add(k); shown.push(p); } };
+    places.forEach(pushPlace);
+    ((st.om && st.om.results) || []).map(r => rmOpenMeteoPlace(r, q)).filter(Boolean).forEach(pushPlace);
+    ((st.geo && st.geo.features) || []).map(rmPhotonPlace).filter(Boolean).forEach(pushPlace);
+    ((st.geo && st.geo.nm) || []).map(rmGeoPlace).filter(Boolean).forEach(pushPlace);
+    shown.forEach(p => ul.appendChild(rmPlaceRow(p)));
     const seen = new Set(), list = [];
-    (Array.isArray(rows) ? rows : []).forEach(r => { const s = rmNormalize(r, true); if (s && !seen.has(s.id)){ seen.add(s.id); list.push(s); } });
-    msg.textContent = list.length ? '' : 'No station found for that name.';
-    list.forEach(s => {
-      const li = document.createElement('li'), b = bpMk('button', '', s.name); b.type = 'button';
-      b.appendChild(bpMk('small', '', [s.state, s.country].filter(Boolean).join(', ') + (s.tags.length ? ' \u00b7 ' + s.tags.slice(0, 3).join(', ') : '')));
-      b.addEventListener('click', () => { if (s.lat != null && !rmSt.has(s.id)){ rmSt.set(s.id, s); rmPushSoon(); } rmSelect(s, b); });
-      li.appendChild(b); ul.appendChild(li);
-    });
-  }).catch(() => { if (seq === rmQSeq && rmWrap) msg.textContent = 'Could not reach the radio directory. Try again.'; });
+    (Array.isArray(st.rows) ? st.rows : []).forEach(r => { const x = rmNormalize(r, true); if (x && !seen.has(x.id)){ seen.add(x.id); list.push(x); } });
+    list.forEach(x => ul.appendChild(rsRow(x, [x.state, x.country].filter(Boolean).join(', ') + (x.tags.length ? ' · ' + x.tags.slice(0, 3).join(', ') : ''))));
+    const waiting = st.geo === undefined || st.om === undefined || st.rows === undefined;
+    msg.textContent = waiting ? (shown.length || list.length ? '' : 'Searching…') : shown.length || list.length ? '' : st.rows === null && st.geo === null && st.om === null ? 'Could not reach the search services. Try again.' : 'Nothing found for that. Try a town, a zip code or a station name.';
+  };
+  paint();
+  const ctl = new AbortController(), tmo = setTimeout(() => ctl.abort(), 6000), ctl2 = new AbortController(), tmo2 = setTimeout(() => ctl2.abort(), 5000);
+  fetch('https://geocoding-api.open-meteo.com/v1/search?' + new URLSearchParams({ name: q, count: '6', language: 'en' }), { credentials: 'omit', signal: ctl2.signal }).then(r => r.ok ? r.json() : null).catch(() => null).then(d => { clearTimeout(tmo2); st.om = d || (d === null ? null : { results: [] }); paint(); });
+  const photon = q.length >= 3 ? fetch('https://photon.komoot.io/api/?' + new URLSearchParams({ q, limit: '6' }), { credentials: 'omit', signal: ctl.signal }).then(r => r.ok ? r.json() : null).catch(() => null) : Promise.resolve({ features: [] });
+  photon.then(async (geo) => {
+    clearTimeout(tmo);
+    if (geo === null && ask){   // Photon is down or slow: on Enter, ask OpenStreetMap's own search once
+      const nm = await fetch('https://nominatim.openstreetmap.org/search?' + new URLSearchParams({ q, format: 'jsonv2', limit: '5' }), { credentials: 'omit' }).then(r => r.ok ? r.json() : null).catch(() => null);
+      geo = nm ? { features: [], nm } : null;
+    }
+    st.geo = geo; paint();
+  });
+  rmGet('/json/stations/search?name=' + encodeURIComponent(q) + '&hidebroken=true&is_https=true&order=votes&reverse=true&limit=30').then(rows => { st.rows = rows; paint(); }).catch(() => { st.rows = null; paint(); });
 }
-function rmSheetOpen(){ return !!rmWrap && !rmWrap.querySelector('.rm-sheet').hidden; }
-function rmCloseSheet(){
-  if (!rmWrap) return;
-  rmWrap.querySelector('.rm-sheet').hidden = true; rmSel = null;
-  const m = rmWrap.querySelector('.rm-map'); if (m) try { m.focus({ preventScroll: true }); } catch(e){}
+/* ---------- STATION PAGE: tap a station and its own page opens, with the facts and a button that plays it at once ---------- */
+const rsDet = new Map();
+// the directory's full record for one station (logo, language, codec, listens, last check), asked once and kept for the session
+function rsDetail(st){
+  if (rsDet.has(st.id)) return rsDet.get(st.id);
+  const p = rmGet('/json/stations/byuuid/' + encodeURIComponent(st.id)).then(rows => {
+    const n = Array.isArray(rows) && rows[0] ? rmNormalize(rows[0], true) : null;
+    if (n){
+      ['favicon', 'lang', 'codec', 'clicks', 'checked'].forEach(k => { if (n[k]) st[k] = n[k]; });
+      if (!st.home && n.home) st.home = n.home;
+      if (!st.tags.length) st.tags = n.tags;
+      st.allTags = String(rows[0].tags || '').split(',').map(x => x.trim()).filter(Boolean).slice(0, 16);
+      if (!st.bitrate) st.bitrate = n.bitrate;
+      if (!st.state) st.state = n.state;
+      if (!st.cc) st.cc = n.cc;
+    }
+    return st;
+  }).catch(() => { rsDet.delete(st.id); return st; });
+  rsDet.set(st.id, p);
+  return p;
 }
-function rmSelect(st, from){
-  if (!rmWrap || !st) return;
-  rmSel = st;
-  const sh = rmWrap.querySelector('.rm-sheet');
-  sh.textContent = '';
-  const h = bpMk('h2', '', st.name); h.tabIndex = -1; sh.appendChild(h);
-  const bits = [[st.state, st.country].filter(Boolean).join(', '), st.bitrate ? st.bitrate + ' kbps' : ''].filter(Boolean);
-  sh.appendChild(bpMk('p', 'rm-place', bits.join(' · ')));
-  if (st.tags.length){ const t = bpMk('div', 'rm-tags'); st.tags.forEach(x => t.appendChild(bpMk('span', '', x))); sh.appendChild(t); }
-  const x = bpMk('button', 'rm-x', '×'); x.type = 'button'; x.setAttribute('aria-label', 'Close station'); x.addEventListener('click', rmCloseSheet); sh.appendChild(x);
-  const act = bpMk('div', 'rm-act');
-  const go = bpMk('button', 'rm-go', 'Play songs from here'); go.type = 'button';
+// the station's own logo when it loads, otherwise a drawn tile with its initials
+function rsLogo(st){
+  const tile = rmTileUrl(st.name);
+  if (!st.favicon) return Promise.resolve(tile);
+  return new Promise(res => {
+    let done = false;
+    const fin = (u) => { if (!done){ done = true; res(u); } };
+    const im = new Image();
+    im.referrerPolicy = 'no-referrer';
+    im.onload = () => fin(im.naturalWidth >= 24 ? st.favicon : tile);
+    im.onerror = () => fin(tile);
+    setTimeout(() => fin(tile), 4000);
+    im.src = st.favicon;
+  });
+}
+var rsSaved = null;
+var RS_KEY = 'ebbless:radio:saved';
+function rsSavedList(){
+  if (!rsSaved){
+    try { const a = JSON.parse(localStorage.getItem(RS_KEY) || '[]'); rsSaved = (Array.isArray(a) ? a : []).map(rmFromRow).filter(Boolean).slice(0, 300); } catch(e){ rsSaved = []; }
+  }
+  return rsSaved;
+}
+function rsIsSaved(id){ return rsSavedList().some(x => x.id === id); }
+function rsToggleSave(st){
+  const list = rsSavedList(), i = list.findIndex(x => x.id === st.id);
+  if (i >= 0) list.splice(i, 1); else list.unshift(Object.assign({}, st));
+  try { localStorage.setItem(RS_KEY, JSON.stringify(list.map(x => rmToRow(x, true)))); } catch(e){ showToast('Could not save here: browser storage is full or blocked.'); }
+  showToast(i >= 0 ? 'Removed from your library.' : 'Saved to your library, under Radio.');
+  renderLibraryRadio(); rmSheetSync(); rsRowSync();
+}
+function renderLibraryRadio(){
+  const box = $('libraryRadio'), row = $('libraryRadioRow');
+  if (!box || !row) return;
+  const list = rsSavedList();
+  row.textContent = '';
+  box.classList.toggle('hidden', !list.length);
+  list.slice(0, 40).forEach(st => {
+    const card = bpMk('div', 'lib-radio-card'), open = bpMk('button', 'lib-radio-open'); open.type = 'button';
+    const img = document.createElement('img'); img.alt = ''; img.loading = 'lazy'; img.src = rmTileUrl(st.name);
+    if (st.favicon) rsLogo(st).then(u => { if (img.isConnected) img.src = u; });
+    open.appendChild(img); open.appendChild(bpMk('span', '', st.name)); open.appendChild(bpMk('small', '', [st.state, st.country].filter(Boolean).join(', ')));
+    open.setAttribute('aria-label', st.name + ', radio station. Open its page.');
+    open.addEventListener('click', () => rsOpen(st, open));
+    const pl = bpMk('button', 'lib-radio-play'); pl.type = 'button'; pl.setAttribute('aria-label', 'Tune in to ' + st.name + ' live');
+    pl.innerHTML = rsPlayIcon();
+    pl.addEventListener('click', (e) => { e.stopPropagation(); if (liveSt && liveSt.id === st.id && liveIsPlaying()) liveStop(); else liveStart(st); });
+    card.appendChild(open); card.appendChild(pl); row.appendChild(card);
+  });
+}
+// one station in a list: tap the name for its page, the waves button tunes in at once, the plus adds it to your radio list
+function rsRow(st, small, keepFrom){
+  const li = document.createElement('li'); li.className = 'rs-li';
+  const open = bpMk('button', 'rs-li-open'); open.type = 'button';
+  // #828: a small thumb of the station's art (its logo, or a drawn tile) beside the name
+  const th = document.createElement('img'); th.className = 'rs-li-img'; th.alt = ''; th.width = 40; th.height = 40; th.loading = 'lazy';
+  th.src = rmTileUrl(st.name);
+  if (st.favicon) rsLogo(st).then(u => { if (th.isConnected) th.src = u; });
+  const tx = bpMk('span', 'rs-li-txt'); tx.appendChild(bpMk('span', 'rs-li-name', st.name)); tx.appendChild(bpMk('small', '', small));
+  open.appendChild(th); open.appendChild(tx);
+  open.addEventListener('click', () => { if (st.lat != null && !rmSt.has(st.id)){ rmSt.set(st.id, st); rmPushSoon(); } rsOpen(st, open, !!keepFrom); });
+  const pl = bpMk('button', 'rs-li-play'); pl.type = 'button'; pl._st = st;
+  pl.addEventListener('click', () => { if (liveSt && liveSt.id === st.id && liveIsPlaying()) liveStop(); else liveStart(st); });
+  const sv = bpMk('button', 'rs-li-save'); sv.type = 'button'; sv._st = st;
+  sv.addEventListener('click', () => rsToggleSave(st));
+  li.appendChild(open); li.appendChild(pl); li.appendChild(sv);
+  rsRowSync(li);
+  return li;
+}
+// every Play and Save button on screen follows the live player and the saved list
+function rsRowSync(root){
+  (root || document).querySelectorAll('.rs-li-play').forEach(b => {
+    const st = b._st, on = !!st && !!liveSt && liveSt.id === st.id && liveIsPlaying();
+    b.innerHTML = on ? rsStopIcon() : rsPlayIcon();
+    b.setAttribute('aria-label', (on ? 'Stop ' : 'Tune in to ') + (st ? st.name : 'station') + ' live');
+  });
+  (root || document).querySelectorAll('.rs-li-save').forEach(b => {
+    const st = b._st, on = !!st && rsIsSaved(st.id);
+    b.textContent = on ? '\u2713' : '+';
+    b.classList.toggle('is-saved', on); b.setAttribute('aria-pressed', String(on));
+    b.setAttribute('aria-label', (on ? 'Remove ' : 'Add ') + (st ? st.name : 'station') + (on ? ' from your radio list' : ' to your radio list'));
+  });
+}
+let rsEl = null, rsFrom = null, rsSeq = 0;
+function rsBuild(){
+  rsEl = document.createElement('div');
+  rsEl.id = 'rsPage'; rsEl.hidden = true;
+  rsEl.setAttribute('role', 'dialog'); rsEl.setAttribute('aria-modal', 'true'); rsEl.setAttribute('aria-label', 'Radio station');
+  rsEl.innerHTML = '<button type="button" class="rs-back" id="rsBack" aria-label="Back"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20z"/></svg></button>' +
+    '<div class="rs-scroll" id="rsScroll"><div class="rs-inner" id="rsBody"></div></div>';
+  document.body.appendChild(rsEl);
+  $('rsBack').addEventListener('click', () => rsClose());
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && rsOpenNow() && !(fmEl && !fmEl.hidden)){ e.preventDefault(); e.stopImmediatePropagation(); rsClose(); } }, true);
+}
+function rsOpenNow(){ return !!rsEl && !rsEl.hidden; }
+function rmSheetOpen(){ return rsOpenNow(); }
+function rsClose(){
+  if (!rsOpenNow()) return;
+  rsEl.hidden = true; rsSeq++; rmSel = null;
+  if (rsFrom && rsFrom.isConnected) try { rsFrom.focus({ preventScroll: true }); } catch(e){}
+  rsFrom = null;
+}
+function rmCloseSheet(){ rsClose(); }
+const rsGeo = new Map();
+// the street-level place for a station's map position (one OpenStreetMap lookup, only when its page opens, kept for the session)
+function rsPlace(st){
+  if (st.lat == null) return Promise.resolve('');
+  const k = st.id;
+  if (rsGeo.has(k)) return rsGeo.get(k);
+  const p = fetch('https://nominatim.openstreetmap.org/reverse?' + new URLSearchParams({ format: 'jsonv2', lat: String(st.lat), lon: String(st.lng), zoom: '14', addressdetails: '1', 'accept-language': (navigator.language || 'en').slice(0, 12) }), { credentials: 'omit' })
+    .then(r => r.ok ? r.json() : null).then(d => rmPlaceLine(d && d.address)).catch(() => '');
+  rsGeo.set(k, p);
+  return p;
+}
+function rsPlayIcon(){ return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="2" fill="currentColor" stroke="none"/><path d="M8.5 8.5a5 5 0 0 0 0 7M15.5 8.5a5 5 0 0 1 0 7M5.6 5.6a9 9 0 0 0 0 12.8M18.4 5.6a9 9 0 0 1 0 12.8"/></svg>'; }
+function rsStopIcon(){ return '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 6h12v12H6z"/></svg>'; }
+function rsRender(st){
+  const body = $('rsBody'), seq = ++rsSeq;
+  body.textContent = '';
+  const wrap = bpMk('div', 'rs-heroWrap'), cover = bpMk('div', 'rs-cover'), img = document.createElement('img');
+  cover.style.setProperty('--rs-h', String(rmHue(st.name)));
+  img.alt = ''; img.src = rmTileUrl(st.name); cover.appendChild(img);
+  const ht = bpMk('div', 'rs-heroText'), meta = bpMk('div', 'rs-meta', 'Radio station'), h = bpMk('h2', '', st.name); h.tabIndex = -1;
+  ht.appendChild(meta); ht.appendChild(h); cover.appendChild(ht); wrap.appendChild(cover);
+  const big = bpMk('button', 'rs-bigplay'); big.type = 'button'; big.innerHTML = rsPlayIcon(); big.setAttribute('aria-label', 'Tune in to ' + st.name + ' live');
+  big.addEventListener('click', () => { if (liveSt && liveSt.id === st.id && liveIsPlaying()) liveStop(); else liveStart(st); });
+  wrap.appendChild(big); body.appendChild(wrap);
+  const pad = bpMk('div', 'rs-pad'); body.appendChild(pad);
+  const note = bpMk('p', 'rs-note rs-livenote'); note.setAttribute('role', 'status'); pad.appendChild(note);
+  const row = bpMk('div', 'rs-row');
+  const sv = bpMk('button', 'rs-save', 'Save to library'); sv.type = 'button'; sv.addEventListener('click', () => rsToggleSave(st)); row.appendChild(sv);
+  const go = bpMk('button', '', 'Songs from here'); go.type = 'button';
   go.addEventListener('click', () => { bpLastEl = go; fmOpenResults(rmSongsTerms(st), st.state || st.country || st.name, null, null, st.cc, st.cc ? 'cc-' + st.cc.toLowerCase() : ''); });
-  act.appendChild(go);
-  const lv = bpMk('button', 'rm-live', 'Listen live'); lv.type = 'button';
-  lv.addEventListener('click', () => { if (liveSt && liveSt.id === st.id && liveIsPlaying()) liveStop(); else liveStart(st); });
-  act.appendChild(lv);
-  if (st.home){ const a = bpMk('a', '', 'Station website'); a.href = st.home; a.target = '_blank'; a.rel = 'noopener noreferrer'; act.appendChild(a); }
-  sh.appendChild(act);
-  sh.appendChild(bpMk('p', 'rm-note', 'Songs from this place, picked by EBBLESS. No ads.'));
-  const ln = bpMk('p', 'rm-note rm-livenote'); ln.setAttribute('role', 'status'); sh.appendChild(ln);
-  sh.hidden = false;
-  rmSheetSync();
+  row.appendChild(go);
+  if (st.lat != null){
+    const mp = bpMk('button', '', 'Show on map'); mp.type = 'button';
+    mp.addEventListener('click', () => {
+      rsClose();
+      if (rmMap){ try { rmMap.easeTo({ center: [st.lng, st.lat], zoom: Math.max(rmMap.getZoom(), 9), duration: 500 }); } catch(e){} }
+      else { rmView = { c: [st.lng, st.lat], z: 9 }; openBrowsePage('region'); }
+    });
+    row.appendChild(mp);
+  }
+  pad.appendChild(row);
+  const about = bpMk('div'), near = bpMk('div', 'rs-sec rs-near'); pad.appendChild(about); pad.appendChild(near);
+  let placeLine = '';
+  const sec = (title, node) => { const d = bpMk('div', 'rs-sec'); d.appendChild(bpMk('h3', '', title)); d.appendChild(node); about.appendChild(d); };
+  const langs = () => String(st.lang || '').split(',').map(x => x.trim().replace(/\b\w/g, c => c.toUpperCase())).filter(Boolean);
+  const fill = () => {
+    if (seq !== rsSeq) return;
+    about.textContent = '';
+    const place = placeLine || [st.state, st.country].filter(Boolean).join(', ');
+    meta.textContent = ['Radio station', langs().slice(0, 2).join(', ')].filter(Boolean).join(' · ');
+    if (place) sec('Place', bpMk('p', '', place));
+    const gen = rmGenres(st.allTags && st.allTags.length ? st.allTags : st.tags, 8);
+    if (gen.length){ const t = bpMk('div', 'rs-tags'); gen.forEach(x => t.appendChild(bpMk('span', '', x))); sec('Genres', t); }
+    if (langs().length) sec(langs().length > 1 ? 'Languages' : 'Language', bpMk('p', '', langs().join(', ')));
+    if (st.home){ const p = bpMk('p'), a = bpMk('a', '', st.home.replace(/^https:\/\/(www\.)?/, '').replace(/\/$/, '').slice(0, 50)); a.href = st.home; a.target = '_blank'; a.rel = 'noopener noreferrer'; p.appendChild(a); sec('Website', p); }
+    sec('About live radio', bpMk('p', 'rs-note', 'Play is the station as it broadcasts, so it can include ads and talk. Songs from here are picked by EBBLESS from this place, with no ads.'));
+    rsLogo(st).then(u => { if (seq === rsSeq) img.src = u; });
+    // stations close by, from the ones already loaded on the map
+    near.textContent = '';
+    if (st.lat != null){
+      const list = [...rmSt.values()].filter(x => x.id !== st.id).map(x => ({ x, d: rmDistM(st.lat, st.lng, x.lat, x.lng) })).sort((a, b) => a.d - b.d).slice(0, 6);
+      if (list.length){
+        near.appendChild(bpMk('h3', '', 'More stations nearby'));
+        const ul = document.createElement('ul');
+        list.forEach(({ x, d }) => ul.appendChild(rsRow(x, [x.state, x.country].filter(Boolean).join(', ') + ' \u00b7 ' + rmKm(d) + ' away', true)));
+        near.appendChild(ul);
+      }
+    }
+    rmSheetSync();
+  };
+  fill();
+  rsDetail(st).then(fill);
+  rsPlace(st).then(line => { if (line && seq === rsSeq){ placeLine = line; fill(); } });
+  return h;
+}
+function rsOpen(st, from, keepFrom){
+  if (!st) return;
+  if (!rsEl) rsBuild();
+  if (!keepFrom || !rsOpenNow()) rsFrom = from || document.activeElement;
+  rmSel = st;
+  const h = rsRender(st);
+  rsEl.hidden = false;
+  $('rsScroll').scrollTop = 0;
   statsFeature('region_map_station');
-  if (rmMap && st.lat != null){ try { rmMap.easeTo({ center: [st.lng, st.lat], zoom: Math.max(rmMap.getZoom(), 9), padding: { bottom: 200 }, duration: 400 }); } catch(e){} }
+  if (rmMap && st.lat != null){ try { rmMap.easeTo({ center: [st.lng, st.lat], zoom: Math.max(rmMap.getZoom(), 9), duration: 0 }); } catch(e){} }
   h.focus({ preventScroll: true });
 }
-// the Listen live button and its note follow the live player's state
+function rmSelect(st, from){ rsOpen(st, from); }
+// the page's Play and Save buttons and its live note follow the live player and the library
 function rmSheetSync(){
-  const sh = rmWrap && rmWrap.querySelector('.rm-sheet');
-  if (!sh || sh.hidden || !rmSel) return;
-  const b = sh.querySelector('.rm-live'), n = sh.querySelector('.rm-livenote');
+  try { rsRowSync(); } catch(e){}
+  if (!rsOpenNow() || !rmSel) return;
+  const b = rsEl.querySelector('.rs-bigplay'), n = rsEl.querySelector('.rs-livenote'), sv = rsEl.querySelector('.rs-save');
+  if (sv){ const on = rsIsSaved(rmSel.id); sv.textContent = on ? 'Saved \u2713' : 'Save to library'; sv.classList.toggle('is-saved', on); sv.setAttribute('aria-pressed', String(on)); }
   if (!b || !n) return;
-  const mine = !!liveSt && liveSt.id === rmSel.id, mode = mine ? liveMode : 'idle';
-  b.textContent = mode === 'playing' || mode === 'loading' ? 'Stop live radio' : 'Listen live';
-  n.textContent = mode === 'loading' ? 'Connecting to the station\u2026' : mode === 'playing' ? 'Live now. Live radio can include ads and talk.'
-    : mode === 'error' ? 'Could not reach this station. Try again, or play songs from here.' : 'Live radio is the station as it broadcasts. It can include ads and talk.';
+  const mine = !!liveSt && liveSt.id === rmSel.id, mode = mine ? liveMode : 'idle', on = mode === 'playing' || mode === 'loading';
+  b.innerHTML = on ? rsStopIcon() : rsPlayIcon();
+  b.setAttribute('aria-label', (on ? 'Stop ' : 'Tune in to ') + rmSel.name + (on ? ' live' : ' live'));
+  n.textContent = mode === 'playing' ? 'Live now.' : mode === 'loading' ? 'Connecting to the station\u2026' : mode === 'error' ? 'Could not reach this station. Tap to tune in again, or play songs from here.' : 'Tap to tune in live.';
 }
 function rmTeardownMap(){
   clearTimeout(rmMoveT); clearTimeout(rmPushT);
-  rmQueue = [];
+  rmQueue = []; rmMarks.clear();
   if (rmMap){ try { rmMap.remove(); } catch(e){} rmMap = null; }
+  rmPinMk = null;
 }
 function rmDestroy(){
-  rmGen++; rmQSeq++; clearTimeout(rmQT);
+  rmGen++; rmQSeq++; clearTimeout(rmQT); rmPin = null; rmArmed = false;
   rmTeardownMap();
   rmWrap = null; rmSel = null;
 }
@@ -12214,21 +12680,26 @@ function rmOff(msg){
 function rmMount(top){
   const wrap = rmWrap = bpMk('section', '');
   wrap.setAttribute('aria-label', 'World map of radio stations');
-  wrap.innerHTML = '<form class="rm-find" role="search" aria-label="Search radio stations"><input type="search" name="q" class="rm-q" placeholder="Search any radio station" aria-label="Search any radio station" maxlength="60" autocomplete="off" enterkeyhint="search" spellcheck="false"><div class="rm-found-msg" role="status" aria-live="polite"></div><ul class="rm-found"></ul></form>' +
+  wrap.innerHTML = '<form class="rm-find" role="search" aria-label="Search radio stations"><input type="search" name="q" class="rm-q" placeholder="Search a town, zip code or station" aria-label="Search a town, zip code, region or radio station" maxlength="60" autocomplete="off" enterkeyhint="search" spellcheck="false"><div class="rm-found-msg" role="status" aria-live="polite"></div><ul class="rm-found"></ul></form>' +
     '<div class="rm-wrap"><div class="rm-map" tabindex="0" aria-label="Map. Arrow keys move, plus and minus zoom. The list below the map has the same stations."></div>' +
-    '<div class="rm-ctl" role="group" aria-label="Map zoom"><button type="button" data-rm="in" aria-label="Zoom in">+</button><button type="button" data-rm="out" aria-label="Zoom out">−</button><button type="button" data-rm="reset" aria-label="Show whole world">◎</button></div>' +
-    '<div class="rm-status" role="status" aria-live="polite" hidden></div><div class="rm-sheet" role="group" aria-label="Station" hidden></div></div>' +
-    '<div class="rm-here" hidden><h2>Stations in view</h2><ul></ul></div>';
+    '<div class="rm-ctl" role="group" aria-label="Map zoom"><button type="button" data-rm="in" aria-label="Zoom in">+</button><button type="button" data-rm="out" aria-label="Zoom out">−</button><button type="button" data-rm="reset" aria-label="Show whole world">◎</button><button type="button" data-rm="pin" aria-label="Drop a pin: then tap the map, or tap again to drop it at the centre" aria-pressed="false"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5.5" r="3.2"/><path d="M12 10c-3.2 0-5.2 1.7-5.2 3.8V16h2v6h6.4v-6h2v-2.2C17.2 11.7 15.2 10 12 10z"/></svg></button></div>' +
+    '<div class="rm-status" role="status" aria-live="polite" hidden></div></div>' +
+    '<div class="rm-here" hidden><div class="rm-here-head"><h2>Stations in view</h2><button type="button" class="rm-clear" hidden>Clear pin</button></div><ul></ul></div>';
   top.appendChild(wrap);
   wrap.addEventListener('click', (e) => {
     const b = e.target.closest('[data-rm]'); if (!b || !rmMap) return;
     if (b.dataset.rm === 'in') rmMap.zoomIn({ duration: 250 });
     else if (b.dataset.rm === 'out') rmMap.zoomOut({ duration: 250 });
+    else if (b.dataset.rm === 'pin') rmPinButton();
     else rmMap.easeTo({ center: [10, 25], zoom: rmWorldZoom(), duration: 400 });
   });
+  wrap.addEventListener('click', (e) => { if (e.target.closest('.rm-clear')) rmClearPin(); });
   const fq = wrap.querySelector('.rm-q');
   fq.addEventListener('input', () => { clearTimeout(rmQT); rmQT = setTimeout(() => rmSearchRun(fq.value), 350); });
-  wrap.querySelector('.rm-find').addEventListener('submit', (e) => { e.preventDefault(); clearTimeout(rmQT); rmSearchRun(fq.value); });
+  wrap.querySelector('.rm-find').addEventListener('submit', (e) => { e.preventDefault(); clearTimeout(rmQT); rmSearchRun(fq.value, true); });
+  wrap.addEventListener('keydown', (e) => {
+    if ((e.key === 'p' || e.key === 'P') && !e.ctrlKey && !e.metaKey && !e.altKey && e.target.classList && e.target.classList.contains('rm-map') && rmMap){ e.preventDefault(); const c = rmMap.getCenter(); rmDropPin(c); }
+  });
   wrap.addEventListener('keydown', (e) => { if (e.key === 'Escape' && rmSheetOpen()){ e.preventDefault(); e.stopPropagation(); rmCloseSheet(); } });
   if (!rmVisBound){
     rmVisBound = true;
@@ -12240,6 +12711,51 @@ function rmMount(top){
   rmInit(rmGen);
 }
 function rmWorldZoom(){ const w = (rmWrap && rmWrap.clientWidth) || 360; return Math.max(0.4, Math.min(2.2, Math.log2(w / 512) + 0.15)); }
+// #823: the dark base map is plain black and grey, so after it loads its colors are re-tinted from the app's accent
+// (water, land, parks, roads, borders, labels): same map, same data, just the UI's own color instead of grey
+function rmAccentHsl(){
+  const cs = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#e0b26a';
+  const c = document.createElement('canvas').getContext('2d'); c.fillStyle = '#e0b26a'; c.fillStyle = cs;
+  const m = /^#([0-9a-f]{6})$/i.exec(c.fillStyle);
+  const n = m ? parseInt(m[1], 16) : 0xe0b26a, r = (n >> 16 & 255) / 255, g = (n >> 8 & 255) / 255, b = (n & 255) / 255;
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
+  let h = 0; if (d){ h = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; h = Math.round(h * 60); if (h < 0) h += 360; }
+  const sat = mx ? d / mx : 0;
+  return { h, s: Math.round(Math.max(26, Math.min(60, sat * 70))) };
+}
+function rmTint(map){
+  const { h, s } = rmAccentHsl(), set = (id, prop, v) => { try { if (map.getLayer(id)) map.setPaintProperty(id, prop, v); } catch(e){} };
+  const hs = (l, sat) => 'hsl(' + h + ',' + (sat == null ? s : sat) + '%,' + l + '%)';
+  set('background', 'background-color', hs(9, s * 0.7));
+  ['water', 'waterway'].forEach(id => set(id, id === 'water' ? 'fill-color' : 'line-color', hs(15, s + 6)));
+  ['landuse_park', 'landcover_wood'].forEach(id => set(id, 'fill-color', hs(14, s * 0.8)));
+  set('landuse_residential', 'fill-color', hs(11, s * 0.7));
+  set('landcover_glacier', 'fill-color', hs(12, s * 0.7)); set('landcover_ice_shelf', 'fill-color', hs(10, s * 0.7));
+  ['highway_minor', 'highway_motorway_subtle'].forEach(id => set(id, 'line-color', hs(18, s * 0.8)));
+  set('highway_major_subtle', 'line-color', hs(24, s * 0.8));
+  ['boundary_state', 'boundary_country_z0-4', 'boundary_country_z5-'].forEach(id => set(id, 'line-color', hs(id === 'boundary_state' ? 30 : 42, s)));
+  ['place_other', 'place_suburb', 'place_village', 'place_town', 'place_city', 'place_city_large', 'place_state', 'place_country_other', 'place_country_minor', 'place_country_major']
+    .forEach(id => set(id, 'text-color', hs(66, s * 0.9)));
+}
+// #818: close in (street level) each lone station shows its own logo on the map, and tapping it opens the station
+var rmMarks = new Map();
+function rmMarksClear(){ rmMarks.forEach(m => { try { m.mk.remove(); } catch(e){} }); rmMarks.clear(); }
+function rmMarkSync(){
+  const map = rmMap; if (!map || !map.getLayer('rm-pin')) return;
+  if (map.getZoom() < 11){ if (rmMarks.size) rmMarksClear(); return; }
+  const want = new Map();
+  map.queryRenderedFeatures({ layers: ['rm-pin'] }).forEach(f => { const id = f.properties && f.properties.id; if (id != null && want.size < 40 && !want.has(id)) want.set(id, f.geometry.coordinates.slice()); });
+  rmMarks.forEach((m, id) => { if (!want.has(id)){ try { m.mk.remove(); } catch(e){} rmMarks.delete(id); } });
+  want.forEach((c, id) => {
+    if (rmMarks.has(id)) return;
+    const st = rmSt.get(id); if (!st) return;
+    const el = document.createElement('button'); el.type = 'button'; el.className = 'rm-mk'; el.setAttribute('aria-label', st.name + ', radio station. Open its page.');
+    const img = document.createElement('img'); img.alt = ''; img.src = rmTileUrl(st.name); el.appendChild(img);
+    if (st.favicon) rsLogo(st).then(u => { if (img.isConnected) img.src = u; });
+    el.addEventListener('click', (ev) => { ev.stopPropagation(); rmSelect(st); });
+    rmMarks.set(id, { mk: new maplibregl.Marker({ element: el }).setLngLat(c).addTo(map) });
+  });
+}
 function rmSaveView(){ if (rmMap){ const c = rmMap.getCenter(); rmView = { c: [c.lng, c.lat], z: rmMap.getZoom() }; } }
 function rmInit(gen){
   if (!rmWrap || document.hidden) return;
@@ -12261,13 +12777,17 @@ function rmInit(gen){
     map.on('load', () => {
       try { const at = el.querySelector('.maplibregl-ctrl-attrib'); if (at){ at.removeAttribute('open'); at.classList.remove('maplibregl-compact-show'); } } catch(e){}   // credits live in Settings > Credits; the map keeps only its small info button
       if (map !== rmMap) return;
+      rmTint(map);
+      if (rmPin) rmMountPin();
       map.addSource('rm-st', { type: 'geojson', data: rmGeo(rmSt), cluster: true, clusterRadius: 46, clusterMaxZoom: 13 });
       map.addLayer({ id: 'rm-cl', type: 'circle', source: 'rm-st', filter: ['has', 'point_count'], paint: { 'circle-color': '#e0b26a', 'circle-opacity': 0.92, 'circle-radius': ['step', ['get', 'point_count'], 15, 10, 19, 40, 24, 120, 30], 'circle-stroke-width': 2, 'circle-stroke-color': 'rgba(21,17,7,.7)' } });
       map.addLayer({ id: 'rm-n', type: 'symbol', source: 'rm-st', filter: ['has', 'point_count'], layout: { 'text-field': ['get', 'point_count_abbreviated'], 'text-font': ['Noto Sans Regular'], 'text-size': 13, 'text-allow-overlap': true }, paint: { 'text-color': '#151107' } });
       map.addLayer({ id: 'rm-pin', type: 'circle', source: 'rm-st', filter: ['!', ['has', 'point_count']], paint: { 'circle-color': '#e0b26a', 'circle-radius': 8, 'circle-stroke-width': 2.5, 'circle-stroke-color': '#151107' } });
       const pointer = (on) => () => { map.getCanvas().style.cursor = on ? 'pointer' : ''; };
       ['rm-cl', 'rm-pin'].forEach(l => { map.on('mouseenter', l, pointer(true)); map.on('mouseleave', l, pointer(false)); });
+      map.on('contextmenu', (e) => { if (map === rmMap) rmDropPin(e.lngLat); });
       map.on('click', (e) => {
+        if (rmArmed){ rmDropPin(e.lngLat); return; }
         const hit = map.queryRenderedFeatures([[e.point.x - 10, e.point.y - 10], [e.point.x + 10, e.point.y + 10]], { layers: ['rm-pin', 'rm-cl'] })[0];
         if (hit && hit.layer.id === 'rm-pin'){ const s = rmSt.get(hit.properties.id); if (s) rmSelect(s); return; }
         if (hit){
@@ -12280,6 +12800,7 @@ function rmInit(gen){
       rmListRender();
       rmFetchView();
     });
+    map.on('idle', () => { if (map === rmMap) rmMarkSync(); });
     map.on('moveend', () => {
       if (map !== rmMap) return;
       rmSaveView();
@@ -12300,8 +12821,31 @@ function rmInit(gen){
 var liveAudio = null, liveSt = null, liveMode = 'idle', liveTry = 0, liveUiSync = false, liveRetryT = 0;   // liveMode: idle | loading | playing | paused | error
 function liveActive(){ return !!liveSt; }
 function liveIsPlaying(){ return !!liveSt && (liveMode === 'playing' || liveMode === 'loading'); }
+var liveArtId = '', liveArtHttps = '';
+// the station's logo (or a drawn tile) takes the cover's place in the player, the footer player and on the lock screen
+function liveArt(){
+  const st = liveSt; if (!st) return;
+  const id = st.id + '|' + (st.favicon || ''); if (liveArtId === id) return;
+  liveArtId = id;
+  rsLogo(st).then(u => {
+    if (liveSt !== st || liveArtId !== id) return;
+    liveArtHttps = /^https:/.test(u) ? u : new URL('brand/assets/mark-white.png', location.href).href;
+    const t = { art: u };
+    try { swapPlayerArt(t); swapFlowArt(t); attachArtworkFallback(miniArt, t, 'icon'); } catch(e){}
+    liveMeta();
+  });
+}
+document.addEventListener('click', (e) => {
+  if (!liveSt || !e.target || !e.target.closest) return;
+  const t = e.target.closest('#trackTitle,#trackArtist,#flowTitle,#flowArtist,#miniTitle,#miniArtist,#miniArt,#artA,#artB,#flowArtA,#flowArtB,#flowArtWrap');
+  const pa = artA && artA.parentElement;
+  if (!t && !(pa && e.target === pa)) return;
+  e.preventDefault(); e.stopImmediatePropagation();
+  rsOpen(liveSt, t || pa);
+}, true);
 function liveMeta(){
   const st = liveSt; if (!st) return;
+  liveArt();
   const place = [st.state, st.country].filter(Boolean).join(', ');
   const artist = 'Live radio' + (place ? ' · ' + place : '');
   $('trackMeta').classList.remove('is-empty');
@@ -12309,12 +12853,13 @@ function liveMeta(){
   setMarqueeText(flowTitle, st.name); setMarqueeText(flowArtist, artist);
   setMarqueeText(miniTitle, st.name); setMarqueeText(miniArtist, artist);
   if ('mediaSession' in navigator){
-    try { navigator.mediaSession.metadata = new MediaMetadata({ title: st.name, artist: 'Live radio', album: place || 'EBBLESS' }); } catch(e){}
+    try { navigator.mediaSession.metadata = new MediaMetadata({ title: st.name, artist: 'Live radio', album: place || 'EBBLESS', artwork: liveArtHttps ? [{ src: liveArtHttps, sizes: '300x300' }] : [] }); } catch(e){}
     try { if (navigator.mediaSession.setPositionState) navigator.mediaSession.setPositionState(); } catch(e){}
   }
 }
 function liveSync(){
   document.body.classList.toggle('is-live-radio', !!liveSt);
+  try { updateMiniBarVisibility(); } catch(e){}
   if (liveSt){ liveMeta(); liveUiSync = true; try { setPlayingUI(liveIsPlaying()); } finally { liveUiSync = false; } }
   if ('mediaSession' in navigator){ try { navigator.mediaSession.playbackState = liveSt ? (liveIsPlaying() ? 'playing' : 'paused') : 'none'; } catch(e){} }
   try { rmSheetSync(); } catch(e){}
@@ -12336,7 +12881,8 @@ function liveLoad(){
   a.onwaiting = a.onstalled = () => { if (liveSt === st && liveMode === 'playing'){ liveMode = 'loading'; liveSync(); } };
   a.onpause = () => { if (liveSt === st && (liveMode === 'playing' || liveMode === 'loading')){ liveMode = 'paused'; liveSync(); } };   // the OS or a headset paused it
   a.onerror = () => { if (liveSt === st && (liveMode === 'loading' || liveMode === 'playing')) liveFail(); };
-  a.src = url;
+  a.src = url; a.volume = 0;
+  a.addEventListener('playing', function once(){ a.removeEventListener('playing', once); liveRamp(a, 0, 1, 700); });
   const p = a.play();
   if (p && p.catch) p.catch((e) => { if (liveSt === st && e && e.name !== 'AbortError' && liveMode === 'loading') liveFail(); });
 }
@@ -12346,11 +12892,46 @@ function liveFail(){
   liveRelease(); liveMode = 'error'; liveSync();
   showToast('Could not play ' + st.name + '. Check your connection, or try again.', { label: 'Try again', run: () => { if (liveSt === st){ liveTry = 0; liveLoad(); } } }, 'live-err');
 }
+// #835: changing station is a tuning dial: the old station fades into a soft burst of static, and the static fades out into the new one.
+// The burst is quiet and short (about 1.2 s), made on the spot (no audio file), and skipped if the browser has no Web Audio.
+var liveStaticCtx = null, liveFadeT = 0;
+function liveStaticBurst(){
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
+    if (!liveStaticCtx) liveStaticCtx = new AC();
+    const ctx = liveStaticCtx; if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+    const len = Math.floor(ctx.sampleRate * 1.3), buf = ctx.createBuffer(1, len, ctx.sampleRate), d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+    const src = ctx.createBufferSource(); src.buffer = buf;
+    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 3200;
+    const g = ctx.createGain(), t = ctx.currentTime;
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.07, t + 0.3); g.gain.linearRampToValueAtTime(0.07, t + 0.65); g.gain.linearRampToValueAtTime(0, t + 1.25);
+    src.connect(lp); lp.connect(g); g.connect(ctx.destination);
+    src.onended = () => { try { src.disconnect(); lp.disconnect(); g.disconnect(); } catch(e){} };
+    src.start(t); src.stop(t + 1.3);
+  } catch(e){}
+}
+// ramp the station's own volume (the stream starts at 0 and rises as the static falls away)
+function liveRamp(a, from, to, ms, done){
+  clearInterval(liveFadeT);
+  const t0 = performance.now(); a.volume = from;
+  liveFadeT = setInterval(() => {
+    const k = Math.min(1, (performance.now() - t0) / ms);
+    try { a.volume = from + (to - from) * k; } catch(e){}
+    if (k >= 1){ clearInterval(liveFadeT); if (done) done(); }
+  }, 40);
+}
 function liveStart(st){
   if (!st || !rmHttps(st.url)){ showToast('This station has no safe stream to play.'); return; }
   if (liveSt && liveSt.id === st.id && liveMode === 'paused'){ liveToggle(); return; }
-  try { pausePlayback(); } catch(e){}
-  liveSt = st; liveTry = 0;
+  const prev = liveSt && liveSt.id !== st.id && liveAudio && !liveAudio.paused ? liveAudio : null;
+  if (prev){ liveStaticBurst(); liveRamp(prev, prev.volume, 0, 300, () => liveStartNow(st, true)); liveSt = st; liveArtId = ''; liveMeta(); return; }
+  liveStartNow(st, false);
+}
+function liveStartNow(st, fromStation){
+  if (!fromStation){ liveStaticBurst(); try { pausePlayback(); } catch(e){} }
+  liveSt = st; liveTry = 0; liveArtId = '';
+  rsDetail(st).then(() => { if (liveSt === st) liveArt(); });
   rmGet('/json/url/' + encodeURIComponent(st.id)).catch(() => {});   // the directory asks apps to count a listen
   showToast('Live radio can include ads and talk.', null, 'live-note');
   liveLoad();
@@ -12363,14 +12944,16 @@ function liveToggle(){
 function liveStop(quiet){
   if (!liveSt) return;
   liveRelease();
-  liveSt = null; liveMode = 'idle'; liveTry = 0;
+  liveSt = null; liveMode = 'idle'; liveTry = 0; liveArtId = ''; liveArtHttps = '';
   document.body.classList.remove('is-live-radio');
+  try { updateMiniBarVisibility(); } catch(e){}
   const t = currentTrack();
   if (t) updateTrackMetaUI(t);
   else {
     $('trackMeta').classList.add('is-empty');
     setMarqueeText(trackTitle, uiT('Nothing playing yet')); setMarqueeText(trackArtist, '');
     setMarqueeText(flowTitle, ''); setMarqueeText(flowArtist, ''); setMarqueeText(miniTitle, ''); setMarqueeText(miniArtist, '');
+    [artA, artB, flowArtA, flowArtB].forEach(a => { a.classList.remove('is-active'); a.removeAttribute('src'); }); miniArt.removeAttribute('src');
   }
   if ('mediaSession' in navigator){ try { navigator.mediaSession.playbackState = 'none'; } catch(e){} }
   if (!quiet) setPlayingUI(false);
@@ -13853,7 +14436,7 @@ window.addEventListener('popstate', () => {
   syncHistoryBuffer();
 });
 function updateMiniBarVisibility(){
-  const hasTrack = currentTrack() !== null;
+  const hasTrack = currentTrack() !== null || !!liveSt;   // live radio gets the footer player too
   if (!hasTrack){ document.body.classList.remove('pod-playing'); syncIosPodSkip(false); }
   const showMini = hasTrack && (state.currentView !== 'player' || state.queueOpen || importOverlay.classList.contains('is-open') || musicMapOpen());
   miniBar.hidden = !showMini;
@@ -14819,6 +15402,7 @@ function syncLibraryVideos(){
 }
 document.addEventListener('visibilitychange', syncLibraryVideos);
 function renderLibrary(){
+  try { renderLibraryRadio(); } catch(e){}
   try{ renderHomeShelf(); } catch(e){}
   // an artist page opened from the player (openArtistPage) shows nothing
   // from the library, so a re-render underneath it leaves it open
@@ -25947,10 +26531,22 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
-  { version: 569, date: '2026-11-17', items: [
+  { version: 571, date: '2026-11-17', items: [
     'First screen: a Play button. One tap opens the app and starts a song, with no sign-in first. If you have not played anything yet, it is waiting for you each time you open EBBLESS.',
     'The Google sign-in prompt now waits until after your first song.',
   ] },
+  { version: 570, date: '2026-11-17', items: [
+    'Radio: moving or zooming the map with the arrow keys no longer skips your station to the next song.',
+    'Radio: search a country on the map and tap Artists from that country, so places like Ethiopia show people, not only stations.',
+    'Radio: when you zoom in close, each station shows its own logo on the map and opens when you tap it, station lists have a small logo beside each name, and the map takes its colors from the app.',
+    'Radio: changing station fades the old one into a soft burst of static and fades the new one up out of it.',
+  ]},
+  { version: 569, date: '2026-11-17', items: [
+    'Tap a radio station on the region map and it opens its own page: logo, place, language, audio quality, votes, last check, stations nearby, and a big Play live now button. Save a station to your library (a Radio row at the top of Library), and the player and footer player show its logo while it plays.',
+    'Browse by region has one search box for towns, zip codes, regions and radio stations, with suggestions as you type; pick a place and the map flies there.',
+    'Drop a little pin figure anywhere on the map (the person button, a right-click, or press P): the map zooms to it and lists the stations nearest that spot.',
+    'Every station in any list has a button to tune in at once and a plus to add it to your radio list. While a station plays, tapping the title, artist or picture in the player opens its page.'
+  ]},
   { version: 568, date: '2026-11-17', items: [
     'The Video tab now tells you what is behind it: lit when there is an official video (one tap switches to it), grey when there is not (tap it to search for one).',
     'Browse by vibe opens on seven popular moods: Chill, Happy, Sad, Romantic, Sexy, Hype and Focus. The full feelings map is a second mode, without the emojis.',
@@ -39435,6 +40031,9 @@ document.addEventListener('keydown', (e) => {
   const nonText = t && t.tagName === 'INPUT' && /^(range|checkbox|radio|button|submit|reset|file|color|image)$/i.test(t.type);
   const isTyping = t && !nonText && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable);
   if (isTyping) return;
+  // #849: the region map owns its keys (arrows move it, plus and minus zoom it): the app's shortcuts must not
+  // also fire, or moving or zooming the map while a station plays skipped to the next song
+  if (t && t.closest && t.closest('.rm-map') && e.key !== ' ' && e.key !== 'Escape') return;
   switch (e.key){
     case ' ':
       e.preventDefault();
