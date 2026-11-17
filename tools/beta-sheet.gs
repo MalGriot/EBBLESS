@@ -104,7 +104,7 @@ const FEATURES = ['lyrics', 'cymatics', 'lp', 'cassette', 'youtube_video', 'full
   'soundcloud', 'cast', 'vibe_search', 'share'];
 HEADERS[ANALYTICS] = ['tester_number', 'tester_id', 'first_active', 'last_active', 'days_since_active', 'sessions',
   'listening_minutes', 'songs_played', 'playlists_played', 'playlists_added', 'days_active', 'returned_within_7d',
-  'active_days'].concat(FEATURES.map(function (f) { return 'uses_' + f; }));
+  'active_days'].concat(FEATURES.map(function (f) { return 'uses_' + f; }), ['plays_tapped', 'plays_started', 'plays_failed']);   // new columns go last: ensureHeaders_ appends, never moves
 
 // ---------- sheet helpers ----------
 
@@ -832,6 +832,9 @@ function activity_(b) {
     add('songs_played', d.songs);
     add('playlists_played', d.playlists);
     add('playlists_added', d.imports);
+    add('plays_tapped', d.playTapped);
+    add('plays_started', d.playStarted);
+    add('plays_failed', d.playFailed);
     FEATURES.forEach(function (f) { if (d.features && d.features[f]) add('uses_' + f, d.features[f]); });
     const days = String(r.active_days || '').split(',').filter(Boolean);
     if (days.indexOf(today) < 0) days.push(today);
@@ -1064,10 +1067,19 @@ function setup() {
     ['7-day return (eligible testers)', '=COUNTIF(' + nCol('first_active') + ',"<="&(' + week + '))'],
     ['7-day return (came back)', '=COUNTIFS(' + nCol('first_active') + ',"<="&(' + week + '),' + nCol('returned_within_7d') + ',"Yes")'],
     ['7-day return rate', '=IFERROR(TEXT(B29/B28,"0%"),"-")'],
+    // First play (added after the rows above so none of them move). Testers from before these
+    // columns existed have blanks, so they count in none of these.
+    ['', ''],
+    ['FIRST PLAY (Analytics tab, anonymous)', ''],
+    ['Testers who tapped play', '=COUNTIF(' + nCol('plays_tapped') + ',">0")'],
+    ['Testers whose play started', '=COUNTIF(' + nCol('plays_started') + ',">0")'],
+    ['Opened, tapped play, never started', '=COUNTIF(' + nCol('plays_tapped') + ',">0")-COUNTIFS(' + nCol('plays_tapped') + ',">0",' + nCol('plays_started') + ',">0")'],
+    ['Opened, never tapped play', '=COUNTA(' + nCol('tester_id') + ')-COUNTIF(' + nCol('plays_tapped') + ',">0")'],
+    ['Play timeouts or errors', '=SUM(' + nCol('plays_failed') + ')'],
   ];
   dash.clear();
   dash.getRange(1, 1, rows.length, 2).setValues(rows);
-  [1, 8, 14, 17, 20].forEach(function (r) { dash.getRange(r, 1).setFontWeight('bold'); });
+  [1, 8, 14, 17, 20, 32].forEach(function (r) { dash.getRange(r, 1).setFontWeight('bold'); });
   // Feature usage: sessions using each feature, summed across testers.
   const fRows = [['FEATURE USAGE (sessions)', '']].concat(FEATURES.map(function (f) { return [f.replace(/_/g, ' '), '=SUM(' + nCol('uses_' + f) + ')']; }));
   dash.getRange(1, 4, fRows.length, 2).setValues(fRows);

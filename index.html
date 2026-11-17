@@ -5027,7 +5027,8 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
     <span class="splash-install-label">Add to Home Screen</span>
   </button>
   <div id="splashChoice" class="splash-choice">
-    <button id="splashBringMusic" type="button" class="splash-choice-btn splash-choice-btn-primary splash-bring">Import your music</button>
+    <button id="splashPlayNow" type="button" class="splash-choice-btn splash-choice-btn-primary splash-bring">Play</button>
+    <button id="splashBringMusic" type="button" class="splash-choice-btn splash-bring">Import your music</button>
     <button id="splashPlayTutorial" type="button" class="splash-choice-btn">Tutorial</button>
     <button id="splashSkipTutorial" type="button" class="splash-choice-btn">Enter</button>
   </div>
@@ -6684,7 +6685,7 @@ try { if (localStorage.getItem('ebbless_backend') === 'staging') BACKEND = BACKE
 setTimeout(() => {
   try{
     const splashSafetyEl = document.getElementById('splash');
-    if (splashSafetyEl && !splashSafetyEl.classList.contains('is-hidden') && !splashSafetyEl.classList.contains('is-return') && !(document.documentElement.classList.contains('ebb-android') && splashSafetyEl.classList.contains('is-choice'))){
+    if (splashSafetyEl && !splashSafetyEl.classList.contains('is-hidden') && !splashSafetyEl.classList.contains('is-return') && !splashSafetyEl.classList.contains('is-choice')){   // T-0007: a slow load must never swallow the Play choice (it has buttons, so nobody is stuck)
       splashSafetyEl.classList.add('is-hidden');
     }
   }catch(e){}
@@ -9360,6 +9361,7 @@ setInterval(() => { if (!document.hidden && profileIdToken) renderAccountRow(); 
 // row's Sign in button keeps working.
 const LS_ONETAP_DISMISSED = 'ebbless:oneTapDismissedAt';
 const ONETAP_DISMISS_COOLDOWN_MS = 24 * 60 * 60 * 1000;
+let oneTapWaiting = false;
 function initGoogleOneTap(attempt){
   if (!GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID.startsWith('REPLACE_')) return;
   if (window.google && window.google.accounts && window.google.accounts.id){
@@ -9384,6 +9386,8 @@ function initGoogleOneTap(attempt){
     // cooldown: their One Tap is the silent auto sign-in, not a prompt to nag.
     const returning = !!lsGet(LS_PROFILE_EMAIL, '');
     if (!returning && Date.now() - lsGet(LS_ONETAP_DISMISSED, 0) < ONETAP_DISMISS_COOLDOWN_MS) return;
+    // Quiet first run (T-0007): no Google popup before the first song. recordLatestPlayed runs it after.
+    if (!returning && !hasEverPlayed()){ oneTapWaiting = true; return; }
     try{
       google.accounts.id.prompt((notification) => {
         // Only a moment that didn't lead to sign-in (blocked, skipped, or
@@ -10264,6 +10268,27 @@ document.addEventListener('click', (e) => {
   const enter = $('splashSkipTutorial');
   if (enter) enter.click();
   setTimeout(openBring, 900);
+}, true);
+// Splash "Play" (T-0007): one tap from the first screen to a playing song, no sign-in before it.
+// Enter the app exactly like Enter, then start the first starter (the owner's own SoundCloud
+// album: no ads, no Spotify or Google needed). beginImport plays at once if it is cached, else
+// resolves it and jumps into the player on the first playable track. Runs in the same tap, so
+// the browser's autoplay gesture is still valid.
+let firstSongStarting = '';
+function playFirstSong(){
+  const entry = STARTER_LIBRARY_URLS.map(starterLibraryEntry).find(Boolean);
+  if (!entry) return false;
+  firstSongStarting = entry.id;   // seedStarterLibrary skips it so it is not resolved twice
+  statsPlayTapped();
+  beginImport(entry.id, false, entry.type);
+  return true;
+}
+document.addEventListener('click', (e) => {
+  if (!e.target.closest || !e.target.closest('#splashPlayNow')) return;
+  e.stopPropagation(); e.preventDefault();
+  const enter = $('splashSkipTutorial');
+  if (enter) enter.click();
+  playFirstSong();
 }, true);
 // #619: desktop library width toggle, remembered across visits (CSS only acts on the 3-pane desktop layout)
 const LS_LIB_WIDE = 'ebbless:libraryWide';
@@ -21070,6 +21095,7 @@ function playPlaylistNow(id){
     const dot = libraryGrid.querySelector('[data-pl-id="' + SWELL_ID + '"] .new-dot');
     if (dot) dot.classList.remove('is-active');
   }
+  statsPlayTapped();
   loadPlaylistIntoPlayer(pl);
   setView('player');
   buildQueueFrom(-1, pl.id); // -1 = from the top of its own order (per-playlist sort)
@@ -24765,6 +24791,7 @@ async function seedStarterLibrary(){
     const entry = starterLibraryEntry(url);
     if (!entry) continue;
     const { id, type } = entry;
+    if (id === firstSongStarting) continue;   // the splash Play button is already loading and saving it
     // Reuse an existing cache only if it isn't stale (see isResolveStale) -
     // a listener whose starter items were seeded before a source-parsing
     // fix landed (e.g. the SoundCloud album resolving/track-list fixes this
@@ -25920,6 +25947,10 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
+  { version: 569, date: '2026-11-17', items: [
+    'First screen: a Play button. One tap opens the app and starts a song, with no sign-in first. If you have not played anything yet, it is waiting for you each time you open EBBLESS.',
+    'The Google sign-in prompt now waits until after your first song.',
+  ] },
   { version: 568, date: '2026-11-17', items: [
     'The Video tab now tells you what is behind it: lit when there is an official video (one tap switches to it), grey when there is not (tap it to search for one).',
     'Browse by vibe opens on seven popular moods: Chill, Happy, Sad, Romantic, Sexy, Hype and Focus. The full feelings map is a second mode, without the emojis.',
@@ -26680,13 +26711,13 @@ const STATS_KEY = 'ebbless:stats', STATS_OFF_KEY = 'ebbless:statsOff';
 const STATS_SESSION_GAP_MS = 30 * 60 * 1000;   // idle this long = next activity is a new session
 const STATS_TICK_MS = 15 * 1000, STATS_FLUSH_MS = 10 * 60 * 1000, STATS_HIDE_FLUSH_MIN_MS = 60 * 1000;
 const statsHostOk = !/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname) && location.protocol !== 'file:';
-function statsEmpty(){ return { sessions: 0, listenSec: 0, songs: 0, playlists: 0, imports: 0, features: {} }; }
+function statsEmpty(){ return { sessions: 0, listenSec: 0, songs: 0, playlists: 0, imports: 0, playTapped: 0, playStarted: 0, playFailed: 0, features: {} }; }
 let stats = (() => {
   let s = null;
   try { s = JSON.parse(localStorage.getItem(STATS_KEY)); } catch(e){}
   s = s && typeof s === 'object' ? s : {};
   return { lastSeen: +s.lastSeen || 0, seen: Array.isArray(s.seen) ? s.seen : [], playKey: s.playKey || '', plId: s.plId || '',
-    lastFlush: +s.lastFlush || 0, pend: Object.assign(statsEmpty(), s.pend || {}) };
+    lastFlush: +s.lastFlush || 0, attempt: +s.attempt || 0, pend: Object.assign(statsEmpty(), s.pend || {}) };
 })();
 function statsSave(){ try { localStorage.setItem(STATS_KEY, JSON.stringify(stats)); } catch(e){} }
 function statsToken(){
@@ -26717,7 +26748,8 @@ function statsFeature(name){
   statsSave();
 }
 // A playlist newly added to the library (not a refresh of one already there).
-function statsImport(id){ if (!getLibrary().includes(id) && !document.body.classList.contains('onb-active')) awardMilestone('load'); if (statsEnabled() && !getLibrary().includes(id)){ statsTouch(); stats.pend.imports++; statsSave(); } }
+function statsImport(id){ if (id === firstSongStarting) return;   // the splash Play starter is not a playlist the tester added
+  if (!getLibrary().includes(id) && !document.body.classList.contains('onb-active')) awardMilestone('load'); if (statsEnabled() && !getLibrary().includes(id)){ statsTouch(); stats.pend.imports++; statsSave(); } }
 let statsLastTick = 0;
 function statsTick(){
   const now = Date.now(), prev = statsLastTick;
@@ -26753,11 +26785,56 @@ function statsUsedNow(){
   if (castActive()) used.push('cast');
   return used;
 }
+/* First-play funnel (T-0007): did a tester try to play, did it start, did it fail?
+   playTapped: a deliberate play action (splash Play, the play button, a playlist's Play).
+   playStarted: the active deck's real PLAYING event (onDeckStateChange), not the 15 s
+   statsTick above. It counts only when a tap is waiting, so one tap is one started or
+   one failed. (The event also fires for a muted ad-wait start; that still means the
+   player started.)
+   playFailed: a tap that saw no PLAYING event within STATS_PLAY_TIMEOUT_MS, or a deck
+   error (statsPlayError). The pending tap time is kept in localStorage, so a tester who
+   closes the tab mid-wait is counted as failed on the next open or flush. */
+/* play-funnel:start */
+const STATS_PLAY_TIMEOUT_MS = 20 * 1000;
+let statsAttemptTimer = 0;
+function statsAttemptExpire(){
+  if (stats.attempt && Date.now() - stats.attempt >= STATS_PLAY_TIMEOUT_MS){ stats.attempt = 0; stats.pend.playFailed++; statsSave(); }
+}
+function statsPlayTapped(){
+  if (!statsEnabled()) return;
+  statsTouch();
+  statsAttemptExpire();
+  if (!stats.attempt){
+    stats.attempt = Date.now();
+    stats.pend.playTapped++;
+    clearTimeout(statsAttemptTimer);
+    statsAttemptTimer = setTimeout(() => { statsAttemptExpire(); }, STATS_PLAY_TIMEOUT_MS + 250);
+  }
+  statsSave();
+}
+function statsPlayStarted(){
+  if (!statsEnabled() || !stats.attempt) return;
+  statsAttemptExpire();
+  if (!stats.attempt) return;   // it did time out first: already counted as failed
+  stats.attempt = 0;
+  clearTimeout(statsAttemptTimer);
+  stats.pend.playStarted++;
+  statsSave();
+}
+function statsPlayError(){
+  if (!statsEnabled() || !stats.attempt) return;
+  stats.attempt = 0;
+  clearTimeout(statsAttemptTimer);
+  stats.pend.playFailed++;
+  statsSave();
+}
+/* play-funnel:end */
 function statsFlush(onHide){
   if (!statsEnabled()) return;
+  statsAttemptExpire();
   const p = stats.pend;
   p.listenSec = Math.round(p.listenSec);
-  if (!p.sessions && !p.listenSec && !p.songs && !p.playlists && !p.imports && !Object.keys(p.features).length) return;
+  if (!p.sessions && !p.listenSec && !p.songs && !p.playlists && !p.imports && !p.playTapped && !p.playStarted && !p.playFailed && !Object.keys(p.features).length) return;
   const body = JSON.stringify(Object.assign({ token: statsToken() }, p));
   const url = BACKEND + '/beta/activity';
   // text/plain keeps it a simple CORS request (no preflight) for sendBeacon and fetch alike.
@@ -26770,7 +26847,7 @@ function statsFlush(onHide){
   statsSave();
 }
 if (statsHostOk){
-  if (statsEnabled()){ statsTouch(); statsSave(); }
+  if (statsEnabled()){ statsTouch(); statsAttemptExpire(); statsSave(); }
   ['pointerdown', 'keydown'].forEach(ev => document.addEventListener(ev, () => {
     if (statsEnabled() && Date.now() - stats.lastSeen > 5000){ statsTouch(); statsSave(); }
   }, { capture: true, passive: true }));
@@ -32171,7 +32248,7 @@ function onDeckStateChange(deck, e){
   if (deck.kind === 'yt') guardActiveDeckAd();
   // mid pause-fade the deck is still audibly playing, but the UI already
   // shows paused (see runPlayFade) - don't let a PLAYING event flip it back
-  if (e.data === YT.PlayerState.PLAYING){ if (!isFadingOut(deck)){ setPlayingUI(true); announceTabPlaying(); } }
+  if (e.data === YT.PlayerState.PLAYING){ if (!isFadingOut(deck)){ setPlayingUI(true); announceTabPlaying(); statsPlayStarted(); } }
   else if (e.data === YT.PlayerState.PAUSED){ if (!(deck.unstickAt && Date.now() - deck.unstickAt < 1500)) setPlayingUI(false); }
   else if (e.data === YT.PlayerState.ENDED){
     if (swapInProgress) return;
@@ -32892,6 +32969,7 @@ function createAudioDeckPlayer(deck, videoId){
   el.onended = () => emit(YT.PlayerState.ENDED);
   el.onerror = () => {
     if (deck.gen !== myGen || deck !== activeDeck() || deck.kind !== 'au') return;
+    statsPlayError();
     showToast(isLocalVideoId(deck.videoId) || isAudiusVideoId(deck.videoId) ? "Couldn't play this song - skipping." : "Couldn't play this episode - skipping.");
     playNext(true);
   };
@@ -38120,6 +38198,7 @@ function recordLatestPlayed(t){
     lsSet(LS_PLAY_HISTORY, hist.slice(0, PLAY_HISTORY_MAX));
   }
   if (signInNudgeWaiting){ signInNudgeWaiting = false; setTimeout(showSignInNudge, 6000); }
+  if (oneTapWaiting){ oneTapWaiting = false; setTimeout(() => initGoogleOneTap(), 6000); }
 }
 
 function reflectCurrentTrackUI(pos, opts){
@@ -39037,6 +39116,7 @@ function userTogglePlayback(){
   if (s === 1) msPausedOnce = true; else if (msPausedOnce) awardMilestone('pause');
   try { vibeNotePause(s === 1); } catch(e){}
   playLpNeedle(s === 1 && !isFadingOut(ad) ? 'lift' : 'drop');
+  if (s !== 1) statsPlayTapped();
   playIndex(state.queuePos);
 }
 
@@ -39151,6 +39231,7 @@ playBtn.addEventListener('click', () => {
   if (state.queuePos >= 0){ userTogglePlayback(); return; }
   // first run (#264): the glowing play button starts the glowing starter
   const nudgeId = playNudgeActive() ? playNudgeTargetId() : null;
+  statsPlayTapped();
   if (nudgeId) playLibraryTrackInline(nudgeId, 0); else playRickrollFallback();
 });
 nextBtn.addEventListener('click', () => { liveStop(); msPart('skip', 'next', ['next', 'prev']); playNext(false); });
@@ -46801,6 +46882,10 @@ if (introBeatCapture){
 else if (onboardingComplete && !tutorialWatched && inviteDueToday(TUTORIAL_INVITE_DAY_KEY)){
   // Took "Enter" without ever watching - offer the choice again, once a day.
   markInviteShown(TUTORIAL_INVITE_DAY_KEY);
+  showSplashChoice();
+}
+else if (onboardingComplete && !hasEverPlayed()){
+  // Returning but never played a song (T-0006): put Play in front again every visit until they do.
   showSplashChoice();
 }
 else if (onboardingComplete || !introEligibleNow){ discardIntroChrome(); startApp(); }

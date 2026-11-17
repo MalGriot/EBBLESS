@@ -323,11 +323,13 @@ async function handleActivity(request, env, ctx, h) {
   const delta = {
     sessions: n(body.sessions, 50), listenSec: n(body.listenSec, 86_400), songs: n(body.songs, 2_000),
     playlists: n(body.playlists, 500), imports: n(body.imports, 500),
+    // First-play funnel: taps on play, real starts, timeouts or errors. Counts only, small caps.
+    playTapped: n(body.playTapped, 500), playStarted: n(body.playStarted, 500), playFailed: n(body.playFailed, 500),
     features: {},   // feature -> sessions it was used in
   };
   const f = body.features && typeof body.features === 'object' ? body.features : {};
   FEATURES.forEach(k => { const v = n(f[k], 50); if (v) delta.features[k] = v; });
-  if (!delta.sessions && !delta.listenSec && !delta.songs && !delta.playlists && !delta.imports && !Object.keys(delta.features).length) return h.json({ ok: true });
+  if (!delta.sessions && !delta.listenSec && !delta.songs && !delta.playlists && !delta.imports && !delta.playTapped && !delta.playStarted && !delta.playFailed && !Object.keys(delta.features).length) return h.json({ ok: true });
   if (await throttled(request, ctx, h.envCache, 'activity', ACTIVITY_LIMIT, ACTIVITY_WINDOW_S)) return h.json({ error: 'slow down' }, 429);
   const r = await sheet(env, 'activity', { token: body.token, delta });
   if (!r.tester) return h.json({ error: 'not a tester' }, 403);
