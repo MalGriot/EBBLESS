@@ -138,8 +138,8 @@ const slice = (name) => {
 };
 // Builds the splash Play pieces with stubs. `startApp` is what Enter runs: like the real startApp() it
 // restores a saved queue first and starts seedStarterLibrary() without waiting for it.
-function splashPlay({ savedQueue }) {
-  const log = { imports: [], resolved: [], tapped: 0, order: [] };
+function splashPlay({ savedQueue, defer = false }) {
+  const log = { imports: [], resolved: [], tapped: 0, order: [], pending: [] };
   const state = { queue: savedQueue ? [{ id: 'old' }] : [], queuePos: savedQueue ? 0 : -1 };
   const URLS = ['https://soundcloud.com/starter-album', 'https://open.spotify.com/playlist/second'];
   let handler = null;
@@ -152,7 +152,9 @@ function splashPlay({ savedQueue }) {
     const getCachedPlaylist = () => null, isResolveStale = () => false, saveToLibrary = () => {}, renderLibrary = () => {};
     const queueBackgroundLoad = async (id) => { log.resolved.push(id); return true; };
     const statsPlayTapped = () => { log.tapped++; log.order.push('tapped'); };
-    const beginImport = (id, force, type, ti) => { log.imports.push({ id, keep: importKeepsQueue(type, ti) }); log.order.push('import'); };
+    const run = (id, type, ti) => { log.imports.push({ id, keep: importKeepsQueue(type, ti, id) }); };
+    // like importChain: with defer on, the import waits its turn behind anything queued earlier
+    const beginImport = (id, force, type, ti) => { log.order.push('import'); if (ctx.defer) log.pending.push(() => run(id, type, ti)); else run(id, type, ti); };
     const $ = (id) => (id === 'splashSkipTutorial' ? ctx.enterEl : null);
     const document = { addEventListener: (ev, fn) => { if (ev === 'click') ctx.setHandler(fn); } };
     ${slice('seed-starter')}
@@ -161,7 +163,7 @@ function splashPlay({ savedQueue }) {
     ctx.startApp = () => { log.order.push('startApp'); seedStarterLibrary(); };
     return { importKeepsQueue };
   `);
-  const ctx = { state, URLS, log, enterEl, setHandler: (fn) => { handler = fn; } };
+  const ctx = { state, URLS, log, enterEl, defer, setHandler: (fn) => { handler = fn; } };
   var startApp;
   const ret = api(ctx);
   startApp = ctx.startApp;
@@ -177,12 +179,25 @@ const queued = (async () => {
   assert.strictEqual(f.log.imports[0].id, 'id:' + f.URLS[0]);
   assert.strictEqual(f.log.imports[0].keep, false, 'a saved queue must not turn Play into a quiet "file it" import');
   // the force is used up: a link pasted afterwards keeps the queue as before (#386)
-  assert.strictEqual(f.importKeepsQueue('playlist', 0), true);
+  assert.strictEqual(f.importKeepsQueue('playlist', 0, 'id:pasted'), true);
 })();
 const fresh = (async () => {
   const f = splashPlay({ savedQueue: false });
   f.click(); await tick();
   assert.strictEqual(f.log.imports[0].keep, false);
+})();
+const ahead = (async () => {
+  // a signup playlist (#446) or ?import= link is already on importChain when Play is tapped, so it runs first
+  const f = splashPlay({ savedQueue: true, defer: true });
+  f.click(); await tick();
+  assert.strictEqual(f.log.pending.length, 1);
+  const signup = f.importKeepsQueue('playlist', 0, 'id:signup-playlist');   // runs first, with the saved queue
+  assert.strictEqual(signup, true, 'the earlier import keeps the queue (#386)');
+  f.log.pending.shift()();                                                  // now the starter's own import
+  assert.strictEqual(f.log.imports[0].id, 'id:' + f.URLS[0]);
+  assert.strictEqual(f.log.imports[0].keep, false, 'the earlier import must not use up the starter force');
+  assert.strictEqual(f.importKeepsQueue('playlist', 0, 'id:later-paste'), true, 'a later pasted link keeps the queue (#386)');
+  assert.strictEqual(f.importKeepsQueue('playlist', 0, 'id:' + f.URLS[0]), true, 'one-shot: used up by the starter import');
 })();
 const order = (async () => {
   const f = splashPlay({ savedQueue: true });
@@ -261,10 +276,11 @@ check('Dashboard: the old rows are untouched and the new FIRST PLAY block sits a
   assert.ok(gs.includes('=IFERROR(TEXT(B29/B28,"0%"),"-")'), 'B29/B28 references must not move');
   assert.ok(gs.includes('[1, 8, 14, 17, 20, 32].forEach'));
 });
-Promise.all([queued, fresh, order]).then(() => {
-  pass += 3;
+Promise.all([queued, fresh, ahead, order]).then(() => {
+  pass += 4;
   console.log('ok  Play with a saved queue replaces the queue, starts once, and the force is used up (async)');
   console.log('ok  Play on a fresh install starts the starter (async)');
+  console.log('ok  a signup or ?import= import ahead of Play keeps the queue and leaves the starter force intact (async)');
   console.log('ok  real click order: Enter first, then tap and import; the starter is not resolved twice (async)');
   console.log(pass + ' passed');
 }).catch((e) => { console.error(e); process.exit(1); });

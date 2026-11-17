@@ -12,9 +12,13 @@ Branch `claude/vigorous-morse-0bbe88`. Nothing is pushed, deployed or re-run on 
 - One tap on Play enters the app exactly like Enter, then starts the first starter in the same tap
   (`playFirstSong()`). The first song is the owner's own SoundCloud album (Breathe Love Deep): no ads, no
   Spotify, no Google. This is the builder's call (T-0007 assumption): fewest moving parts.
-- **Play always plays, even with a saved queue (round 2).** Before, a returning tester's resumed queue made the
-  import "keep the queue" and nothing played. `importKeepsQueue()` now lets the Play import replace the queue
-  (one-shot flag `firstSongForce`, used up by that import, so a pasted link afterwards still keeps the queue).
+- **Play always plays, even with a saved queue (rounds 2 and 3).** Before, a returning tester's resumed queue made the
+  import "keep the queue" and nothing played. `importKeepsQueue(type, targetIndex, id)` now lets the **starter's own
+  import** replace the queue: the one-shot flag `firstSongForce` only counts for `id === firstSongStarting`. Round 3
+  fix: a signup playlist (#446, `applyBetaSignupPlaylist()`) or a `?import=` link already queued on `importChain`
+  runs first, keeps the queue as before (#386) and no longer uses up the force, so the starter still replaces the
+  queue when its turn comes. Chosen over deferring those imports because it changes nothing for them. A later pasted
+  link keeps the queue (#386). Play on the return-to-splash screen replaces the queue by design (CEO accepted).
 - Returning testers who never played (`!hasEverPlayed()`) get the same choice on every open until they do.
 - A slow load can no longer hide it: the 12 s splash safety net skipped Android only; it now skips any splash
   showing the choice.
@@ -108,38 +112,67 @@ branch ships **only T-0007 commits** and nothing else: the three below plus the 
 Verify right before pushing: `git fetch && git log --oneline origin/main..HEAD` must list only T-0007 commits (those three and doc-only follow-ups). If `main`
 moved again, merge it, take the next free release number in `sw.js` and `WHATS_NEW`, and re-run the checks below.
 
-Worker. `git diff origin/main HEAD -- worker` is T-0007 only: `worker/src/beta.js` and `worker/test/beta-activity.test.mjs`.
-But `npx wrangler deploy` ships the whole `worker/` folder at that commit, so it also ships any worker change already
-on `origin/main` that Cloudflare does not have yet. The repo records these as not deployed or not recorded:
+### Worker: what Cloudflare runs now (read-only checks, 2026-11-17)
 
-| Commit | What | Deployed? |
-|---|---|---|
-| `2f8edeb` (2026-11-16) | film and game trailers are never a song's match (#836) | commit message says "not deployed"; no later note says it was |
-| `a898e04` (2026-11-17) | `GET /s` branded share previews | commit message says "worker not deployed yet" |
-| `3742a14` (2026-11-16) | paywall switch and plan map | not recorded in the repo; Cloudflare is the source of truth |
-| `004450b` (this task) | `/beta/activity` three counters | not deployed |
+`npx wrangler deployments list` (no writes) shows the latest deployment **2026-11-17T06:30:11Z (12:00 IST), version
+`b38b74b6-e5d9-454f-a6e9-abde7effffc8`**, source "Unknown". Earlier ones: 2026-11-16T18:05:15Z (`acb8b5d5-...`) and
+2026-11-16T20:35:46Z (`ec1570bb-...`). Cloudflare does not store a git commit for them, so the commit is inferred:
 
-Before deploying: `cd worker && npx wrangler deployments list` for the last deploy time, then
-`git log --since=<that time> --oneline -- worker`. Everything listed ships. The CEO should approve that list, not only
-T-0007. To ship the T-0007 worker change alone, deploy from the commit Cloudflare currently runs plus the two T-0007
-files (`git worktree add ../w <that commit>` then `git checkout claude/vigorous-morse-0bbe88 -- worker/src/beta.js`
-and deploy from `../w/worker`); the owner needs to name that commit, I cannot tell it from the repo.
+- The worker commits in order: `2f8edeb` (11-16 15:58Z), `3742a14` (paywall, 11-16 18:04Z), `a898e04` (`GET /s`, 11-17
+  04:38Z), then T-0007's `004450b` (11-17 06:39Z). No other commit touches `worker/` in that period.
+- The newest deployment (06:30Z) falls after `a898e04` and before `004450b`. A live check agrees: `GET /s` on the
+  production worker answers 302 to the app, while an unknown path (`/s2`) answers 404, and `/s` does not exist before
+  `a898e04`. So `a898e04` is live, and with it the older `3742a14` and `2f8edeb` (a deploy from `a898e04`'s tree
+  includes its parents). The commit messages saying "not deployed" were written before these deploys.
+- Confidence: **high that the running worker is the `a898e04` tree**, but not certain: it cannot rule out a deploy
+  from a worktree with uncommitted edits, and I cannot read the deployed source. The 404 route list of the live worker
+  and the `GET /s` check match `a898e04`; I did not byte-compare the bundle.
+
+What would ship: `git diff --stat a898e04 HEAD -- worker` is exactly `worker/src/beta.js` (4 lines) and
+`worker/test/beta-activity.test.mjs` (new). So `2f8edeb`, `a898e04` and `3742a14` (paywall switch) do **not** ship in the
+steps below; they are already live.
 
 ### Release steps (none have been run)
 
-1. QA and the CEO approve, including the worker list above.
-2. Sheet first: paste the whole `tools/beta-sheet.gs` into Apps Script. Deploy, Manage deployments, edit the existing
+Approve first: QA and the CEO. Then, in this order:
+
+1. **Sheet.** Paste the whole `tools/beta-sheet.gs` into Apps Script. Deploy, Manage deployments, edit the existing
    Web app deployment, Version: New version (do not create a new deployment: `SHEET_URL` must not change). Then in
-   the Sheet, menu EBBLESS Beta, Set up / repair sheet (adds the three Analytics columns, rebuilds the Dashboard,
+   the Sheet: menu EBBLESS Beta, Set up / repair sheet (adds the three Analytics columns, rebuilds the Dashboard,
    reinstalls the two triggers). Check: Dashboard rows 1 to 30 unchanged (39 / 36 / 28 funnel numbers), new block at
-   rows 32 to 37, three new columns at the far right of Analytics.
-3. Worker: `cd worker && npm test && npx wrangler deploy`, then `curl -s -X POST <worker>/beta/activity -d '{}'`
-   should answer 403 `not a tester`, not an error page.
-4. App: merge `claude/vigorous-morse-0bbe88` into `main`, run `scripts/check.sh`, push `main` (GitHub Pages serves it;
-   testers get v571 on next load; the Android app refreshes its local copy in the background, so allow one launch).
-5. Verify on live with a fresh browser profile and a real tester link (the Android steps above).
-6. Roll back: app by reverting the merge; worker with `npx wrangler rollback`; Sheet by re-pasting the old
-   `beta-sheet.gs` and running Set up / repair sheet (extra columns can stay).
+   rows 32 to 37, three new Analytics columns at the far right.
+2. **Worker, isolated to T-0007.** From the repo root:
+
+   ```bash
+   git fetch
+   git worktree add --detach ../w-t0007 a898e04
+   cd ../w-t0007
+   git checkout claude/vigorous-morse-0bbe88 -- worker/src/beta.js worker/test/beta-activity.test.mjs
+   git diff --cached --stat a898e04 -- worker     # must list exactly those two files
+   cd worker && npm ci && npm test                # 263 pass
+   npx wrangler deployments list                  # confirm latest is still b38b74b6 (06:30Z 11-17)
+   npx wrangler deploy
+   ```
+
+   If `deployments list` shows a newer deployment than `b38b74b6`, stop: someone deployed in between; re-map it before
+   continuing. Dry run already done on this exact tree (`wrangler deploy --dry-run --outdir`, bundles locally, no
+   upload): it builds clean. Check after deploy: `curl -s -X POST <worker>/beta/activity -d '{}'` answers 403 `not a
+   tester`, `curl -sI <worker>/s` still answers 302.
+   Worker rollback, right here: `npx wrangler rollback b38b74b6-e5d9-454f-a6e9-abde7effffc8` returns to the version
+   running before (the old app then simply ignores the three counters).
+3. **App.** Merge `claude/vigorous-morse-0bbe88` into `main`, run `scripts/check.sh`, push `main` (GitHub Pages serves
+   it). `git fetch && git log --oneline origin/main..HEAD` must list only T-0007 commits (the three feature commits
+   and doc-only follow-ups; today `origin/main` is `f3ff169`). If `main` moved, merge it, take the next free release
+   number in `sw.js` and `WHATS_NEW` (571 now), and re-run the checks. Testers get v571 on next load; the Android app
+   refreshes its local copy in the background, so allow one launch.
+   App rollback: revert the merge commit and push (testers get the revert on next load).
+4. **Verify the Sheet path.** Open the beta link in a fresh browser profile, tap Play, wait up to 10 minutes (or close
+   the tab), and confirm the tester row in Analytics has `plays_tapped` 1 and `plays_started` 1.
+5. **Android phone check (the CEO's phone, after release),** with its rollback next to it. Steps: the "Steps for the
+   CEO's Android phone" list above. If Play does nothing, taps twice, or no song starts within about 10 s, roll back
+   now: app by reverting the merge (step 3 rollback); the worker needs no rollback for a UI problem. If only the
+   counters misbehave (Analytics cells wrong or blank), roll back the worker with `npx wrangler rollback
+   b38b74b6-e5d9-454f-a6e9-abde7effffc8` and re-paste the old `beta-sheet.gs` (extra Analytics columns can stay).
 
 ## How to read it on the Dashboard
 
@@ -152,7 +185,7 @@ and deploy from `../w/worker`); the owner needs to name that commit, I cannot te
 - Not tested on a real Android or phone. Counters are off on localhost by design, so the live counter path ran in
   the node tests with the real code, not in a browser.
 - Not verified: SoundCloud autoplay after the async resolve on a real phone, the Android native splash path,
-  live Sheet headers after the paste, the deployed worker state.
+  live Sheet headers after the paste, and the exact commit behind the running worker (inferred, see above).
 - The choice buttons fade in about 4 s after load, longer on a slow connection. Not shortened.
 - On a phone browser the "Add to Home Screen" splash shows for a few seconds after Play; the song is playing.
 - `play_started` can fire for a muted ad-wait start; it still means the player started.

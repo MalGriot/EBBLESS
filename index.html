@@ -22198,8 +22198,11 @@ function beginImport(id, force, type, targetIndex){
 // pasted or searched link just file itself and leave the old queue alone (Geethub #386), so Play asks this one
 // import to replace the queue. Read once, then cleared.
 let firstSongForce = false;
-function importKeepsQueue(type, targetIndex){
-  const force = firstSongForce; firstSongForce = false;
+// The force belongs to the starter's id, so an import that queued ahead of it (a signup playlist, a ?import= link)
+// neither uses it up nor replaces the queue; only the starter's own import does.
+function importKeepsQueue(type, targetIndex, id){
+  const force = firstSongForce && id === firstSongStarting;
+  if (force) firstSongForce = false;
   return !force && !targetIndex && state.queue.length > 0 && state.queuePos >= 0 && !isSingleTrackType(type);
 }
 /* first-song:end */
@@ -22209,7 +22212,7 @@ async function beginImportNow(id, force, type, targetIndex, waited){
   // Searching/pasting a link files its songs in the library (an album as an
   // album) but never wipes a queue that is already going (Geethub #386). A
   // single song still plays now, and an empty queue still starts the link.
-  const keepQueue = importKeepsQueue(type, targetIndex);
+  const keepQueue = importKeepsQueue(type, targetIndex, id);
   if (!force){
     const cached = getCachedPlaylist(id);
     if (cached){
