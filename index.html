@@ -26504,6 +26504,12 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
+  { version: 570, date: '2026-11-17', items: [
+    'Radio: moving or zooming the map with the arrow keys no longer skips your station to the next song.',
+    'Radio: search a country on the map and tap Artists from that country, so places like Ethiopia show people, not only stations.',
+    'Radio: when you zoom in close, each station shows its own logo on the map and opens when you tap it, station lists have a small logo beside each name, and the map takes its colors from the app.',
+    'Radio: changing station fades the old one into a soft burst of static and fades the new one up out of it.',
+  ]},
   { version: 569, date: '2026-11-17', items: [
     'Tap a radio station on the region map and it opens its own page: logo, place, language, audio quality, votes, last check, stations nearby, and a big Play live now button. Save a station to your library (a Radio row at the top of Library), and the player and footer player show its logo while it plays.',
     'Browse by region has one search box for towns, zip codes, regions and radio stations, with suggestions as you type; pick a place and the map flies there.',
