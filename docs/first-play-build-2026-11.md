@@ -93,58 +93,53 @@ no new write or subrequest (the counters ride the existing single Sheet call), g
 dependency change, no public route renamed or reshaped, counts only (no track names or device info). Covered by
 `worker/test/beta-activity.test.mjs`. `scripts/check-security.js` passes with no new baseline entry.
 
-## What approving a release ships (exact, as of 2026-11-17)
+## What approving a release ships (exact, checked against `origin/main` on 2026-11-17)
 
-`origin/main` is `a898e04`. This branch is 14 commits ahead of it. The merge to `main` and `git push` would ship
-**all** of them, not only T-0007:
+While round 2 was in progress `origin/main` moved: the radio and station-page lane (including Release 570) was pushed
+(`git fetch` shows `origin/main` = `f3ff169`). This branch already contains it. So a merge and `git push` of this
+branch ships **only T-0007 commits** and nothing else: the three below plus the doc-only commit that last touched this file (`git log origin/main..HEAD` is the authority):
 
-| Lane | Commits | Reviewed in this task? |
-|---|---|---|
-| T-0007 (this task) | `004450b` one-tap Play and counters, `9da1c70` merge (takes release **571**), and the round 2 fix commit | yes |
-| Radio map / station page (not mine) | `966399f`, `c5e693e`, `b1f862a`, `a3f7d2e`, `908f739`, `fbf259b` (merge; first use of 569), `b0bc41b`, `9d24317`, `2ab040b`, `efdcbeb`, `f3ff169` (Release 570 notes) | **no**, unreviewed here |
+| Commit | What |
+|---|---|
+| `004450b` | one-tap Play, the three counters, worker route, Sheet columns and Dashboard rows, findings and build docs |
+| `9da1c70` | merge of `main` (`f3ff169`); release number taken: **571** (`sw.js` `ebbless-shell-v571`, `WHATS_NEW` 571) |
+| `b77ab1f` | round 2 fixes, behavior tests, evidence screenshots, this document |
 
-Result of the merge: `sw.js` `ebbless-shell-v571`, `WHATS_NEW` 571 (T-0007), 570 and 569 (the radio lane). The
-radio lane's code and what's-new text go out with it.
+Verify right before pushing: `git fetch && git log --oneline origin/main..HEAD` must list only T-0007 commits (those three and doc-only follow-ups). If `main`
+moved again, merge it, take the next free release number in `sw.js` and `WHATS_NEW`, and re-run the checks below.
 
-Worker changes already on `origin/main` (pushed, not necessarily deployed) that `npx wrangler deploy` would ship
-together with T-0007, because wrangler deploys the whole `worker/` folder:
+Worker. `git diff origin/main HEAD -- worker` is T-0007 only: `worker/src/beta.js` and `worker/test/beta-activity.test.mjs`.
+But `npx wrangler deploy` ships the whole `worker/` folder at that commit, so it also ships any worker change already
+on `origin/main` that Cloudflare does not have yet. The repo records these as not deployed or not recorded:
 
 | Commit | What | Deployed? |
 |---|---|---|
 | `2f8edeb` (2026-11-16) | film and game trailers are never a song's match (#836) | commit message says "not deployed"; no later note says it was |
 | `a898e04` (2026-11-17) | `GET /s` branded share previews | commit message says "worker not deployed yet" |
-| `3742a14` (2026-11-16) | paywall switch and plan map | not recorded; the Cloudflare dashboard is the source of truth |
+| `3742a14` (2026-11-16) | paywall switch and plan map | not recorded in the repo; Cloudflare is the source of truth |
 | `004450b` (this task) | `/beta/activity` three counters | not deployed |
 
-The worker change in the unpushed commits is T-0007 only (`worker/src/beta.js`, `worker/test/beta-activity.test.mjs`).
-Before deploying, compare `cd worker && npx wrangler deployments list` (last deploy time) against
-`git log --since=<that time> -- worker`: everything listed ships.
+Before deploying: `cd worker && npx wrangler deployments list` for the last deploy time, then
+`git log --since=<that time> --oneline -- worker`. Everything listed ships. The CEO should approve that list, not only
+T-0007. To ship the T-0007 worker change alone, deploy from the commit Cloudflare currently runs plus the two T-0007
+files (`git worktree add ../w <that commit>` then `git checkout claude/vigorous-morse-0bbe88 -- worker/src/beta.js`
+and deploy from `../w/worker`); the owner needs to name that commit, I cannot tell it from the repo.
 
-### Option A: release everything above (merge this branch)
+### Release steps (none have been run)
 
-1. QA and the CEO approve, knowing the radio lane and the worker rows above ship too.
+1. QA and the CEO approve, including the worker list above.
 2. Sheet first: paste the whole `tools/beta-sheet.gs` into Apps Script. Deploy, Manage deployments, edit the existing
-   Web app deployment, Version: New version (do not create a new deployment: `SHEET_URL` must not change). Then
-   in the Sheet, menu EBBLESS Beta, Set up / repair sheet (adds the three columns, rebuilds the Dashboard, reinstalls
-   the two triggers). Check: old Dashboard rows 1 to 30 unchanged (39 / 36 / 28 funnel numbers), new block at 32 to 37.
+   Web app deployment, Version: New version (do not create a new deployment: `SHEET_URL` must not change). Then in
+   the Sheet, menu EBBLESS Beta, Set up / repair sheet (adds the three Analytics columns, rebuilds the Dashboard,
+   reinstalls the two triggers). Check: Dashboard rows 1 to 30 unchanged (39 / 36 / 28 funnel numbers), new block at
+   rows 32 to 37, three new columns at the far right of Analytics.
 3. Worker: `cd worker && npm test && npx wrangler deploy`, then `curl -s -X POST <worker>/beta/activity -d '{}'`
-   should answer 403 `not a tester`.
-4. App: merge `claude/vigorous-morse-0bbe88` into `main`, run `scripts/check.sh`, push `main`.
-5. Verify on live with a fresh browser profile and a real tester link (Android steps above).
-6. Roll back: app by reverting the merge, worker with `npx wrangler rollback`, Sheet by re-pasting the old
+   should answer 403 `not a tester`, not an error page.
+4. App: merge `claude/vigorous-morse-0bbe88` into `main`, run `scripts/check.sh`, push `main` (GitHub Pages serves it;
+   testers get v571 on next load; the Android app refreshes its local copy in the background, so allow one launch).
+5. Verify on live with a fresh browser profile and a real tester link (the Android steps above).
+6. Roll back: app by reverting the merge; worker with `npx wrangler rollback`; Sheet by re-pasting the old
    `beta-sheet.gs` and running Set up / repair sheet (extra columns can stay).
-
-### Option B: release only T-0007
-
-Branch `claude/t0007-release-only` is `origin/main` plus only the T-0007 commits (the radio lane and its 570 notes
-are not in it). Its release number is **569** (`sw.js` `ebbless-shell-v569`), because on `origin/main` the last
-release is 568. Worker: deploy from a clean checkout of that branch with `git switch claude/t0007-release-only`, so the
-only worker diff versus `origin/main` is T-0007; the rows above for `2f8edeb`, `a898e04` and `3742a14` are already on
-`origin/main` and still ship with any `wrangler deploy` from it. To avoid that too, deploy the worker from the commit
-Cloudflare currently runs plus the two T-0007 worker files (`git checkout <that commit> -- worker && git checkout
-claude/t0007-release-only -- worker/src/beta.js worker/test/beta-activity.test.mjs`); the CEO or owner needs to name
-that commit. Steps 2, 3, 5, 6 are as in Option A; step 4 is merging `claude/t0007-release-only` instead. The radio lane
-then lands later and takes the next free number (its release numbers 569 and 570 will collide with this one).
 
 ## How to read it on the Dashboard
 
