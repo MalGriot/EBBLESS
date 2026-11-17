@@ -1539,6 +1539,13 @@ body.split-desktop:has(#mini-bar:not([hidden])) :is(#browsePage,#addSongsPage,#r
 .rs-li{display:flex;align-items:stretch;gap:6px}
 .rs-li-open{flex:1;min-width:0;text-align:left;padding:10px 14px;border-radius:14px;border:1px solid var(--border);background:var(--panel);color:var(--text);font:inherit;font-size:14.5px;cursor:pointer;overflow-wrap:anywhere}
 .rs-li-open small{display:block;color:var(--faint);font-size:12.5px;margin-top:2px}
+.rs-li-open{display:flex;align-items:center;gap:10px}
+.rm-mk{width:38px;height:38px;padding:0;border-radius:50%;border:2.5px solid var(--accent);background:#151107;overflow:hidden;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.5)}
+.rm-mk img{display:block;width:100%;height:100%;object-fit:cover}
+.rm-mk:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.rs-li-img{flex:none;width:40px;height:40px;border-radius:10px;object-fit:cover;background:var(--panel-3)}
+.rs-li-txt{min-width:0;flex:1}
+.rs-li-name{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .rs-li-play,.rs-li-save{flex:none;width:46px;border-radius:14px;border:1px solid var(--border-2);background:var(--panel-2);color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;font:inherit;font-size:22px;line-height:1}
 .rs-li-play{background:var(--accent);border-color:var(--accent);color:var(--on-accent,#151107)}
 .rs-li-play svg{width:22px;height:22px}
@@ -12476,8 +12483,13 @@ function renderLibraryRadio(){
 // one station in a list: tap the name for its page, the waves button tunes in at once, the plus adds it to your radio list
 function rsRow(st, small, keepFrom){
   const li = document.createElement('li'); li.className = 'rs-li';
-  const open = bpMk('button', 'rs-li-open', st.name); open.type = 'button';
-  open.appendChild(bpMk('small', '', small));
+  const open = bpMk('button', 'rs-li-open'); open.type = 'button';
+  // #828: a small thumb of the station's art (its logo, or a drawn tile) beside the name
+  const th = document.createElement('img'); th.className = 'rs-li-img'; th.alt = ''; th.width = 40; th.height = 40; th.loading = 'lazy';
+  th.src = rmTileUrl(st.name);
+  if (st.favicon) rsLogo(st).then(u => { if (th.isConnected) th.src = u; });
+  const tx = bpMk('span', 'rs-li-txt'); tx.appendChild(bpMk('span', 'rs-li-name', st.name)); tx.appendChild(bpMk('small', '', small));
+  open.appendChild(th); open.appendChild(tx);
   open.addEventListener('click', () => { if (st.lat != null && !rmSt.has(st.id)){ rmSt.set(st.id, st); rmPushSoon(); } rsOpen(st, open, !!keepFrom); });
   const pl = bpMk('button', 'rs-li-play'); pl.type = 'button'; pl._st = st;
   pl.addEventListener('click', () => { if (liveSt && liveSt.id === st.id && liveIsPlaying()) liveStop(); else liveStart(st); });
@@ -12623,7 +12635,7 @@ function rmSheetSync(){
 }
 function rmTeardownMap(){
   clearTimeout(rmMoveT); clearTimeout(rmPushT);
-  rmQueue = [];
+  rmQueue = []; rmMarks.clear();
   if (rmMap){ try { rmMap.remove(); } catch(e){} rmMap = null; }
   rmPinMk = null;
 }
@@ -12674,6 +12686,25 @@ function rmMount(top){
   rmInit(rmGen);
 }
 function rmWorldZoom(){ const w = (rmWrap && rmWrap.clientWidth) || 360; return Math.max(0.4, Math.min(2.2, Math.log2(w / 512) + 0.15)); }
+// #818: close in (street level) each lone station shows its own logo on the map, and tapping it opens the station
+var rmMarks = new Map();
+function rmMarksClear(){ rmMarks.forEach(m => { try { m.mk.remove(); } catch(e){} }); rmMarks.clear(); }
+function rmMarkSync(){
+  const map = rmMap; if (!map || !map.getLayer('rm-pin')) return;
+  if (map.getZoom() < 11){ if (rmMarks.size) rmMarksClear(); return; }
+  const want = new Map();
+  map.queryRenderedFeatures({ layers: ['rm-pin'] }).forEach(f => { const id = f.properties && f.properties.id; if (id != null && want.size < 40 && !want.has(id)) want.set(id, f.geometry.coordinates.slice()); });
+  rmMarks.forEach((m, id) => { if (!want.has(id)){ try { m.mk.remove(); } catch(e){} rmMarks.delete(id); } });
+  want.forEach((c, id) => {
+    if (rmMarks.has(id)) return;
+    const st = rmSt.get(id); if (!st) return;
+    const el = document.createElement('button'); el.type = 'button'; el.className = 'rm-mk'; el.setAttribute('aria-label', st.name + ', radio station. Open its page.');
+    const img = document.createElement('img'); img.alt = ''; img.src = rmTileUrl(st.name); el.appendChild(img);
+    if (st.favicon) rsLogo(st).then(u => { if (img.isConnected) img.src = u; });
+    el.addEventListener('click', (ev) => { ev.stopPropagation(); rmSelect(st); });
+    rmMarks.set(id, { mk: new maplibregl.Marker({ element: el }).setLngLat(c).addTo(map) });
+  });
+}
 function rmSaveView(){ if (rmMap){ const c = rmMap.getCenter(); rmView = { c: [c.lng, c.lat], z: rmMap.getZoom() }; } }
 function rmInit(gen){
   if (!rmWrap || document.hidden) return;
@@ -12717,6 +12748,7 @@ function rmInit(gen){
       rmListRender();
       rmFetchView();
     });
+    map.on('idle', () => { if (map === rmMap) rmMarkSync(); });
     map.on('moveend', () => {
       if (map !== rmMap) return;
       rmSaveView();
