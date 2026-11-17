@@ -323,3 +323,10 @@ test('/owner/tier: a Patreon sync never changes the test plan; real drops it', a
   env2.PROFILES.m.set('ent:own', JSON.stringify({ tier: 'horizon', src: 'code', at: 1 }));
   assert.deepEqual(await (await ownerCall(env2, '/owner/tier', { idToken: 'owner', tier: 'real' })).json(), { tier: 'horizon', testing: false }, 'real leaves a non-test grant alone');
 });
+
+test('paywall flag: /entitlement says paywall only when PAYWALL is on', async () => {
+  const off = mkEnv();
+  assert.equal((await (await call(off, '/entitlement', { body: { idToken: 'good' } })).json()).paywall, undefined);
+  const on = { ...mkEnv(), PAYWALL: 'on' };
+  assert.equal((await (await call(on, '/entitlement', { body: { idToken: 'good' } })).json()).paywall, true);
+});

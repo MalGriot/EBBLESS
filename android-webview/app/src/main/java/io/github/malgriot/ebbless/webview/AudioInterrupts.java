@@ -13,8 +13,10 @@ import android.os.Looper;
 
 /**
  * #755: pause the music for a call, for another app's audio, and when the headphones or Bluetooth drop, like a
- * phone's own music app. The WebView asks for no audio focus of its own, so this holds it for the page while the
- * page plays. Decisions live in InterruptPolicy; this only wires Android's events to it and sends the result to
+ * phone's own music app. The WebView (157) asks for audio focus of its own when media plays, and a second request
+ * from here took it away, so the WebView paused the page's player a second into every song. So this no longer
+ * requests focus (REQUEST_FOCUS): call and other-app interruptions pause through the WebView's own focus, and only
+ * the headphones/Bluetooth "noisy" receiver stays here. Decisions live in InterruptPolicy; this only wires Android's events to it and sends the result to
  * the page through the same path as the notification buttons ("stop" = the page's pause without the needle sound,
  * "play" = its play). Everything runs on the main thread.
  */
@@ -26,6 +28,8 @@ final class AudioInterrupts {
     private final Sink sink;
     private final Handler main = new Handler(Looper.getMainLooper());
     private final InterruptPolicy policy = new InterruptPolicy();
+    /** Off: a second focus request makes the WebView lose focus and pause YouTube (soak 2026-11-14). */
+    private static final boolean REQUEST_FOCUS = false;
     private AudioFocusRequest request;
     private boolean holding, noisyOn;
 
@@ -75,7 +79,7 @@ final class AudioInterrupts {
     }
 
     private void request() {
-        if (holding || am == null) return;
+        if (!REQUEST_FOCUS || holding || am == null) return;
         try {
             int r;
             if (Build.VERSION.SDK_INT >= 26) {

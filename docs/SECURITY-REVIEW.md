@@ -119,3 +119,9 @@ automates the greppable parts.
   and nothing is written; existing per-IP throttle on these routes. Cost: one KV write per
   switch. The Settings panel is hidden for everyone else; hiding it is UX only, the worker
   is the gate.
+- 2026-11-16: paywall switch (worker var `PAYWALL`, `worker/src/paywall.js`). Off by default:
+  every signed-in listener gets the paid voice cap; the owner's test record still applies.
+  `GET /flags` and `POST /entitlement` add `paywall: true` only when on; existing fields
+  unchanged. Client gates (`can()`, fLUX daily taste in raw localStorage) are UX only; the
+  worker's voice cap is the enforced limit. No new route, no new write. Cost: voice LLM
+  calls can rise to 100 per user per day while off, still under the global neuron ceiling.

@@ -12522,7 +12522,7 @@ Add entries in this shape:
 - **Description:** Today `buildShareUrl` makes an EBBLESS link but every link shows the same generic preview image (`og-image.png`). Add a small worker route that serves a page with per-song Open Graph tags (EBBLESS logo over the song's art, the title and artist) and then redirects into the app or site, so a link dropped in a chat looks like EBBLESS and not Apple Music or YouTube.
 - **Touches:** worker/ (new public route, additive), index.html (`buildShareUrl`, share paths), brand assets for the preview image.
 - **Branch:**
-- **Notes:** **Blocked on the owner getting a domain** (see `own-domain-app-links`). Owner said 2026-11-11: activate this and the domain item once the domain exists. Needs the security checklist when built: size caps and a per-IP throttle on the new anonymous route, escape every title and artist in the HTML, allowlist the art host, no storing anything, generic errors. Design with the domain in mind so the same links can open straight in the app.
+- **Notes:** **Built 2026-11-17 on the worker address** (owner chose to build it now rather than wait for a domain): `GET /s` in worker/src/sharepage.js + index.js, `buildBrandedShareUrl` in index.html for song shares (playlist/album shares still use the plain site link). Preview image is the song's art (allowlisted CDNs) with the EBBLESS site name and title; a rendered logo-over-art image is not done (needs image generation). Needs the worker deployed BEFORE the app, or song shares point at a route that does not exist yet. Swap the base URL when a domain exists. Original note: Owner said 2026-11-11: activate this and the domain item once the domain exists. Needs the security checklist when built: size caps and a per-IP throttle on the new anonymous route, escape every title and artist in the HTML, allowlist the art host, no storing anything, generic errors. Design with the domain in mind so the same links can open straight in the app.
 
 ### own-domain-app-links: Own domain with verified app links, so EBBLESS links open in the app with no Settings step
 - **Status:** draft
@@ -12975,3 +12975,163 @@ Add entries in this shape:
 - **Notes:** Test: node --test tools/region-map.test.js. Saved stations are in localStorage only (ebbless:radio:saved), not in the cloud profile sync, so they do not follow a signed-in user to another device yet. Nominatim is called only on an explicit search (never while typing) and once when a station's page opens (reverse lookup of its map position for a street-level place, kept for the session), no key; its public policy limits heavy use, and the query text goes to OpenStreetMap, so it is credited in Settings. The places index is built from the 2,500-station snapshot plus loaded stations, so small regions can show few stations until the map loads that area. Not run on a phone or in the native apps; stream playback was seen working in the desktop preview only.
 
 - **Notes (later):** Region search is one box: regions from the map's own index, towns and zip codes from Open-Meteo Geocoding (GeoNames, steady, CORS) and Photon (OpenStreetMap, broad but sometimes slow or down), Nominatim only on Enter when Photon fails; stations by name from Radio Browser. Each source paints as it answers. Pin: person button, right-click or P; draggable; lists the 30 nearest known stations and asks the directory in widening rings (25, 100, 400 km). Station rows everywhere share one builder (name opens the page, waves button tunes in, plus saves). Clicking title, artist or picture in the player, flow view or footer player opens the live station's page. Query text goes to Open-Meteo and Photon, credited in Settings; saved stations are still local only.
+
+### home-search-merge: Search and Home are one page, ordered for Spotify users
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Owner: "there's a search page and a home page. they should be the same page. merge any redundancies and order the sections by priority of what's most interesting to spotify users". Home now starts with the search field and type chips (and the link help line), then: Recently played, Top artists, albums, playlists, songs, Top genres, Made for you (CuRRentSSsss, SwiiiRrrLL), the vibe box (today's period mood is one of its chips), the Add songs block (Import your music first, then browse by genre/region/vibe), Music map. A new user gets Add songs, Made for you, the vibe box, Music map. Sections with nothing in them are not built. The logo, the Home button and the Search tab open the same page (Search focuses the field; on desktop the top bar is the field). The separate Search page, its Picked for you row and its Right now mood and genre cards are gone.
+- **Touches:** index.html (Home, setView, search code), sw.js, scripts/test-home-order.js, scripts/check.sh
+- **Branch:** agent/home-search-merge
+- **Notes:** Test: node scripts/test-home-order.js. setView('search') still works and means Home with the field focused. Esc leaves the page on desktop widths. Not verified: real phone keyboard, Hindi UI strings for the new Made for you subtitles (English only for now), a user with many playlists at 768 px.
+
+### library-fullscreen-polish: Library: full-width view fixes (home page fits, art fades, thumbs trimmed, filter menu, thumbs load one at a time) (Geethub #872, #865, #866, #867, #863)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** #872: when library is fully extended, the home page should accommodate the slimmer size it's squished to | #865: when library is fully extended, the song art doesn't fade on song change - it just switches suddenly | #866: remove extra info from thumbs in library | #867: library: filter menu is looking glitchy on desktop when the playlist tab is active | #863: load library thumbs one at a time so it doesn't freeze the app. do it quickly but with less stress on the gpu
+- **Touches:** index.html
+- **Branch:**
+- **Notes:** Synced from Geethub #872, #865, #866, #867, #863 on 2026-11-16.
+
+### art-fade-and-color: Art fades to the next song's art on skip; UI always switches to the new song's color (Geethub #853, #837, #845)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** #853: art is not fading to the next song's | #837: art should fade to next art when song is skipped | #845: sometimes the ui doesn't switch to the current song's color
+- **Touches:** index.html
+- **Branch:**
+- **Notes:** Synced from Geethub #853, #837, #845 on 2026-11-16.
+
+### album-page-rework: Album page: one album page, more info, play any track or the whole album in one click, album art and song-menu album open it (Geethub #869, #857, #856, #807)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** #869: the two types of album page... | #857: alsbum page needs more info and you should be able to play any of the tracks in one click or start the album in one click | #856: clicking album art should open the album page | #807: song menu: album should be clickable and take you to the album page
+- **Touches:** index.html
+- **Branch:**
+- **Notes:** Synced from Geethub #869, #857, #856, #807 on 2026-11-16.
+
+### official-video-and-video-section: Official video option on video select (dup of #781, already ready) plus a Videos section/tab (next to podcasts, saved from YouTube/Vimeo) (Geethub #870, #868, #814)
+- **Status:** draft
+- **Priority:** low
+- **Description:** #870: when you select video it should give an option to watch the official video | #868: there should be a video section next to podcasts | #814: videos tab in the library that you can save videos and playlists to from youtube, vimeo and any other free video source
+- **Touches:** index.html
+- **Branch:**
+- **Notes:** Synced from Geethub #870, #868, #814 on 2026-11-16.
+
+### english-default-language: English is the only language on by default; others opt-in (Geethub #871)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** #871: english should be the only default language active. let them turn on other languages on they're own
+- **Touches:** index.html
+- **Branch:**
+- **Notes:** Synced from Geethub #871 on 2026-11-16.
+
+### link-menu-paste: Link menu: let people paste a link (note: conflicts with the no-paste-fields rule, decide) (Geethub #864)
+- **Status:** draft
+- **Priority:** low
+- **Description:** #864: fix this link menu: you should be able to paste a link
+- **Touches:** index.html
+- **Branch:**
+- **Notes:** Synced from Geethub #864 on 2026-11-16.
+
+### home-player-keys: Home/player switching: H, Esc, button swap, Z to previous mode, fullscreen home (Geethub #862, #847, #833, #815, #829)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** #862: h should take you to player from any place. when on player, it should take you to home page | #847: when in player mode, home button should be as it is. when in home mode, the button should switch to player with a player symbol | #833: hitting esc key on home page should bring you to player view | #815: z should take you back to previous visual mode | #829: you should be able to fullscreen the home page
+- **Touches:** index.html
+- **Branch:**
+- **Notes:** Synced from Geethub #862, #847, #833, #815, #829 on 2026-11-16.
+
+### flux-fixes: fLUX: same controls as cymatics, closes other modes, melts in, no title, works from fullscreen, tester freeze (#855) (Geethub #861, #838, #831, #830, #809, #855)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** #861: flux should have the same controls as cymatics plus their own. | #838: activating fLUX should close all other modes. currently if you select while video or some other style is active, it either doesn't appear or it does and both are active | #831: fLUX should slowly melt in over the current art style rather than just switching over | #830: fLUX doesn't need to display the song name and artist when activated | #809: if you're in another full full screen mode and switch to fLUX, it doesn't come up. you have to hit f again. it should fade to fLUX when you hit 3 or tap the fLUX button | #855: tester report. look into it.
+- **Touches:** index.html
+- **Branch:**
+- **Notes:** Synced from Geethub #861, #838, #831, #830, #809, #855 on 2026-11-16.
+
+### mood-simplify: Mood search: max 7 simple moods first, big list in a dropdown, no emojis, emotion mode as alternative (Geethub #859, #854, #852, #851)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** #859: search by mood should be more mood based, not granular emotions. reference the list of music moods that already exists . use the current emotional spectrum as an alternative mode (e.g. emotion mode) | #854: simplify mood selection at first then make the big list a dropdown | #852: limit number of moods to 7 | #851: remove emojis from mood chart
+- **Touches:** index.html
+- **Branch:**
+- **Notes:** Synced from Geethub #859, #854, #852, #851 on 2026-11-16.
+
+### radio-map-and-radio-upgrades: Radio and map: station thumbs/flags/markers, play region as playlist, Shazam for radio, static fade between stations, stays playing on zoom, Ethiopia artists, colorful map, Radio Garden comparison, browse pages inside the middle section (Geethub #850, #849, #823, #820, #819, #818, #817, #835, #828, #858, #825, #821)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** #850: when i look up artists in ethiopia, it doesn't show anyone. is it because it's trying to pull from the station itself and not the region? | #849: when you zoom out on the globe map, the radio station stops and the next song on the queue starts | #823: the world map is too black and grey - it should have more color from the ui | #820: when the map zooms to country level, it should show the flag on the button | #819: play songs from here should make a playlist from that region | #818: radio map: when you zoom in to station level, the station's image should be visible on the marker and when you click it | #817: shazam functionality for a radio station that displays the current song or show playing on the radio that's active | #835: radio stations should fade into static sound and the static should fade into the next station when you change stations | #828: radio stations list should show a small thumb of the station art with the name | #858: analyze radio garden and see what's working and what's missing from them and add those features to ebbless' radio function | #825: browse by region, artist, mood should be within the middle player section so the library and queue are still visible. no more separate pages on this app. everything that currently takes you out of the main hud should be in the middle section | #821: when browsing by region, genre or mood, when you click the footer player, the footer just disappears and doesn't take you to the player
+- **Touches:** index.html
+- **Branch:**
+- **Notes:** Synced from Geethub #850, #849, #823, #820, #819, #818, #817, #835, #828, #858, #825, #821 on 2026-11-16.
+
+### top-artists-photos: Top artists show the artist's photo, not album covers (Geethub #848)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** #848: top artists should show the artists' photos not their album covers
+- **Touches:** index.html
+- **Branch:**
+- **Notes:** Synced from Geethub #848 on 2026-11-16.
+
+### prev-song-delay: Previous song takes 30s and starts mid-song; current song should fade out sooner (Geethub #846)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** #846: switching to the previous song takes 30 seconds and starts the previous song suddenly 30 seconds in. the current song fades out after a while but not soon enough.
+- **Touches:** index.html
+- **Branch:**
+- **Notes:** Synced from Geethub #846 on 2026-11-16.
+
+### dj-markers: DJ mode: markers on the progress bar to jump and sample clips (see #244) (Geethub #844)
+- **Status:** draft
+- **Priority:** low
+- **Description:** #844: dj mode where you can set markers on the progress bar and jump there instantly to sample clips
+- **Touches:** index.html
+- **Branch:**
+- **Notes:** Synced from Geethub #844 on 2026-11-16.
+
+### home-page-polish: Home page: top-song spacing, artist-name centering, drop All/Playlist buttons, hover clipping, playlist list alphabetical (Geethub #843, #842, #841, #840, #839)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** #843: home page: top songs list items: the artist is too close beneath the title. | #842: home page: top artists' names are not center aligned beneath the thumb pic | #841: home page: "all" and "playlist" buttons are unnecessary under the search bar. | #840: home page: on:hover the buttons are clipped by the mask | #839: "add to playlist" list should be in alphabetical order (liked should stay at the top)
+- **Touches:** index.html
+- **Branch:**
+- **Notes:** Synced from Geethub #843, #842, #841, #840, #839 on 2026-11-16.
+
+### queue-library-actions: Queue/library: stray trailer in queue, double-click plays, cmd/ctrl-click plays next, queue auto-scrolls to now playing, unheart does not skip (Geethub #836, #827, #826, #824, #822)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** #836: avengers doomsday official trailer started playing in the middle of a queue. why?? | #827: double-clicking something in the library should start playing it immediately | #826: cmd/ctrl clicking a song, playlist episode, album, or playlist should play it next on queue | #824: queue: the list should always slide after some time of no scrolling to put now playing at the top and the previously played should be above now playing - not at the bottom of the list | #822: when you heart a song then unheart it, it skips to the next song and erases it from the queue. it shouldn't do that
+- **Touches:** index.html
+- **Branch:**
+- **Notes:** Synced from Geethub #836, #827, #826, #824, #822 on 2026-11-16.
+
+### cassette-splash-polish: Cassette and splash: remove star, peel hint, reel hover grow, subtitle pops after EBBLESS (Geethub #813, #812, #811, #810)
+- **Status:** draft
+- **Priority:** low
+- **Description:** #813: when you hover of the spinning wheels of the cassette they should grow to show they're clickable | #812: put a subtle little indication that you can peel the sticker from the cassette | #811: remove the star from the cassette | #810: splash page: the subtitle/tier name beneath ebbless should pop up after ebbless. right now it's there on:load
+- **Touches:** index.html
+- **Branch:**
+- **Notes:** Synced from Geethub #813, #812, #811, #810 on 2026-11-16.
+
+### reduced-motion-cursor: Reduced motion: simple cursor and auto-activate GUI saving settings (Geethub #816)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** #816: reduced motion should make cursor simple and auto activate gui saving settings
+- **Touches:** index.html
+- **Branch:**
+- **Notes:** Synced from Geethub #816 on 2026-11-16.
+
+### lyrics-scroll-wait: Lyrics wait after manual scroll before snapping back to the current line (Geethub #808)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** #808: lyrics scroll to the current lyric too fast. it should wait some time after i scroll manually to snap to the current lyric
+- **Touches:** index.html
+- **Branch:**
+- **Notes:** Synced from Geethub #808 on 2026-11-16.
+
+### song-page-duration: Song page: duration and plays laid out better (Geethub #832)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** #832: song page: duration and plays should be displayed differently. they are awkward where they are
+- **Touches:** index.html
+- **Branch:**
+- **Notes:** Synced from Geethub #832 on 2026-11-16.

@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   titleOverlapRatio, titleTokens, titleTokensRaw, matchKey, foldMatchText,
-  crossScriptIncomparable, nonAsciiCacheTag, looseTranslitKey,
+  crossScriptIncomparable, nonAsciiCacheTag, looseTranslitKey, TRAILER_EXCLUDE_HINTS,
 } from '../src/match-text.js';
 
 // ---- the pre-change tokeniser, verbatim, as a regression reference ----
@@ -265,4 +265,13 @@ test('songMatchScore: right song passes, wrong artist / karaoke / wrong length a
   assert.equal(songMatchScore(src, { title: 'Redbone', channel: 'Covers Unplugged', durationSec: 327 }), null);
   assert.equal(songMatchScore(src, { title: 'Redbone (Karaoke Instrumental)', channel: 'Childish Gambino', durationSec: 327 }), null);
   assert.equal(songMatchScore(src, { title: 'Redbone', channel: 'Childish Gambino', durationSec: 103 }), null);
+});
+
+test('#836: trailer titles are excluded, song titles are not', () => {
+  const hit = (t) => TRAILER_EXCLUDE_HINTS.some(h => t.toLowerCase().includes(h));
+  assert.ok(hit('Avengers: Doomsday | Official Trailer'));
+  assert.ok(hit('DOOMSDAY - Teaser Trailer (2026)'));
+  assert.ok(hit('Doomsday [Trailer]'));
+  assert.ok(!hit('Doomsday (Official Audio)'));
+  assert.ok(!hit('MF DOOM - Doomsday'));
 });

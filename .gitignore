@@ -7,3 +7,4 @@ worker/.dev.vars
 worker/node_modules/
 desktop/dist*/
 desktop/bin/
+tools/.genre-artists-cache.json

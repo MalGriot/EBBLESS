@@ -10,8 +10,9 @@
 //      hits, is the most reliable option short of running locally like the
 //      site's own discover-weekly refresh script does.
 
+import { paywallOn } from './paywall.js';
 import {
-  titleOverlapRatio, nameSimilarity, versionPenalty, songMatchScore, foldMatchText, matchKey, popularityBonus, artistKeys, candidateNamesArtist, channelNamesArtist, isCleanArtistTitle, genreConflict,
+  titleOverlapRatio, TRAILER_EXCLUDE_HINTS, nameSimilarity, versionPenalty, songMatchScore, foldMatchText, matchKey, popularityBonus, artistKeys, candidateNamesArtist, channelNamesArtist, isCleanArtistTitle, genreConflict,
   crossScriptIncomparable, nonAsciiCacheTag, hasTranslitScript, looseTranslitKey,
 } from './match-text.js';
 import { handleBeta, betaInAppReport } from './beta.js';
@@ -19,6 +20,7 @@ import { handleAdmin } from './admin.js';
 import { sanitizeLinkFix } from './linkfix.js';
 import { handleNowPlaying } from './nowplaying.js';
 import { handleWaves } from './waves.js';
+import { buildSharePage } from './sharepage.js';
 import { parseVibeExclusions, filterExcluded, matchHouseVibe, vibeSeededShuffle, orderVibeSeeds } from './vibe-intent.js';
 import { HOUSE_VIBES, HOUSE_VIBES_VERSION } from './house-vibes.js';
 import { parseMusicLangs, detectVibeLangs, vibeLangKey, vibeLangHint, vibeLangTags, vibeSeedMinListeners, vibeLangLists } from './vibe-locale.js';
@@ -309,6 +311,7 @@ const EXCLUDE_GROUPS = [
   { keyword: 'rehearsal', hints: ['rehearsal'] },
   { keyword: 'cover', hints: ['cover)', 'cover]', '- cover'] },
   { keyword: 'karaoke', hints: ['karaoke'] },
+  { keyword: 'trailer', hints: TRAILER_EXCLUDE_HINTS },   // #836
   { keyword: 'instrumental', hints: ['instrumental', '(instrumental)', '[instrumental]', '- instrumental'] },
   // "Slow Motion" (Lynnic) resolved to its [Extended Mix] for tester #20
   { keyword: 'extended', hints: ['extended mix', 'extended version', 'extended edit', 'extended club', '(extended)', '[extended]', '- extended'] },
@@ -5187,11 +5190,23 @@ export default {
     // Shared waveform peaks (#727): public GET, signed-in POST, own CORS.
     if (url.pathname === '/waves') return await handleWaves(request, url, env, ctx, { envCache, verifyGoogleIdToken });
     if (request.method === 'OPTIONS') return new Response(null, { headers: CORS_HEADERS });
-    // Remote kill switch for the Mac app's adblock (#524). ADBLOCK_FLAG = "false"/"0"/"off" turns it off; default on.
+    // Branded share page (Phase 5): a link dropped in a chat previews as EBBLESS with the song's art, title and artist, then opens the app.
+    // Anonymous and read-only: nothing is stored, every query value is capped, allowlisted or escaped (see sharepage.js), per-IP throttled.
+    if (url.pathname === '/s' && (request.method === 'GET' || request.method === 'HEAD')) {
+      if (await overIpLimit(request, ctx, 'share', 120, 600)) return new Response('Too many requests, try again later.', { status: 429, headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
+      const page = buildSharePage(url.searchParams);
+      if (page.redirect) return Response.redirect(page.redirect, 302);
+      return new Response(request.method === 'HEAD' ? null : page.html, { headers: {
+        'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=3600',
+        'Content-Security-Policy': "default-src 'none'; img-src https:; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'",
+        'Referrer-Policy': 'no-referrer', 'X-Content-Type-Options': 'nosniff' } });
+    }
+    // Remote flags. Kill switch for the Mac app's adblock (#524). ADBLOCK_FLAG = "false"/"0"/"off" turns it off; default on.
     if (url.pathname === '/flags' && request.method === 'GET') {
       const raw = env.ADBLOCK_FLAG;
       const adblock = raw === undefined || raw === null || !/^(false|0|off|no)$/i.test(String(raw).trim());
-      return new Response(JSON.stringify({ adblock }), {
+      // paywall: true only while plans limit features (worker var PAYWALL = "on"); the app reads it signed in or not.
+      return new Response(JSON.stringify(paywallOn(env) ? { adblock, paywall: true } : { adblock }), {
         headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=60', ...CORS_HEADERS },
       });
     }

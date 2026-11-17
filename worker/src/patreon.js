@@ -30,6 +30,7 @@
 import { hmacMd5Hex } from './md5.js';
 import { mintCodes } from './codes.js';
 import { sheet as sheetCall } from './beta.js';
+import { paywallOn } from './paywall.js';
 
 export const RECHECK_MS = 24 * 3600 * 1000;
 const STATE_TTL_S = 600;
@@ -287,6 +288,7 @@ export async function handlePatreon(request, url, env, ctx, deps) {
       if (t) ent = { tier: t };
     }
     const out = { tier: publicTier(entTier(ent)) };
+    if (paywallOn(env)) out.paywall = true;   // absent = paywall off: the app opens every feature
     if (isOwner(id, env)){ out.owner = true; out.testing = !!(ent && ent.src === 'owner'); }
     return json(out);
   }
