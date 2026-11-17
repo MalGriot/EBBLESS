@@ -12348,7 +12348,18 @@ function rmPlaceRow(p){
   const li = document.createElement('li'), b = bpMk('button', 'rm-pl', p.name); b.type = 'button';
   b.appendChild(bpMk('small', '', (p.kind === 'country' ? 'Country' : p.kind === 'region' ? 'Region' : 'Place') + (p.sub ? ' · ' + p.sub : '') + (p.n ? ' · ' + p.n + ' stations' : '')));
   b.addEventListener('click', () => rmGoPlace(p));
-  li.appendChild(b); return li;
+  li.appendChild(b);
+  // #850: a country is also a place people want artists from, not only stations (Ethiopia found nobody before)
+  if (p.kind === 'country'){
+    const a = bpMk('button', 'rm-pl rm-pl-art', 'Artists from ' + p.name); a.type = 'button';
+    a.addEventListener('click', () => {
+      bpLastEl = a;
+      const terms = [p.name + ' music', p.name + ' pop', p.name + ' hip hop', p.name + ' traditional'];
+      fmOpenResults(terms, p.name, null, null, '', null);   // no store country: many countries have no music store of their own, so searching only their store found nobody
+    });
+    li.appendChild(a);
+  }
+  return li;
 }
 // search as you type: the map's own index of regions, then any town, street or zip code in the world (Photon, OpenStreetMap data), then stations by name.
 // Each source paints as soon as it answers, so a slow one never holds up the others.
@@ -39839,6 +39850,9 @@ document.addEventListener('keydown', (e) => {
   const nonText = t && t.tagName === 'INPUT' && /^(range|checkbox|radio|button|submit|reset|file|color|image)$/i.test(t.type);
   const isTyping = t && !nonText && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable);
   if (isTyping) return;
+  // #849: the region map owns its keys (arrows move it, plus and minus zoom it): the app's shortcuts must not
+  // also fire, or moving or zooming the map while a station plays skipped to the next song
+  if (t && t.closest && t.closest('.rm-map') && e.key !== ' ' && e.key !== 'Escape') return;
   switch (e.key){
     case ' ':
       e.preventDefault();
