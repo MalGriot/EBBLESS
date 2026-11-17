@@ -100,13 +100,13 @@ dependency change, no public route renamed or reshaped, counts only (no track na
 ## What approving a release ships (exact, checked against `origin/main` on 2026-11-17)
 
 While round 2 was in progress `origin/main` moved: the radio and station-page lane (including Release 570) was pushed
-(`git fetch` shows `origin/main` = `f3ff169`). This branch already contains it. So a merge and `git push` of this
+(`git fetch` shows `origin/main` = `d421418`, which also adds a Library Videos section as release 571). This branch already contains it. So a merge and `git push` of this
 branch ships **only T-0007 commits** and nothing else: the three below plus the doc-only commit that last touched this file (`git log origin/main..HEAD` is the authority):
 
 | Commit | What |
 |---|---|
 | `004450b` | one-tap Play, the three counters, worker route, Sheet columns and Dashboard rows, findings and build docs |
-| `9da1c70` | merge of `main` (`f3ff169`); release number taken: **571** (`sw.js` `ebbless-shell-v571`, `WHATS_NEW` 571) |
+| `9da1c70` and the later merge of `main` (`d421418`) | merges; release number taken: **572** (`sw.js` `ebbless-shell-v572`, `WHATS_NEW` 572, above main's 571) |
 | `b77ab1f` | round 2 fixes, behavior tests, evidence screenshots, this document |
 
 Verify right before pushing: `git fetch && git log --oneline origin/main..HEAD` must list only T-0007 commits (those three and doc-only follow-ups). If `main`
@@ -162,8 +162,8 @@ Approve first: QA and the CEO. Then, in this order:
    running before (the old app then simply ignores the three counters).
 3. **App.** Merge `claude/vigorous-morse-0bbe88` into `main`, run `scripts/check.sh`, push `main` (GitHub Pages serves
    it). `git fetch && git log --oneline origin/main..HEAD` must list only T-0007 commits (the three feature commits
-   and doc-only follow-ups; today `origin/main` is `f3ff169`). If `main` moved, merge it, take the next free release
-   number in `sw.js` and `WHATS_NEW` (571 now), and re-run the checks. Testers get v571 on next load; the Android app
+   and doc-only follow-ups; today `origin/main` is `d421418`). If `main` moved, merge it, take the next free release
+   number in `sw.js` and `WHATS_NEW` (572 now), and re-run the checks. Testers get v572 on next load; the Android app
    refreshes its local copy in the background, so allow one launch.
    App rollback: revert the merge commit and push (testers get the revert on next load).
 4. **Verify the Sheet path.** Open the beta link in a fresh browser profile, tap Play, wait up to 10 minutes (or close
