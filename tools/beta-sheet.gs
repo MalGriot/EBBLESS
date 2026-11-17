@@ -1067,14 +1067,15 @@ function setup() {
     ['7-day return (eligible testers)', '=COUNTIF(' + nCol('first_active') + ',"<="&(' + week + '))'],
     ['7-day return (came back)', '=COUNTIFS(' + nCol('first_active') + ',"<="&(' + week + '),' + nCol('returned_within_7d') + ',"Yes")'],
     ['7-day return rate', '=IFERROR(TEXT(B29/B28,"0%"),"-")'],
-    // First play (added after the rows above so none of them move). Testers from before these
-    // columns existed have blanks, so they count in none of these.
+    // First play (added after the rows above so none of them move). A tester's plays_* cells stay blank
+    // until their first ping from the new app build, then hold a number (0 included), so every row below
+    // counts only testers seen since the Sheet and worker shipped (one still on the old app build shows 0 until it updates); testers not seen since are blank and count in none.
     ['', ''],
     ['FIRST PLAY (Analytics tab, anonymous)', ''],
     ['Testers who tapped play', '=COUNTIF(' + nCol('plays_tapped') + ',">0")'],
     ['Testers whose play started', '=COUNTIF(' + nCol('plays_started') + ',">0")'],
     ['Opened, tapped play, never started', '=COUNTIF(' + nCol('plays_tapped') + ',">0")-COUNTIFS(' + nCol('plays_tapped') + ',">0",' + nCol('plays_started') + ',">0")'],
-    ['Opened, never tapped play', '=COUNTA(' + nCol('tester_id') + ')-COUNTIF(' + nCol('plays_tapped') + ',">0")'],
+    ['Opened since release, never tapped play', '=COUNTIF(' + nCol('plays_tapped') + ',"=0")'],
     ['Play timeouts or errors', '=SUM(' + nCol('plays_failed') + ')'],
   ];
   dash.clear();

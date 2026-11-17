@@ -8972,7 +8972,24 @@ const LS_SIGNIN_NUDGED = 'ebbless:signinNudged';
 // Quiet first run: nobody is asked to sign in or install before their first
 // song has played. The sign-in card waits (without using up its once per
 // device) and lands a few seconds after that first song starts.
-function hasEverPlayed(){ return !personalizeOn() || (lsGet(LS_PLAY_HISTORY, []) || []).length > 0; }   // with personalization off no plays are recorded, so don't wait on one
+// A song really played (T-0007): set by the active deck's PLAYING event (noteRealPlay), not by a track merely loading.
+// With personalization off no plays are recorded, so don't wait on one. Listeners from before this flag existed count
+// once their play log shows listening time. Raw localStorage on purpose: this flag is per device, never profile-synced.
+/* played-flag:start */
+const LS_FIRST_PLAYED = 'ebbless:firstPlayed';
+function hasEverPlayed(){
+  if (!personalizeOn()) return true;
+  try { if (localStorage.getItem(LS_FIRST_PLAYED) === '1') return true; } catch(e){}
+  try { if (playLog && playLog.ms > 0) return true; } catch(e){}
+  return false;
+}
+function noteRealPlay(){
+  try { if (localStorage.getItem(LS_FIRST_PLAYED) === '1') return; localStorage.setItem(LS_FIRST_PLAYED, '1'); } catch(e){}
+  // first song really playing: now the sign-in card and Google One Tap may come
+  if (signInNudgeWaiting){ signInNudgeWaiting = false; setTimeout(showSignInNudge, 6000); }
+  if (oneTapWaiting){ oneTapWaiting = false; setTimeout(() => initGoogleOneTap(), 6000); }
+}
+/* played-flag:end */
 let signInNudgeWaiting = false;
 function showSignInNudge(){
   if (!hasEverPlayed()){ signInNudgeWaiting = true; return; }
@@ -10334,11 +10351,14 @@ document.addEventListener('click', (e) => {
 // album: no ads, no Spotify or Google needed). beginImport plays at once if it is cached, else
 // resolves it and jumps into the player on the first playable track. Runs in the same tap, so
 // the browser's autoplay gesture is still valid.
+/* splash-play:start */
 let firstSongStarting = '';
+function firstSongEntry(){ return STARTER_LIBRARY_URLS.map(starterLibraryEntry).find(Boolean) || null; }
 function playFirstSong(){
-  const entry = STARTER_LIBRARY_URLS.map(starterLibraryEntry).find(Boolean);
+  const entry = firstSongEntry();
   if (!entry) return false;
   firstSongStarting = entry.id;   // seedStarterLibrary skips it so it is not resolved twice
+  firstSongForce = true;          // replace a resumed queue instead of only filing the starter
   statsPlayTapped();
   beginImport(entry.id, false, entry.type);
   return true;
@@ -10346,10 +10366,14 @@ function playFirstSong(){
 document.addEventListener('click', (e) => {
   if (!e.target.closest || !e.target.closest('#splashPlayNow')) return;
   e.stopPropagation(); e.preventDefault();
+  // Mark the starter before entering: Enter runs startApp(), which starts seedStarterLibrary() right away.
+  const entry = firstSongEntry();
+  if (entry) firstSongStarting = entry.id;
   const enter = $('splashSkipTutorial');
   if (enter) enter.click();
   playFirstSong();
 }, true);
+/* splash-play:end */
 // #619: desktop library width toggle, remembered across visits (CSS only acts on the 3-pane desktop layout)
 const LS_LIB_WIDE = 'ebbless:libraryWide';
 function applyLibWide(on){
@@ -22169,13 +22193,23 @@ function beginImport(id, force, type, targetIndex){
   return run;
 }
 
+/* first-song:start */
+// The splash Play must always start a song. A saved queue (tryResume ran in startApp) would otherwise make a
+// pasted or searched link just file itself and leave the old queue alone (Geethub #386), so Play asks this one
+// import to replace the queue. Read once, then cleared.
+let firstSongForce = false;
+function importKeepsQueue(type, targetIndex){
+  const force = firstSongForce; firstSongForce = false;
+  return !force && !targetIndex && state.queue.length > 0 && state.queuePos >= 0 && !isSingleTrackType(type);
+}
+/* first-song:end */
 async function beginImportNow(id, force, type, targetIndex, waited){
   importErr.textContent = '';
   const wasSaved = isSaved(id);
   // Searching/pasting a link files its songs in the library (an album as an
   // album) but never wipes a queue that is already going (Geethub #386). A
   // single song still plays now, and an empty queue still starts the link.
-  const keepQueue = !targetIndex && state.queue.length > 0 && state.queuePos >= 0 && !isSingleTrackType(type);
+  const keepQueue = importKeepsQueue(type, targetIndex);
   if (!force){
     const cached = getCachedPlaylist(id);
     if (cached){
@@ -25370,6 +25404,7 @@ function starterLibraryEntry(url){
 function starterLibraryIds(){
   return STARTER_LIBRARY_URLS.concat(DEFAULT_SPOTIFY_URLS).map(starterLibraryEntry).filter(Boolean).map(e => e.id);
 }
+/* seed-starter:start */
 async function seedStarterLibrary(){
   for (const url of STARTER_LIBRARY_URLS){
     const entry = starterLibraryEntry(url);
@@ -25389,6 +25424,7 @@ async function seedStarterLibrary(){
   }
   renderLibrary();
 }
+/* seed-starter:end */
 
 async function seedDefaultSpotifyContent(){
   for (const url of DEFAULT_SPOTIFY_URLS){
@@ -32844,7 +32880,7 @@ function onDeckStateChange(deck, e){
   if (deck.kind === 'yt') guardActiveDeckAd();
   // mid pause-fade the deck is still audibly playing, but the UI already
   // shows paused (see runPlayFade) - don't let a PLAYING event flip it back
-  if (e.data === YT.PlayerState.PLAYING){ if (!isFadingOut(deck)){ setPlayingUI(true); announceTabPlaying(); statsPlayStarted(); } }
+  if (e.data === YT.PlayerState.PLAYING){ if (!isFadingOut(deck)){ setPlayingUI(true); announceTabPlaying(); noteRealPlay(); statsPlayStarted(); } }
   else if (e.data === YT.PlayerState.PAUSED){ if (!(deck.unstickAt && Date.now() - deck.unstickAt < 1500)) setPlayingUI(false); }
   else if (e.data === YT.PlayerState.ENDED){
     if (swapInProgress) return;
@@ -38793,8 +38829,6 @@ function recordLatestPlayed(t){
     hist.unshift({ v: t.videoId, t: t.title || '', a: t.artist || '', ts: Date.now() });
     lsSet(LS_PLAY_HISTORY, hist.slice(0, PLAY_HISTORY_MAX));
   }
-  if (signInNudgeWaiting){ signInNudgeWaiting = false; setTimeout(showSignInNudge, 6000); }
-  if (oneTapWaiting){ oneTapWaiting = false; setTimeout(() => initGoogleOneTap(), 6000); }
 }
 
 function reflectCurrentTrackUI(pos, opts){

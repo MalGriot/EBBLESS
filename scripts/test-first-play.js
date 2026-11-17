@@ -111,13 +111,6 @@ check('the splash shows Play first, as the primary button, ahead of Import, Tuto
   assert.ok(i < html.indexOf('id="splashBringMusic"') && i < html.indexOf('id="splashPlayTutorial"') && i < html.indexOf('id="splashSkipTutorial"'));
   assert.ok(!/id="splashBringMusic"[^>]*splash-choice-btn-primary/.test(html), 'Import must not also be primary');
 });
-check('tapping Play enters the app like Enter and starts the first starter in the same tap, with no sign-in step', () => {
-  const h = html.slice(html.indexOf("closest('#splashPlayNow')") - 120, html.indexOf("closest('#splashPlayNow')") + 400);
-  assert.ok(h.includes("$('splashSkipTutorial')") && h.includes('enter.click()') && h.includes('playFirstSong()'));
-  const body = html.slice(html.indexOf('function playFirstSong()'), html.indexOf('function playFirstSong()') + 700);
-  assert.ok(body.includes('beginImport(entry.id, false, entry.type)'));
-  assert.ok(!/signIn|google|prompt\(/i.test(body), 'first song path must not sign in');
-});
 check('the first song is the SoundCloud starter, so it needs no Spotify and no Google', () => {
   assert.ok(/STARTER_LIBRARY_URLS = \[\n  'https:\/\/soundcloud\.com\//.test(html));
 });
@@ -129,21 +122,120 @@ check('Tutorial and Enter still exist and are handled by the same splash code', 
 check('a returning tester who never played sees the choice (with Play) on every visit', () => {
   assert.ok(/else if \(onboardingComplete && !hasEverPlayed\(\)\)\{\n[^\n]*\n  showSplashChoice\(\);\n\}/.test(html));
 });
-check('Google One Tap waits for the first song (018fce4 already held the nudge card and install bar)', () => {
-  assert.ok(html.includes('if (!returning && !hasEverPlayed()){ oneTapWaiting = true; return; }'));
-  assert.ok(html.includes('if (oneTapWaiting){ oneTapWaiting = false; setTimeout(() => initGoogleOneTap(), 6000); }'));
-  assert.ok(html.includes('if (!hasEverPlayed()){ signInNudgeWaiting = true; return; }'));
-});
-check('the splash starter is not resolved twice and does not inflate playlists_added', () => {
-  assert.ok(html.includes('if (id === firstSongStarting) continue;'));
-  assert.ok(html.includes('function statsImport(id){ if (id === firstSongStarting) return;'));
-});
 
 check('the 12 s splash safety net no longer hides the Play choice on any device', () => {
   const i = html.indexOf('splashSafetyEl.classList.add(');
   const w = html.slice(i - 400, i);
   assert.ok(w.includes("!splashSafetyEl.classList.contains('is-choice')"));
   assert.ok(!w.includes('ebb-android'));
+});
+
+// ---- behavior: the real splash Play code, run in the real click order ----
+const slice = (name) => {
+  const a = html.indexOf('/* ' + name + ':start */'), b = html.indexOf('/* ' + name + ':end */', a);
+  if (a < 0 || b < 0) { console.error(name + ' block not found in index.html'); process.exit(1); }
+  return html.slice(a, b);
+};
+// Builds the splash Play pieces with stubs. `startApp` is what Enter runs: like the real startApp() it
+// restores a saved queue first and starts seedStarterLibrary() without waiting for it.
+function splashPlay({ savedQueue }) {
+  const log = { imports: [], resolved: [], tapped: 0, order: [] };
+  const state = { queue: savedQueue ? [{ id: 'old' }] : [], queuePos: savedQueue ? 0 : -1 };
+  const URLS = ['https://soundcloud.com/starter-album', 'https://open.spotify.com/playlist/second'];
+  let handler = null;
+  const enterEl = { click() { log.order.push('enter'); startApp(); } };
+  const api = new Function('ctx', `
+    const { state, URLS, log } = ctx;
+    const STARTER_LIBRARY_URLS = URLS;
+    const starterLibraryEntry = (u) => ({ id: 'id:' + u, type: 'x' });
+    const isSingleTrackType = () => false;
+    const getCachedPlaylist = () => null, isResolveStale = () => false, saveToLibrary = () => {}, renderLibrary = () => {};
+    const queueBackgroundLoad = async (id) => { log.resolved.push(id); return true; };
+    const statsPlayTapped = () => { log.tapped++; log.order.push('tapped'); };
+    const beginImport = (id, force, type, ti) => { log.imports.push({ id, keep: importKeepsQueue(type, ti) }); log.order.push('import'); };
+    const $ = (id) => (id === 'splashSkipTutorial' ? ctx.enterEl : null);
+    const document = { addEventListener: (ev, fn) => { if (ev === 'click') ctx.setHandler(fn); } };
+    ${slice('seed-starter')}
+    ${slice('first-song')}
+    ${slice('splash-play')}
+    ctx.startApp = () => { log.order.push('startApp'); seedStarterLibrary(); };
+    return { importKeepsQueue };
+  `);
+  const ctx = { state, URLS, log, enterEl, setHandler: (fn) => { handler = fn; } };
+  var startApp;
+  const ret = api(ctx);
+  startApp = ctx.startApp;
+  const click = () => handler({ target: { closest: (sel) => sel === '#splashPlayNow' ? {} : null }, stopPropagation() {}, preventDefault() {} });
+  return { log, click, importKeepsQueue: ret.importKeepsQueue, URLS };
+}
+const tick = () => new Promise(r => setImmediate(r));
+
+const queued = (async () => {
+  const f = splashPlay({ savedQueue: true });
+  f.click(); await tick();
+  assert.strictEqual(f.log.imports.length, 1);
+  assert.strictEqual(f.log.imports[0].id, 'id:' + f.URLS[0]);
+  assert.strictEqual(f.log.imports[0].keep, false, 'a saved queue must not turn Play into a quiet "file it" import');
+  // the force is used up: a link pasted afterwards keeps the queue as before (#386)
+  assert.strictEqual(f.importKeepsQueue('playlist', 0), true);
+})();
+const fresh = (async () => {
+  const f = splashPlay({ savedQueue: false });
+  f.click(); await tick();
+  assert.strictEqual(f.log.imports[0].keep, false);
+})();
+const order = (async () => {
+  const f = splashPlay({ savedQueue: true });
+  f.click(); await tick();
+  assert.deepStrictEqual(f.log.order.slice(0, 4), ['enter', 'startApp', 'tapped', 'import']);
+  // the starter is resolved once (by the import), the other starter is still seeded by startApp
+  assert.deepStrictEqual(f.log.resolved, ['id:' + f.URLS[1]], 'seedStarterLibrary must skip the starter the Play tap is loading');
+  assert.strictEqual(f.log.tapped, 1);
+})();
+
+// ---- behavior: "has played" follows the real PLAYING event, not a track loading ----
+function playedFlag({ personalize = true, playLogMs = 0 } = {}) {
+  const store = {}, timers = [];
+  const ctx = { store, timers, shown: 0, tapped: 0 };
+  const api = new Function('ctx', `
+    const localStorage = { getItem: (k) => (k in ctx.store ? ctx.store[k] : null), setItem: (k, v) => { ctx.store[k] = String(v); } };
+    const personalizeOn = () => ${personalize};
+    let playLog = { ms: ${playLogMs} };
+    let signInNudgeWaiting = true, oneTapWaiting = true;
+    const showSignInNudge = () => { ctx.shown++; };
+    const initGoogleOneTap = () => { ctx.tapped++; };
+    const setTimeout = (fn, ms) => { ctx.timers.push({ fn, ms }); };
+    ${slice('played-flag')}
+    return { hasEverPlayed, noteRealPlay, waiting: () => [signInNudgeWaiting, oneTapWaiting] };
+  `)(ctx);
+  return { ctx, api };
+}
+check('a track loading is not a play: nothing marks it until the deck reports PLAYING', () => {
+  const p = playedFlag();
+  assert.strictEqual(p.api.hasEverPlayed(), false);
+  assert.deepStrictEqual(p.ctx.timers, []);
+});
+check('the first real PLAYING event marks the first play and releases the sign-in card and One Tap, once', () => {
+  const p = playedFlag();
+  p.api.noteRealPlay(); p.api.noteRealPlay();
+  assert.strictEqual(p.api.hasEverPlayed(), true);
+  assert.deepStrictEqual(p.api.waiting(), [false, false]);
+  assert.strictEqual(p.ctx.timers.length, 2);
+  p.ctx.timers.forEach(t => { assert.strictEqual(t.ms, 6000); t.fn(); });
+  assert.deepStrictEqual([p.ctx.shown, p.ctx.tapped], [1, 1]);
+});
+check('listeners from before the flag count as played once the play log shows listening; personalization off never waits', () => {
+  assert.strictEqual(playedFlag({ playLogMs: 5000 }).api.hasEverPlayed(), true);
+  assert.strictEqual(playedFlag({ personalize: false }).api.hasEverPlayed(), true);
+});
+check('the PLAYING branch calls noteRealPlay and track load no longer releases the waiting prompts', () => {
+  assert.ok(/setPlayingUI\(true\); announceTabPlaying\(\); noteRealPlay\(\); statsPlayStarted\(\);/.test(html));
+  const rl = html.slice(html.indexOf('function recordLatestPlayed(t){'), html.indexOf('function reflectCurrentTrackUI'));
+  assert.ok(!/signInNudgeWaiting|oneTapWaiting/.test(rl));
+});
+check('Google One Tap and the sign-in card both wait on hasEverPlayed', () => {
+  assert.ok(html.includes('if (!returning && !hasEverPlayed()){ oneTapWaiting = true; return; }'));
+  assert.ok(html.includes('if (!hasEverPlayed()){ signInNudgeWaiting = true; return; }'));
 });
 
 // ---- Sheet: new columns and rows only, nothing moved ----
@@ -169,4 +261,10 @@ check('Dashboard: the old rows are untouched and the new FIRST PLAY block sits a
   assert.ok(gs.includes('=IFERROR(TEXT(B29/B28,"0%"),"-")'), 'B29/B28 references must not move');
   assert.ok(gs.includes('[1, 8, 14, 17, 20, 32].forEach'));
 });
-console.log(pass + ' passed');
+Promise.all([queued, fresh, order]).then(() => {
+  pass += 3;
+  console.log('ok  Play with a saved queue replaces the queue, starts once, and the force is used up (async)');
+  console.log('ok  Play on a fresh install starts the starter (async)');
+  console.log('ok  real click order: Enter first, then tap and import; the starter is not resolved twice (async)');
+  console.log(pass + ' passed');
+}).catch((e) => { console.error(e); process.exit(1); });
