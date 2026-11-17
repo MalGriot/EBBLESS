@@ -12856,7 +12856,8 @@ function liveLoad(){
   a.onwaiting = a.onstalled = () => { if (liveSt === st && liveMode === 'playing'){ liveMode = 'loading'; liveSync(); } };
   a.onpause = () => { if (liveSt === st && (liveMode === 'playing' || liveMode === 'loading')){ liveMode = 'paused'; liveSync(); } };   // the OS or a headset paused it
   a.onerror = () => { if (liveSt === st && (liveMode === 'loading' || liveMode === 'playing')) liveFail(); };
-  a.src = url;
+  a.src = url; a.volume = 0;
+  a.addEventListener('playing', function once(){ a.removeEventListener('playing', once); liveRamp(a, 0, 1, 700); });
   const p = a.play();
   if (p && p.catch) p.catch((e) => { if (liveSt === st && e && e.name !== 'AbortError' && liveMode === 'loading') liveFail(); });
 }
@@ -12866,10 +12867,44 @@ function liveFail(){
   liveRelease(); liveMode = 'error'; liveSync();
   showToast('Could not play ' + st.name + '. Check your connection, or try again.', { label: 'Try again', run: () => { if (liveSt === st){ liveTry = 0; liveLoad(); } } }, 'live-err');
 }
+// #835: changing station is a tuning dial: the old station fades into a soft burst of static, and the static fades out into the new one.
+// The burst is quiet and short (about 1.2 s), made on the spot (no audio file), and skipped if the browser has no Web Audio.
+var liveStaticCtx = null, liveFadeT = 0;
+function liveStaticBurst(){
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
+    if (!liveStaticCtx) liveStaticCtx = new AC();
+    const ctx = liveStaticCtx; if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+    const len = Math.floor(ctx.sampleRate * 1.3), buf = ctx.createBuffer(1, len, ctx.sampleRate), d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+    const src = ctx.createBufferSource(); src.buffer = buf;
+    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 3200;
+    const g = ctx.createGain(), t = ctx.currentTime;
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.07, t + 0.3); g.gain.linearRampToValueAtTime(0.07, t + 0.65); g.gain.linearRampToValueAtTime(0, t + 1.25);
+    src.connect(lp); lp.connect(g); g.connect(ctx.destination);
+    src.onended = () => { try { src.disconnect(); lp.disconnect(); g.disconnect(); } catch(e){} };
+    src.start(t); src.stop(t + 1.3);
+  } catch(e){}
+}
+// ramp the station's own volume (the stream starts at 0 and rises as the static falls away)
+function liveRamp(a, from, to, ms, done){
+  clearInterval(liveFadeT);
+  const t0 = performance.now(); a.volume = from;
+  liveFadeT = setInterval(() => {
+    const k = Math.min(1, (performance.now() - t0) / ms);
+    try { a.volume = from + (to - from) * k; } catch(e){}
+    if (k >= 1){ clearInterval(liveFadeT); if (done) done(); }
+  }, 40);
+}
 function liveStart(st){
   if (!st || !rmHttps(st.url)){ showToast('This station has no safe stream to play.'); return; }
   if (liveSt && liveSt.id === st.id && liveMode === 'paused'){ liveToggle(); return; }
-  try { pausePlayback(); } catch(e){}
+  const prev = liveSt && liveSt.id !== st.id && liveAudio && !liveAudio.paused ? liveAudio : null;
+  if (prev){ liveStaticBurst(); liveRamp(prev, prev.volume, 0, 300, () => liveStartNow(st, true)); liveSt = st; liveArtId = ''; liveMeta(); return; }
+  liveStartNow(st, false);
+}
+function liveStartNow(st, fromStation){
+  if (!fromStation){ liveStaticBurst(); try { pausePlayback(); } catch(e){} }
   liveSt = st; liveTry = 0; liveArtId = '';
   rsDetail(st).then(() => { if (liveSt === st) liveArt(); });
   rmGet('/json/url/' + encodeURIComponent(st.id)).catch(() => {});   // the directory asks apps to count a listen
