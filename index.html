@@ -12686,6 +12686,32 @@ function rmMount(top){
   rmInit(rmGen);
 }
 function rmWorldZoom(){ const w = (rmWrap && rmWrap.clientWidth) || 360; return Math.max(0.4, Math.min(2.2, Math.log2(w / 512) + 0.15)); }
+// #823: the dark base map is plain black and grey, so after it loads its colors are re-tinted from the app's accent
+// (water, land, parks, roads, borders, labels): same map, same data, just the UI's own color instead of grey
+function rmAccentHsl(){
+  const cs = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#e0b26a';
+  const c = document.createElement('canvas').getContext('2d'); c.fillStyle = '#e0b26a'; c.fillStyle = cs;
+  const m = /^#([0-9a-f]{6})$/i.exec(c.fillStyle);
+  const n = m ? parseInt(m[1], 16) : 0xe0b26a, r = (n >> 16 & 255) / 255, g = (n >> 8 & 255) / 255, b = (n & 255) / 255;
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
+  let h = 0; if (d){ h = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; h = Math.round(h * 60); if (h < 0) h += 360; }
+  const sat = mx ? d / mx : 0;
+  return { h, s: Math.round(Math.max(26, Math.min(60, sat * 70))) };
+}
+function rmTint(map){
+  const { h, s } = rmAccentHsl(), set = (id, prop, v) => { try { if (map.getLayer(id)) map.setPaintProperty(id, prop, v); } catch(e){} };
+  const hs = (l, sat) => 'hsl(' + h + ',' + (sat == null ? s : sat) + '%,' + l + '%)';
+  set('background', 'background-color', hs(9, s * 0.7));
+  ['water', 'waterway'].forEach(id => set(id, id === 'water' ? 'fill-color' : 'line-color', hs(15, s + 6)));
+  ['landuse_park', 'landcover_wood'].forEach(id => set(id, 'fill-color', hs(14, s * 0.8)));
+  set('landuse_residential', 'fill-color', hs(11, s * 0.7));
+  set('landcover_glacier', 'fill-color', hs(12, s * 0.7)); set('landcover_ice_shelf', 'fill-color', hs(10, s * 0.7));
+  ['highway_minor', 'highway_motorway_subtle'].forEach(id => set(id, 'line-color', hs(18, s * 0.8)));
+  set('highway_major_subtle', 'line-color', hs(24, s * 0.8));
+  ['boundary_state', 'boundary_country_z0-4', 'boundary_country_z5-'].forEach(id => set(id, 'line-color', hs(id === 'boundary_state' ? 30 : 42, s)));
+  ['place_other', 'place_suburb', 'place_village', 'place_town', 'place_city', 'place_city_large', 'place_state', 'place_country_other', 'place_country_minor', 'place_country_major']
+    .forEach(id => set(id, 'text-color', hs(66, s * 0.9)));
+}
 // #818: close in (street level) each lone station shows its own logo on the map, and tapping it opens the station
 var rmMarks = new Map();
 function rmMarksClear(){ rmMarks.forEach(m => { try { m.mk.remove(); } catch(e){} }); rmMarks.clear(); }
@@ -12726,6 +12752,7 @@ function rmInit(gen){
     map.on('load', () => {
       try { const at = el.querySelector('.maplibregl-ctrl-attrib'); if (at){ at.removeAttribute('open'); at.classList.remove('maplibregl-compact-show'); } } catch(e){}   // credits live in Settings > Credits; the map keeps only its small info button
       if (map !== rmMap) return;
+      rmTint(map);
       if (rmPin) rmMountPin();
       map.addSource('rm-st', { type: 'geojson', data: rmGeo(rmSt), cluster: true, clusterRadius: 46, clusterMaxZoom: 13 });
       map.addLayer({ id: 'rm-cl', type: 'circle', source: 'rm-st', filter: ['has', 'point_count'], paint: { 'circle-color': '#e0b26a', 'circle-opacity': 0.92, 'circle-radius': ['step', ['get', 'point_count'], 15, 10, 19, 40, 24, 120, 30], 'circle-stroke-width': 2, 'circle-stroke-color': 'rgba(21,17,7,.7)' } });
