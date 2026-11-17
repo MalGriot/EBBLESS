@@ -20,6 +20,7 @@ import { handleAdmin } from './admin.js';
 import { sanitizeLinkFix } from './linkfix.js';
 import { handleNowPlaying } from './nowplaying.js';
 import { handleWaves } from './waves.js';
+import { buildSharePage } from './sharepage.js';
 import { parseVibeExclusions, filterExcluded, matchHouseVibe, vibeSeededShuffle, orderVibeSeeds } from './vibe-intent.js';
 import { HOUSE_VIBES, HOUSE_VIBES_VERSION } from './house-vibes.js';
 import { parseMusicLangs, detectVibeLangs, vibeLangKey, vibeLangHint, vibeLangTags, vibeSeedMinListeners, vibeLangLists } from './vibe-locale.js';
@@ -5189,6 +5190,17 @@ export default {
     // Shared waveform peaks (#727): public GET, signed-in POST, own CORS.
     if (url.pathname === '/waves') return await handleWaves(request, url, env, ctx, { envCache, verifyGoogleIdToken });
     if (request.method === 'OPTIONS') return new Response(null, { headers: CORS_HEADERS });
+    // Branded share page (Phase 5): a link dropped in a chat previews as EBBLESS with the song's art, title and artist, then opens the app.
+    // Anonymous and read-only: nothing is stored, every query value is capped, allowlisted or escaped (see sharepage.js), per-IP throttled.
+    if (url.pathname === '/s' && (request.method === 'GET' || request.method === 'HEAD')) {
+      if (await overIpLimit(request, ctx, 'share', 120, 600)) return new Response('Too many requests, try again later.', { status: 429, headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
+      const page = buildSharePage(url.searchParams);
+      if (page.redirect) return Response.redirect(page.redirect, 302);
+      return new Response(request.method === 'HEAD' ? null : page.html, { headers: {
+        'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=3600',
+        'Content-Security-Policy': "default-src 'none'; img-src https:; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'",
+        'Referrer-Policy': 'no-referrer', 'X-Content-Type-Options': 'nosniff' } });
+    }
     // Remote flags. Kill switch for the Mac app's adblock (#524). ADBLOCK_FLAG = "false"/"0"/"off" turns it off; default on.
     if (url.pathname === '/flags' && request.method === 'GET') {
       const raw = env.ADBLOCK_FLAG;

@@ -18907,6 +18907,18 @@ function buildVibeShareUrl(text){
 function vibeNormalizeShared(v){
   return String(v || '').replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 300);
 }
+// Phase 5: a shared song goes through the worker's /s page, which previews as EBBLESS (song art, title, artist) in chats and then
+// opens the app on the same link and position buildShareUrl would have. The worker caps and allowlists every value.
+function buildBrandedShareUrl(sourceLink, trackIndex, track){
+  try {
+    const params = new URLSearchParams({ import: sourceLink });
+    if (trackIndex != null && trackIndex > 0) params.set('track', String(trackIndex));
+    if (track && track.title) params.set('t', String(track.title).slice(0, 120));
+    if (track && track.artist) params.set('a', String(track.artist).slice(0, 120));
+    if (track && typeof track.art === 'string' && /^https:\/\//.test(track.art)) params.set('i', track.art.slice(0, 500));
+    return BACKEND + '/s?' + params.toString();
+  } catch(e){ return buildShareUrl(sourceLink, trackIndex); }
+}
 function buildShareUrl(sourceLink, trackIndex){
   const params = new URLSearchParams({ import: sourceLink });
   if (trackIndex != null && trackIndex > 0) params.set('track', String(trackIndex));
@@ -18975,7 +18987,7 @@ function shareTrackAt(plId, trackIdx){
   shareEbblessLink({
     title: 'EBBLESS',
     text: 'Listen to "' + t.title + '" by ' + t.artist + ' on EBBLESS',
-    url: buildShareUrl(link, trackIdx)
+    url: buildBrandedShareUrl(link, trackIdx, t)
  }, { burst: true });
 }
 
