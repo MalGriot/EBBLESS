@@ -97,3 +97,8 @@ Owner decision 2026-11-17: merge the old station-page lane first. Done: merged m
 - #814 save videos: pasting a YouTube video link now saves it to Library > Videos at once and plays it (before, a single video was only played and offered a playlist picker; the picker is skipped for videos). VERIFIED LIVE with a real link.
 - NOT BUILT: Vimeo and other free video sources (no embed or metadata path exists for them; each would be its own integration), video playlists in Videos (YouTube playlists still file under Playlists), the "cheeky YouTube video search" and Radio/Podcast chips from #841, and #879 (fLUX over default art fades back to dark plain art; not investigated).
 - Behavior change to know: a pasted YouTube link that is really a song also lands in Videos now.
+
+## Phase 8: final regression (2026-11-17, main at bbd2eed, localhost)
+- Automated: scripts/check.sh PASS (all inline scripts parse, security grep clean, blend-gains and official-video tests), worker npm test 256 pass, region-map 18 pass.
+- Live smoke (service worker and caches cleared first): load with no new console errors; Search, Library, Player, Queue and Settings open; Library pills Playlists, Artists, Albums, Podcasts, Videos; play, clock advances, next, previous, seek to 50% (2:45 of 5:25), pause holds the clock. PASS.
+- Phases 6 and 7 changes are merged to local main but NOT pushed or released (release 571 is local; origin has 570).
