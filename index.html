@@ -5214,6 +5214,7 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
           <button type="button" class="lib-filter-btn hidden" data-filter="artists" id="libFilterArtists">Artists</button>
           <button type="button" class="lib-filter-btn" data-filter="albums" id="libFilterAlbums">Albums</button>
           <button type="button" class="lib-filter-btn hidden" data-filter="podcasts" id="libFilterPodcasts">Podcasts</button>
+          <button type="button" class="lib-filter-btn" data-filter="videos" id="libFilterVideos">Videos</button>
           <button type="button" class="lib-filter-btn hidden" data-filter="sets" id="libFilterSets">Sets</button>
           <button type="button" class="lib-filter-more hidden" id="libFilterMore" aria-label="Show more filters"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8.6 16.6L13.2 12 8.6 7.4 10 6l6 6-6 6z"/></svg></button>
         </div>
@@ -5294,6 +5295,12 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
           <div class="section-label">Podcasts</div>
         </div>
         <div class="lib-grid" id="libraryPodcastsGrid"></div>
+        </div>
+        <div class="lib-sec">
+        <div class="section-label-row hidden" id="libraryVideosHead">
+          <div class="section-label">Videos</div>
+        </div>
+        <div class="lib-grid" id="libraryVideosGrid"></div>
         </div>
         <div class="lib-sec">
         <div class="section-label-row hidden" id="librarySetsHead">
@@ -6168,7 +6175,7 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
             <div class="label"><svg class="adv-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2"/></svg>Sections to show</div>
             <div class="desc">Tap to hide or show a section in your library.</div>
           </div>
-          <div class="adv-chips" role="group" aria-label="Sections to show"><button type="button" class="btn-ghost" data-adv="sec" data-val="playlist">Playlists</button><button type="button" class="btn-ghost" data-adv="sec" data-val="album">Albums</button><button type="button" class="btn-ghost" data-adv="sec" data-val="artist">Artists</button><button type="button" class="btn-ghost" data-adv="sec" data-val="podcast">Podcasts</button></div>
+          <div class="adv-chips" role="group" aria-label="Sections to show"><button type="button" class="btn-ghost" data-adv="sec" data-val="playlist">Playlists</button><button type="button" class="btn-ghost" data-adv="sec" data-val="album">Albums</button><button type="button" class="btn-ghost" data-adv="sec" data-val="artist">Artists</button><button type="button" class="btn-ghost" data-adv="sec" data-val="podcast">Podcasts</button><button type="button" class="btn-ghost" data-adv="sec" data-val="video">Videos</button></div>
         </div>
         <div class="settings-row settings-row-slider">
           <div>
@@ -10264,6 +10271,7 @@ const libraryPlaylistsHead = $('libraryPlaylistsHead');
 const libraryArtistsHead = $('libraryArtistsHead'), libraryArtistsGrid = $('libraryArtistsGrid');
 const libraryAlbumsHead = $('libraryAlbumsHead'), libraryAlbumsGrid = $('libraryAlbumsGrid');
 const libraryPodcastsHead = $('libraryPodcastsHead'), libraryPodcastsGrid = $('libraryPodcastsGrid');
+const libraryVideosHead = $('libraryVideosHead'), libraryVideosGrid = $('libraryVideosGrid');   // saved videos (#868)
 const librarySetsHead = $('librarySetsHead'), librarySetsGrid = $('librarySetsGrid');   // Voice DJ sets (#553)
 // Geethub #552: the top bar names the section at the top of the list. When the next section header reaches the bar, the name swaps and that header steps aside
 const libBarLabel = $('libBarLabel');
@@ -10295,7 +10303,7 @@ if (libBody){
   updateLibBar();
 }
 const libFilterPodcasts = $('libFilterPodcasts');
-const libFilterSets = $('libFilterSets');
+const libFilterSets = $('libFilterSets'), libFilterVideos = $('libFilterVideos');
 const libFilterArtists = $('libFilterArtists');
 const libraryFilterEmpty = $('libraryFilterEmpty');
 const libViewToggle = $('libViewToggle');
@@ -15089,6 +15097,8 @@ function setLibraryView(mode){
   libraryAlbumsGrid.classList.toggle('is-compact', mode === 'compact');
   libraryPodcastsGrid.classList.toggle('is-list', mode === 'list');
   libraryPodcastsGrid.classList.toggle('is-compact', mode === 'compact');
+  libraryVideosGrid.classList.toggle('is-list', mode === 'list');
+  libraryVideosGrid.classList.toggle('is-compact', mode === 'compact');
   librarySetsGrid.classList.toggle('is-list', mode === 'list');
   librarySetsGrid.classList.toggle('is-compact', mode === 'compact');
   libViewToggle.querySelectorAll('[data-mode]').forEach(btn => {
@@ -15096,7 +15106,7 @@ function setLibraryView(mode){
   });
   // All's overview keeps two rows per section, so a new column count needs a
   // fresh trim (#487); grids are still empty at startup, so boot skips this
-  if (prevView !== mode && getLibraryFilter() === 'all' && libraryGrid.children.length + libraryArtistsGrid.children.length + libraryAlbumsGrid.children.length + libraryPodcastsGrid.children.length + librarySetsGrid.children.length){
+  if (prevView !== mode && getLibraryFilter() === 'all' && libraryGrid.children.length + libraryArtistsGrid.children.length + libraryAlbumsGrid.children.length + libraryPodcastsGrid.children.length + libraryVideosGrid.children.length + librarySetsGrid.children.length){
     rerenderLibraryKeepPanel();
     return;
   }
@@ -15152,6 +15162,7 @@ function canFileUnder(pl){ return !!pl && pl.type !== 'custom' && !isSingleTrack
 function libSectionOf(pl){
   const o = pl && canFileUnder(pl) ? LIB_SECTIONS[pl.sectionOverride] : undefined;
   if (pl && pl.isSet && pl.type === 'custom') return 'set';   // Voice DJ set (#553)
+  if (pl && pl.type === 'yt_video') return 'video';   // a saved YouTube video lives in Videos, not Playlists (#868)
   return o || (isPodcastEntry(pl) ? 'podcast' : isArtistEntry(pl) ? 'artist' : isAlbumEntry(pl) ? 'album' : 'playlist');
 }
 libViewToggle.addEventListener('click', (e) => {
@@ -15168,12 +15179,12 @@ libViewToggle.addEventListener('click', (e) => {
   } else setLibraryView(btn.dataset.mode);
   closeLibSortMenu();
 });
-const LIB_FILTER_CYCLE = ['all', 'playlists', 'artists', 'albums', 'podcasts', 'sets'];
+const LIB_FILTER_CYCLE = ['all', 'playlists', 'artists', 'albums', 'podcasts', 'videos', 'sets'];
 // A filter chip only shows while the library holds that kind (kept current
 // by renderLibrary); a saved choice for a kind that's gone reads as 'all'.
 // Playlists/Albums default to shown until the first render knows better.
-let libHasSets = false, libHasPodcasts = false, libHasArtists = false, libHasPlaylists = true, libHasAlbums = true;
-function libFilterCycleModes(){ return LIB_FILTER_CYCLE.filter(m => (m !== 'podcasts' || libHasPodcasts) && (m !== 'sets' || libHasSets) && (m !== 'artists' || libHasArtists) && (m !== 'playlists' || libHasPlaylists) && (m !== 'albums' || libHasAlbums)); }
+let libHasSets = false, libHasVideos = true, libHasPodcasts = false, libHasArtists = false, libHasPlaylists = true, libHasAlbums = true;
+function libFilterCycleModes(){ return LIB_FILTER_CYCLE.filter(m => (m !== 'podcasts' || libHasPodcasts) && (m !== 'videos' || libHasVideos) && (m !== 'sets' || libHasSets) && (m !== 'artists' || libHasArtists) && (m !== 'playlists' || libHasPlaylists) && (m !== 'albums' || libHasAlbums)); }
 function getLibraryFilter(){
   return 'all';   // no All pill any more: the library is always the stacked sections, the pills fold them (#495)
 }
@@ -15399,10 +15410,13 @@ function renderLibrary(){
   libraryAlbumsGrid.innerHTML = '';
   { const old = libraryAlbumsGrid.parentNode.querySelector('.lib-az'); if (old) old.remove(); libraryAlbumsGrid.parentNode.classList.remove('has-az'); }
   libraryPodcastsGrid.innerHTML = '';
+  libraryVideosGrid.innerHTML = '';
   librarySetsGrid.innerHTML = '';
   const advHide = advPrefs().hide || [];
   libHasPodcasts = !advHide.includes('podcast');   // chips always show (unless hidden in Advanced), even with nothing of that kind yet
   libFilterPodcasts.classList.toggle('hidden', !libHasPodcasts);
+  libHasVideos = !advHide.includes('video');
+  libFilterVideos.classList.toggle('hidden', !libHasVideos);
   libHasSets = ids.some(sid => { const sp = getCachedPlaylist(sid); return !!(sp && sp.isSet && sp.type === 'custom'); });   // the pill only appears once a set exists
   libFilterSets.classList.toggle('hidden', !libHasSets);
   libHasArtists = !advHide.includes('artist');
@@ -15414,7 +15428,7 @@ function renderLibrary(){
   libHasPlaylists = !advHide.includes('playlist');
   libFilterPlaylists.classList.toggle('hidden', !libHasPlaylists);
   // chips only help when there's more than one kind to pick between
-  libFilter.classList.toggle('hidden', [libHasPlaylists, libHasAlbums, libHasArtists, libHasPodcasts, libHasSets].filter(Boolean).length < 2);
+  libFilter.classList.toggle('hidden', [libHasPlaylists, libHasAlbums, libHasArtists, libHasPodcasts, libHasVideos, libHasSets].filter(Boolean).length < 2);
   const filter = getLibraryFilter();
   // #677: exactly one visible pill is active; if none or several are, keep the first open one (else the first pill)
   { const vis = [...libFilter.querySelectorAll('.lib-filter-btn:not(.hidden)')].map(b => b.dataset.filter), open = vis.filter(k => !libFolded[k]);
@@ -15426,15 +15440,16 @@ function renderLibrary(){
   const showArtists = (filter === 'all' || filter === 'artists') && !advHide.includes('artist');
   const showAlbums = (filter === 'all' || filter === 'albums') && !advHide.includes('album');
   const showPodcasts = (filter === 'all' || filter === 'podcasts') && !advHide.includes('podcast');
+  const showVideos = (filter === 'all' || filter === 'videos') && !advHide.includes('video');
   const showSets = (filter === 'all' || filter === 'sets');
   // which bucket a saved entry is filed under
   const kindOf = libSectionOf;
-  const kindShown = (k) => k === 'set' ? showSets : k === 'podcast' ? showPodcasts : k === 'artist' ? showArtists : k === 'album' ? showAlbums : showPlaylists;
+  const kindShown = (k) => k === 'set' ? showSets : k === 'video' ? showVideos : k === 'podcast' ? showPodcasts : k === 'artist' ? showArtists : k === 'album' ? showAlbums : showPlaylists;
   libraryGrid.classList.toggle('hidden', !showPlaylists);
   const searchQ = normLibSearch(libSearch.value);
   libSearchTracksList.innerHTML = '';
   let searchTrackCount = 0;
-  let artistCount = 0, albumCount = 0, podcastCount = 0, setCount = 0;
+  let artistCount = 0, albumCount = 0, podcastCount = 0, videoCount = 0, setCount = 0;
   const albumGroups = new Map(); // artistKey -> { name, cards }
   const albumCardsInOrder = []; // every album card in the chosen sort order (flat grid)
   // SoundCloud (sc:) songs saved without art (older or cached items) have no
@@ -15495,6 +15510,8 @@ function renderLibrary(){
     if (isArtist) artistCount++;
     if (isAlbum) albumCount++;
     if (isPodcast) podcastCount++;
+    const isVideoEntry = kind === 'video';
+    if (isVideoEntry) videoCount++;
     const isSetEntry = kind === 'set';
     if (isSetEntry) setCount++;
     const isLiked = id === LIKED_ID;
@@ -15778,7 +15795,7 @@ function renderLibrary(){
       card._sortPlays = totalPlaylistPlays(pl); card._sortTracks = pl.tracks.length;
       albumGroups.get(gk).cards.push(card);
     } else {
-      (isSetEntry ? librarySetsGrid : isPodcast ? libraryPodcastsGrid : isArtist ? libraryArtistsGrid : libraryGrid).appendChild(card);
+      (isSetEntry ? librarySetsGrid : isVideoEntry ? libraryVideosGrid : isPodcast ? libraryPodcastsGrid : isArtist ? libraryArtistsGrid : libraryGrid).appendChild(card);
     }
     } catch(e){
       console.warn('[ebbless] dropping corrupted library entry', id, e);
@@ -15916,7 +15933,7 @@ function renderLibrary(){
   // #631: while searching, a pill is lit only if its section has a match, so a
   // song-only search leaves every pill off
   if (searchQ){
-    const hits = { playlists: libraryGrid.children.length, artists: artistCount, albums: albumCount, podcasts: podcastCount, sets: setCount };
+    const hits = { playlists: libraryGrid.children.length, artists: artistCount, albums: albumCount, podcasts: podcastCount, videos: videoCount, sets: setCount };
     libFilter.querySelectorAll('.lib-filter-btn').forEach(btn => btn.classList.toggle('is-active', !libFolded[btn.dataset.filter] && hits[btn.dataset.filter] > 0));
   }
   libraryArtistsHead.classList.toggle('hidden', artistCount === 0);
@@ -15925,6 +15942,8 @@ function renderLibrary(){
   libraryAlbumsGrid.classList.toggle('hidden', albumCount === 0);
   libraryPodcastsHead.classList.toggle('hidden', podcastCount === 0);
   libraryPodcastsGrid.classList.toggle('hidden', podcastCount === 0);
+  libraryVideosHead.classList.toggle('hidden', videoCount === 0);
+  libraryVideosGrid.classList.toggle('hidden', videoCount === 0);
   librarySetsHead.classList.toggle('hidden', setCount === 0);
   librarySetsGrid.classList.toggle('hidden', setCount === 0);
   libSearchTracks.classList.toggle('hidden', !searchTrackCount);
@@ -15933,7 +15952,7 @@ function renderLibrary(){
   libraryPlaylistsHead.classList.toggle('hidden', filter !== 'all');
   // Section header fold/unfold: click entire header to toggle, All view only
   let firstSecSeen = false;   // the first visible section gets no divider line above it
-  [[libraryPlaylistsHead, libraryGrid, 'playlists'], [libraryArtistsHead, libraryArtistsGrid, 'artists'], [libraryAlbumsHead, libraryAlbumsGrid, 'albums'], [libraryPodcastsHead, libraryPodcastsGrid, 'podcasts'], [librarySetsHead, librarySetsGrid, 'sets']].forEach(([head, grid, key]) => {
+  [[libraryPlaylistsHead, libraryGrid, 'playlists'], [libraryArtistsHead, libraryArtistsGrid, 'artists'], [libraryAlbumsHead, libraryAlbumsGrid, 'albums'], [libraryPodcastsHead, libraryPodcastsGrid, 'podcasts'], [libraryVideosHead, libraryVideosGrid, 'videos'], [librarySetsHead, librarySetsGrid, 'sets']].forEach(([head, grid, key]) => {
     // Attach click handler to the entire section-label-row if not already set
     if (!head.dataset.foldHandlerAttached) {
       head.addEventListener('click', () => { /* #677: one section is always open; switch via the pills */ });
@@ -15947,20 +15966,20 @@ function renderLibrary(){
     head.setAttribute('aria-label', (folded ? 'Expand ' : 'Collapse ') + key);
     if (folded) grid.classList.add('hidden');
     // an empty kind keeps its title and says so (the pills are always there now)
-    const cnt = { playlists: libraryGrid.children.length, artists: artistCount, albums: albumCount, podcasts: podcastCount, sets: setCount }[key];
+    const cnt = { playlists: libraryGrid.children.length, artists: artistCount, albums: albumCount, podcasts: podcastCount, videos: videoCount, sets: setCount }[key];
     let none = grid.nextElementSibling && grid.nextElementSibling.classList.contains('lib-none') ? grid.nextElementSibling : null;
     if (!none){ none = document.createElement('div'); none.className = 'currents-hint lib-none'; none.style.cssText = 'padding:6px 2px 14px'; grid.after(none); }
     const empty = !cnt && !folded && !searchQ && filter === 'all' && !advHide.includes(key.slice(0, -1));
     none.hidden = !empty;
-    none.textContent = 'No ' + key + ' yet.';
+    none.textContent = key === 'videos' ? 'No videos yet. Paste a YouTube video link in Search to save it here.' : 'No ' + key + ' yet.';
     if (empty && searchQ) head.classList.remove('hidden');
   });
   // #487: All is an overview - each section shows its first two rows, with
   // "See all (N)" opening that section's own filter. Rendering every card
   // here made a big library's All view heavy enough to glitch the screen.
-  if (!searchQ) ['playlists', 'artists', 'albums', 'podcasts', 'sets'].forEach(libraryCapSection);   // open sections show a page of cards, then Show more (#487)
-  const nothingShown = !libraryGrid.children.length && !libraryArtistsGrid.children.length && !libraryAlbumsGrid.children.length && !libraryPodcastsGrid.children.length && !librarySetsGrid.children.length && !searchTrackCount;
-  libraryFilterEmpty.textContent = searchQ ? 'Nothing in your library matches "' + libSearch.value.trim() + '".' : filter === 'artists' ? 'No artists in your library yet.' : filter === 'albums' ? 'No albums in your library yet.' : filter === 'podcasts' ? 'No podcasts in your library yet.' : filter === 'sets' ? 'No sets in your library yet.' : 'No playlists in your library yet.';
+  if (!searchQ) ['playlists', 'artists', 'albums', 'podcasts', 'videos', 'sets'].forEach(libraryCapSection);   // open sections show a page of cards, then Show more (#487)
+  const nothingShown = !libraryGrid.children.length && !libraryArtistsGrid.children.length && !libraryAlbumsGrid.children.length && !libraryPodcastsGrid.children.length && !libraryVideosGrid.children.length && !librarySetsGrid.children.length && !searchTrackCount;
+  libraryFilterEmpty.textContent = searchQ ? 'Nothing in your library matches "' + libSearch.value.trim() + '".' : filter === 'artists' ? 'No artists in your library yet.' : filter === 'albums' ? 'No albums in your library yet.' : filter === 'podcasts' ? 'No podcasts in your library yet.' : filter === 'videos' ? 'No videos in your library yet.' : filter === 'sets' ? 'No sets in your library yet.' : 'No playlists in your library yet.';
   libraryFilterEmpty.classList.toggle('hidden', (filter === 'all' && !searchQ) || !nothingShown);
   refreshLibraryMarquees();
   markNowPlaying();
@@ -15978,7 +15997,7 @@ function trimLibraryGrid(grid, keep){
   return cards.length;
 }
 function libraryCapSection(filter){
-  const grid = { playlists: libraryGrid, artists: libraryArtistsGrid, albums: libraryAlbumsGrid, podcasts: libraryPodcastsGrid, sets: librarySetsGrid }[filter];
+  const grid = { playlists: libraryGrid, artists: libraryArtistsGrid, albums: libraryAlbumsGrid, podcasts: libraryPodcastsGrid, videos: libraryVideosGrid, sets: librarySetsGrid }[filter];
   if (!grid || grid.classList.contains('hidden')) return;
   const total = trimLibraryGrid(grid, libShowCount);
   if (total <= libShowCount) return;
@@ -15994,7 +16013,7 @@ function libraryCapSection(filter){
 }
 function libraryAllOverview(totals){
   const view = getLibraryView();
-  [[libraryGrid, 'playlists'], [libraryArtistsGrid, 'artists'], [libraryAlbumsGrid, 'albums'], [libraryPodcastsGrid, 'podcasts'], [librarySetsGrid, 'sets']].forEach(([grid, key]) => {
+  [[libraryGrid, 'playlists'], [libraryArtistsGrid, 'artists'], [libraryAlbumsGrid, 'albums'], [libraryPodcastsGrid, 'podcasts'], [libraryVideosGrid, 'videos'], [librarySetsGrid, 'sets']].forEach(([grid, key]) => {
     if (grid.classList.contains('hidden')) return;
     const cards = Array.from(grid.children).filter(c => c.classList.contains('lib-card'));
     let keep = 6;
@@ -21963,12 +21982,17 @@ function isSingleTrackType(type){
 function playSingleSongLink(pl, targetIndex){
   awardMilestone('load');
   const track = pl.tracks[0];
+  // #868: a pasted YouTube video has a home of its own (Library > Videos), so it is saved there at once, with no destination picker
+  if (pl.type === 'yt_video' && track){
+    if (!getCachedPlaylist(pl.id)) persistPlaylistObj(pl);
+    if (!isSaved(pl.id)){ statsImport(pl.id); saveToLibrary(pl.id); renderLibrary(); showToast('Saved to Library, Videos'); }
+  }
   const playNow = (offerSave) => {
     loadPlaylistIntoPlayer(pl);
     buildQueueFrom(0);
     loadIndex(state.queuePos, true);
     setView('player');
-    if (offerSave) openSingleTrackDestinationPicker(track);
+    if (offerSave && pl.type !== 'yt_video') openSingleTrackDestinationPicker(track);
   };
   if (targetIndex || !(state.queue.length > 0 && state.queuePos >= 0) || !track || !track.videoId){ playNow(true); return; }
   // queue entries point at a playlist by id, so the one-song list must be
@@ -26504,6 +26528,9 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
+  { version: 571, date: '2026-11-17', items: [
+    'The Library has a Videos section next to Podcasts. Paste a YouTube video link and it is saved there at once, ready to play and watch.',
+  ]},
   { version: 570, date: '2026-11-17', items: [
     'Radio: moving or zooming the map with the arrow keys no longer skips your station to the next song.',
     'Radio: search a country on the map and tap Artists from that country, so places like Ethiopia show people, not only stations.',
