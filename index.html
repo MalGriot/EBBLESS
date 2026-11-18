@@ -8574,7 +8574,9 @@ async function syncProfileNow(opts){
       // Fold in anything changed locally while the request was out, so it
       // isn't overwritten - and gets pushed on the next beat.
       const server = normalizeProfile(data.profile);
-      const merged = mergeProfiles(localProfileForSync(), server);
+      const localNow = localProfileForSync();
+      const editedInFlight = profileHash(localNow) !== profileHash(local);
+      const merged = mergeProfiles(localNow, server);
       const changedHere = applyMergedProfile(merged);
       lsSet(LS_PROFILE_SYNCED_AT, Date.now());
       profileSyncStatus = '';
@@ -8583,7 +8585,12 @@ async function syncProfileNow(opts){
       const serverKeepsNow = !!(data.profile && typeof data.profile === 'object' && 'now' in data.profile);
       if (!serverKeepsNow) merged.now = server.now;
       nowRemote = merged.now;
-      if (profStable(merged) !== profStable(server)) scheduleProfileSync();
+      // Push again only when something changed here while the request was
+      // out. If the Worker merges differently from this client (ON AIR was
+      // per-track on the Worker, whole on the client), resending the same
+      // profile gets the same answer, and it looped every ~40s with a 3.7 MB
+      // body, starving playback on a low-RAM phone.
+      if (profStable(merged) !== profStable(server) && editedInFlight) scheduleProfileSync();
       // What this device looks like now = what the Worker has; a later
       // push only goes out once that stops being true.
       else lsSet(LS_PROFILE_SYNCED_HASH, profileHash(localProfileForSync()));
@@ -26528,6 +26535,9 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
+  { version: 572, date: '2026-11-18', items: [
+    'Fixed songs stuck loading on some Android phones when you are signed in: syncing your library no longer repeats in the background and slows playback down.',
+  ]},
   { version: 571, date: '2026-11-17', items: [
     'The Library has a Videos section next to Podcasts. Paste a YouTube video link and it is saved there at once, ready to play and watch.',
   ]},
