@@ -11,3 +11,4 @@ node scripts/test-manual-carry.js >/dev/null
 node scripts/test-home-order.js >/dev/null
 node scripts/test-blend-gains.js >/dev/null
 node scripts/test-official-video.js >/dev/null
+node scripts/test-house-vibes.js >/dev/null

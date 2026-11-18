@@ -70,6 +70,15 @@ test('house-vibes.json: valid entries, and each phrase finds its own entry', () 
   });
 });
 
+test('"sexy time" is a house vibe (sensual slow jams) and near-misses are not', () => {
+  const data = JSON.parse(readFileSync(new URL('../../house-vibes.json', import.meta.url), 'utf8'));
+  const hit = matchHouseVibe('sexy time', data.vibes);
+  assert.ok(hit && hit.tags.includes('sensual') && hit.tags.includes('slow jams'));
+  ['Sexy Time', 'SEXY  TIME', 'sexy-time', 'sexy times', 'sexytime', 'a sexy time playlist please'].forEach(t => assert.equal(matchHouseVibe(t, data.vibes), hit, t));
+  assert.equal(matchHouseVibe('sexy', data.vibes), null);
+  assert.equal(matchHouseVibe('time', data.vibes), null);
+});
+
 // #743: the model put Bon Iver's "Skinny Love" first in its seeds for most
 // mellow sentences, and seeds lead the list, so it opened nearly every playlist.
 test('the model\'s first seed does not lead every vibe', () => {
