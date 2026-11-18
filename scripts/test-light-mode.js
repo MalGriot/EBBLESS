@@ -11,7 +11,8 @@ const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
 const start = html.indexOf('function autoLightMode(){');
 const end = html.indexOf('\n}\n', start);
 if (start < 0 || end < 0) { console.error('autoLightMode not found in index.html'); process.exit(1); }
-const src = html.slice(start, end + 2) + '\nautoLightMode();';
+const liteLine = html.slice(html.indexOf('function isLiteDevice(){'), html.indexOf('\n', html.indexOf('function isLiteDevice(){')));
+const src = liteLine + '\n' + html.slice(start, end + 2) + '\nautoLightMode();';
 
 function run({ mem, motion, flag = false }) {
   const store = { 'ebbless:liteAuto': flag };
@@ -62,6 +63,35 @@ check('runs at boot after PROFILE_SETTING_KEYS exists (lsSet needs it; before it
     assert.ok(at > 0, call.trim() + ' is called');
     assert.ok(at > keys, call.trim() + ' runs after PROFILE_SETTING_KEYS');
   }
+});
+
+// The real isLiteDevice() + schedulePrevWarm(): a 2 GB phone keeps two YouTube players, not three.
+function extractFn(sig) {
+  const a = html.indexOf(sig); const b = html.indexOf('\n}\n', a);
+  assert.ok(a >= 0 && b > a, sig + ' found'); return html.slice(a, b + 2);
+}
+function prevWarm(mem) {
+  const timers = [];
+  const env = {
+    navigator: mem === undefined ? {} : { deviceMemory: mem },
+    prevWarmTimer: 0, clearTimeout: () => {}, setTimeout: (fn, ms) => { timers.push(ms); return 1; },
+    routeLocked: () => false,
+  };
+  const src = 'let prevWarmTimer = 0;\n' + html.slice(html.indexOf('function isLiteDevice(){'), html.indexOf('\n', html.indexOf('function isLiteDevice(){'))) + '\n' + extractFn('function schedulePrevWarm(pos){') + '\nschedulePrevWarm(3); return timers;';
+  const names = Object.keys(env).filter(k => k !== 'prevWarmTimer');
+  return new Function(...names, 'timers', src)(...names.map(n => env[n]), timers);
+}
+check('2 GB phone skips the previous-song warm-up (no third YouTube player)', () => {
+  assert.deepStrictEqual(prevWarm(2), []);
+});
+check('bigger devices still warm the previous song', () => {
+  assert.deepStrictEqual(prevWarm(8), [6000]);
+  assert.deepStrictEqual(prevWarm(undefined), [6000]);
+});
+check('default-content seeding only redraws the library when it added something', () => {
+  const fn = extractFn('async function seedDefaultSpotifyContent(){');
+  assert.ok(/if \(added\) renderLibrary\(\);/.test(fn));
+  assert.ok(!/^\s*renderLibrary\(\);\s*$/m.test(fn), 'no unconditional renderLibrary()');
 });
 
 console.log(pass + ' passed');

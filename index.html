@@ -7815,9 +7815,11 @@ function autoReducedMotion(){
    read that as an ad and muted the song ~27% of the time. Such a device gets Motion: Reduced switched on once (stops every CSS
    animation and, with it, the marquee sweep), shown in Settings like #816; picking Full later stays. navigator.deviceMemory is
    Chromium's rounded RAM bucket (0.25 ... 8); other browsers leave it undefined and are untouched. Called at boot, see above. */
+// A 2 GB-class phone (the device itself, whatever Motion is set to). Also keeps it to two YouTube players (no previous-song warm-up).
+function isLiteDevice(){ try { return navigator.deviceMemory > 0 && navigator.deviceMemory <= 2; } catch(e){ return false; } }
 function autoLightMode(){
   try {
-    if (!(navigator.deviceMemory > 0 && navigator.deviceMemory <= 2)) return;
+    if (!isLiteDevice()) return;
     if (lsGet('ebbless:liteAuto', false)) return;
     lsSet('ebbless:liteAuto', true);
     if (!advPrefs().motion) advSet('motion', 'reduced');
@@ -15456,7 +15458,7 @@ function renderLibrary(){
     if (vis.length && open.length !== 1) setOnlyLibPill(open[0] || vis[0]); }
   libFilter.querySelectorAll('.lib-filter-btn').forEach(btn => btn.classList.toggle('is-active', !libFolded[btn.dataset.filter]));
   try{ renderHomeShelf(); } catch(e){}   // Recents follow the active pill
-  updateLibFilterMore();
+  libAfterRender();
   const showPlaylists = (filter === 'all' || filter === 'playlists') && !advHide.includes('playlist');
   const showArtists = (filter === 'all' || filter === 'artists') && !advHide.includes('artist');
   const showAlbums = (filter === 'all' || filter === 'albums') && !advHide.includes('album');
@@ -16005,7 +16007,18 @@ function renderLibrary(){
   refreshLibraryMarquees();
   markNowPlaying();
   try{ refreshPlayNudge(); } catch(e){}
-  syncLibraryVideos();
+}
+// The filter arrow and the thumbnail clips both read layout. Called inline, each forced its own full layout of the
+// rebuilt grid (~10% of a render each on a 2 GB phone); on the next frame they share the frame's layout, and back-to-back
+// renders run them once. A hidden page gets no frames, so it runs now (that is also when the clips must pause).
+// var: renderLibrary runs during startup, before this line.
+var libAfterRenderPending = false;
+function libAfterRender(){
+  const run = () => { libAfterRenderPending = false; try { updateLibFilterMore(); } catch(e){} syncLibraryVideos(); };
+  if (document.hidden || typeof requestAnimationFrame !== 'function'){ run(); return; }
+  if (libAfterRenderPending) return;
+  libAfterRenderPending = true;
+  requestAnimationFrame(run);
 }
 // Single-section filters draw LIB_PAGE cards, then "Show N more" (#487).
 // var, not const: renderLibrary runs during startup, before these lines.
@@ -25409,6 +25422,7 @@ async function seedStarterLibrary(){
 }
 
 async function seedDefaultSpotifyContent(){
+  let added = false;
   for (const url of DEFAULT_SPOTIFY_URLS){
     const entry = starterLibraryEntry(url);
     if (!entry) continue;
@@ -25419,10 +25433,12 @@ async function seedDefaultSpotifyContent(){
     // a failed or dead link is not marked seeded: tries again next launch
     if (!(await queueBackgroundLoad(entry.id, entry.type))) continue;
     // appended, not unshifted: default content sits below the listener's own items
+    added = true;
     if (!getLibrary().includes(entry.id)) lsSet(LS_LIB, getLibrary().concat(entry.id));
     lsSet(LS_DEFAULT_SEEDED, lsGet(LS_DEFAULT_SEEDED, []).concat(entry.id));
   }
-  renderLibrary();
+  // every launch after the first adds nothing; a full re-render then cost ~2.5 s of a 2 GB phone's startup
+  if (added) renderLibrary();
 }
 
 // Periodyssius (#336): the album is now this YouTube playlist, for everyone.
@@ -26549,6 +26565,9 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
+  { version: 576, date: '2026-11-18', items: [
+    'The app starts up faster, most of all with a big library. On phones with 2 GB of memory or less, the previous song now loads when you tap back instead of waiting in the background.',
+  ]},
   { version: 575, date: '2026-11-18', items: [
     'Light mode now really switches on for phones with 2 GB of memory or less, and phones set to reduce motion get the matching saving settings again.',
   ]},
@@ -34047,7 +34066,8 @@ function keepAsPrev(old){
 let prevWarmTimer = null;
 function schedulePrevWarm(pos){
   clearTimeout(prevWarmTimer);
-  if (routeLocked()) return;
+  // light device: a third YouTube player kept the page busy enough to stall the song's clock; Previous loads on demand there
+  if (routeLocked() || isLiteDevice()) return;
   prevWarmTimer = setTimeout(() => {
     if (state.queuePos !== pos || routeLocked() || swapInProgress || standIn) return;
     const pp = computePrevPos(pos), deck = prevDeck();
