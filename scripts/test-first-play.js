@@ -96,117 +96,93 @@ check('play_started comes from the deck PLAYING event, not statsTick', () => {
   const tick = html.slice(html.indexOf('function statsTick()'), html.indexOf('function statsTick()') + 1500);
   assert.ok(!/playStarted/.test(tick), 'statsTick must not touch playStarted');
 });
-check('taps are counted from the splash Play, the play button, a playlist Play and the toggle', () => {
-  assert.ok(/function playFirstSong\(\)\{[\s\S]*?statsPlayTapped\(\)/.test(html));
+check('taps are counted from the splash Resume, the play button, a playlist Play and the toggle', () => {
+  assert.ok(/function splashResume\(\)\{\n  statsPlayTapped\(\);/.test(html));
   assert.ok(/if \(s !== 1\) statsPlayTapped\(\);\n  playIndex\(state\.queuePos\)/.test(html));
   assert.ok(/statsPlayTapped\(\);\n  if \(nudgeId\)/.test(html));
   assert.ok(/statsPlayTapped\(\);\n  loadPlaylistIntoPlayer\(pl\);\n  setView\('player'\)/.test(html));
 });
 
-// ---- one-tap Play on the first screen ----
-check('the splash shows Play first, as the primary button, ahead of Import, Tutorial and Enter', () => {
+// ---- Resume (history) or Enter (no history) on the first screen (T-0010) ----
+check('the splash button for people with history says Resume, is the primary button and sits ahead of Import, Tutorial and Enter', () => {
   const i = html.indexOf('id="splashPlayNow"');
   assert.ok(i > 0);
-  assert.ok(/id="splashPlayNow" type="button" class="splash-choice-btn splash-choice-btn-primary/.test(html));
+  assert.ok(/id="splashPlayNow" type="button" class="splash-choice-btn splash-choice-btn-primary[^"]*">Resume<\/button>/.test(html));
   assert.ok(i < html.indexOf('id="splashBringMusic"') && i < html.indexOf('id="splashPlayTutorial"') && i < html.indexOf('id="splashSkipTutorial"'));
   assert.ok(!/id="splashBringMusic"[^>]*splash-choice-btn-primary/.test(html), 'Import must not also be primary');
-});
-check('the first song is the SoundCloud starter, so it needs no Spotify and no Google', () => {
-  assert.ok(/STARTER_LIBRARY_URLS = \[\n  'https:\/\/soundcloud\.com\//.test(html));
 });
 check('Tutorial and Enter still exist and are handled by the same splash code', () => {
   assert.ok(html.includes("const playBtn = $('splashPlayTutorial'), skipBtn = $('splashSkipTutorial');"));
   assert.ok(html.includes("if (skipBtn) skipBtn.addEventListener('click'"));
   assert.ok(html.includes("if (playBtn) playBtn.addEventListener('click'"));
 });
-check('a returning tester who never played sees the choice (with Play) on every visit', () => {
+check('a returning tester who never played still sees the splash choice on every visit (Enter, or Resume if a song is saved)', () => {
   assert.ok(/else if \(onboardingComplete && !hasEverPlayed\(\)\)\{\n[^\n]*\n  showSplashChoice\(\);\n\}/.test(html));
 });
 
-check('the 12 s splash safety net no longer hides the Play choice on any device', () => {
+check('the 12 s splash safety net no longer hides the choice on any device', () => {
   const i = html.indexOf('splashSafetyEl.classList.add(');
   const w = html.slice(i - 400, i);
   assert.ok(w.includes("!splashSafetyEl.classList.contains('is-choice')"));
   assert.ok(!w.includes('ebb-android'));
 });
 
-// ---- behavior: the real splash Play code, run in the real click order ----
+// ---- behavior: the real splash Resume code, run in the real click order ----
 const slice = (name) => {
   const a = html.indexOf('/* ' + name + ':start */'), b = html.indexOf('/* ' + name + ':end */', a);
   if (a < 0 || b < 0) { console.error(name + ' block not found in index.html'); process.exit(1); }
   return html.slice(a, b);
 };
-// Builds the splash Play pieces with stubs. `startApp` is what Enter runs: like the real startApp() it
-// restores a saved queue first and starts seedStarterLibrary() without waiting for it.
-function splashPlay({ savedQueue, defer = false }) {
-  const log = { imports: [], resolved: [], tapped: 0, order: [], pending: [] };
-  const state = { queue: savedQueue ? [{ id: 'old' }] : [], queuePos: savedQueue ? 0 : -1 };
-  const URLS = ['https://soundcloud.com/starter-album', 'https://open.spotify.com/playlist/second'];
-  let handler = null;
-  const enterEl = { click() { log.order.push('enter'); startApp(); } };
-  const api = new Function('ctx', `
-    const { state, URLS, log } = ctx;
-    const STARTER_LIBRARY_URLS = URLS;
-    const starterLibraryEntry = (u) => ({ id: 'id:' + u, type: 'x' });
-    const isSingleTrackType = () => false;
-    const getCachedPlaylist = () => null, isResolveStale = () => false, saveToLibrary = () => {}, renderLibrary = () => {};
-    const queueBackgroundLoad = async (id) => { log.resolved.push(id); return true; };
+// Builds the splash Resume pieces with stubs. Enter runs startApp(), which (like the real one) restores a saved queue
+// through tryResume. `readyAfter` = how many 250 ms waits pass before startApp has a current track (0 = in the same tap).
+function splashResume({ readyAfter = 0, never = false } = {}) {
+  const log = { order: [], tapped: 0, resumed: 0, timers: [] };
+  let ready = false, handler = null;
+  const enterEl = { click() { log.order.push('enter'); if (readyAfter === 0) ready = true; } };
+  const ctx = { log, enterEl, setHandler: (fn) => { handler = fn; }, isReady: () => ready };
+  new Function('ctx', `
+    const { log } = ctx;
     const statsPlayTapped = () => { log.tapped++; log.order.push('tapped'); };
-    const run = (id, type, ti) => { log.imports.push({ id, keep: importKeepsQueue(type, ti, id) }); };
-    // like importChain: with defer on, the import waits its turn behind anything queued earlier
-    const beginImport = (id, force, type, ti) => { log.order.push('import'); if (ctx.defer) log.pending.push(() => run(id, type, ti)); else run(id, type, ti); };
+    const currentTrack = () => (ctx.isReady() ? { id: 'saved' } : null);
+    const resumePlayback = () => { log.resumed++; log.order.push('resume'); };
+    const setTimeout = (fn, ms) => { log.timers.push({ fn, ms }); };
     const $ = (id) => (id === 'splashSkipTutorial' ? ctx.enterEl : null);
     const document = { addEventListener: (ev, fn) => { if (ev === 'click') ctx.setHandler(fn); } };
-    ${slice('seed-starter')}
-    ${slice('first-song')}
     ${slice('splash-play')}
-    ctx.startApp = () => { log.order.push('startApp'); seedStarterLibrary(); };
-    return { importKeepsQueue };
-  `);
-  const ctx = { state, URLS, log, enterEl, defer, setHandler: (fn) => { handler = fn; } };
-  var startApp;
-  const ret = api(ctx);
-  startApp = ctx.startApp;
+  `)(ctx);
   const click = () => handler({ target: { closest: (sel) => sel === '#splashPlayNow' ? {} : null }, stopPropagation() {}, preventDefault() {} });
-  return { log, click, importKeepsQueue: ret.importKeepsQueue, URLS };
+  const later = () => { ready = !never; const t = log.timers.shift(); if (t) t.fn(); };
+  return { log, click, later };
 }
-const tick = () => new Promise(r => setImmediate(r));
-
-const queued = (async () => {
-  const f = splashPlay({ savedQueue: true });
-  f.click(); await tick();
-  assert.strictEqual(f.log.imports.length, 1);
-  assert.strictEqual(f.log.imports[0].id, 'id:' + f.URLS[0]);
-  assert.strictEqual(f.log.imports[0].keep, false, 'a saved queue must not turn Play into a quiet "file it" import');
-  // the force is used up: a link pasted afterwards keeps the queue as before (#386)
-  assert.strictEqual(f.importKeepsQueue('playlist', 0, 'id:pasted'), true);
-})();
-const fresh = (async () => {
-  const f = splashPlay({ savedQueue: false });
-  f.click(); await tick();
-  assert.strictEqual(f.log.imports[0].keep, false);
-})();
-const ahead = (async () => {
-  // a signup playlist (#446) or ?import= link is already on importChain when Play is tapped, so it runs first
-  const f = splashPlay({ savedQueue: true, defer: true });
-  f.click(); await tick();
-  assert.strictEqual(f.log.pending.length, 1);
-  const signup = f.importKeepsQueue('playlist', 0, 'id:signup-playlist');   // runs first, with the saved queue
-  assert.strictEqual(signup, true, 'the earlier import keeps the queue (#386)');
-  f.log.pending.shift()();                                                  // now the starter's own import
-  assert.strictEqual(f.log.imports[0].id, 'id:' + f.URLS[0]);
-  assert.strictEqual(f.log.imports[0].keep, false, 'the earlier import must not use up the starter force');
-  assert.strictEqual(f.importKeepsQueue('playlist', 0, 'id:later-paste'), true, 'a later pasted link keeps the queue (#386)');
-  assert.strictEqual(f.importKeepsQueue('playlist', 0, 'id:' + f.URLS[0]), true, 'one-shot: used up by the starter import');
-})();
-const order = (async () => {
-  const f = splashPlay({ savedQueue: true });
-  f.click(); await tick();
-  assert.deepStrictEqual(f.log.order.slice(0, 4), ['enter', 'startApp', 'tapped', 'import']);
-  // the starter is resolved once (by the import), the other starter is still seeded by startApp
-  assert.deepStrictEqual(f.log.resolved, ['id:' + f.URLS[1]], 'seedStarterLibrary must skip the starter the Play tap is loading');
+check('Resume enters like Enter, counts one tap, then continues the saved queue in the same tap', () => {
+  const f = splashResume();
+  f.click();
+  assert.deepStrictEqual(f.log.order, ['enter', 'tapped', 'resume']);
   assert.strictEqual(f.log.tapped, 1);
-})();
+  assert.strictEqual(f.log.timers.length, 0);
+});
+check('Resume waits for startApp when the saved song is not ready yet, then resumes once', () => {
+  const f = splashResume({ readyAfter: 1 });
+  f.click();
+  assert.deepStrictEqual(f.log.order, ['enter', 'tapped']);
+  assert.strictEqual(f.log.timers[0].ms, 250);
+  f.later();
+  assert.deepStrictEqual(f.log.order, ['enter', 'tapped', 'resume']);
+  assert.strictEqual(f.log.resumed, 1);
+});
+check('Resume with nothing to resume gives up quietly after about 5 s (the app is still entered)', () => {
+  const f = splashResume({ readyAfter: 1, never: true });
+  f.click();
+  let n = 0; while (f.log.timers.length && n < 100) { f.later(); n++; }
+  assert.strictEqual(n, 19);
+  assert.strictEqual(f.log.resumed, 0);
+  assert.strictEqual(f.log.tapped, 1);
+});
+check('Resume never loads the starter album or replaces the saved queue (the old Play path is gone)', () => {
+  const code = slice('splash-play');
+  assert.ok(!/beginImport|STARTER_LIBRARY|firstSong|importKeepsQueue|state\.queue\s*=/.test(code));
+  assert.ok(!/firstSongForce|firstSongStarting|playFirstSong|firstSongEntry/.test(html), 'no leftover starter-Play code anywhere');
+});
 
 // ---- behavior: "has played" follows the real PLAYING event, not a track loading ----
 function playedFlag({ personalize = true, playLogMs = 0 } = {}) {
@@ -253,39 +229,58 @@ check('Google One Tap and the sign-in card both wait on hasEverPlayed', () => {
   assert.ok(html.includes('if (!hasEverPlayed()){ signInNudgeWaiting = true; return; }'));
 });
 
-// ---- behavior: exactly one way in on the splash (Play or Enter) ----
+// ---- behavior: exactly one way in on the splash (Resume or Enter) ----
 // Reads the page's own CSS rule and decides, per class state, which of the two buttons it hides.
 const ruleM = /(#splash[^{}]*#splashPlayNow[^{}]*)\{display:none\}/.exec(html);
-function cssHides(state) {   // state: { hasPlayed }; returns the ids hidden by the shipped rule
-  assert.ok(ruleM, 'the Play/Enter display:none rule must exist in index.html');
+function cssHides(state) {   // state: { canResume }; returns the ids hidden by the shipped rule
+  assert.ok(ruleM, 'the Resume/Enter display:none rule must exist in index.html');
   const hidden = new Set();
   ruleM[1].split(',').map(x => x.trim()).forEach(sel => {
-    const m = /^#splash(\.has-played|:not\(\.has-played\)) #(\w+)$/.exec(sel);
+    const m = /^#splash(\.can-resume|:not\(\.can-resume\)) #(\w+)$/.exec(sel);
     assert.ok(m, 'unexpected selector in the splash rule: ' + sel);
-    const needsPlayed = m[1] === '.has-played';
-    if (needsPlayed === state.hasPlayed) hidden.add(m[2]);
+    if ((m[1] === '.can-resume') === state.canResume) hidden.add(m[2]);
   });
   return hidden;
 }
-function splashClassFor(played) {   // what the real syncSplashEntry() leaves on #splash
+// What the real syncSplashEntry() leaves on #splash, given the saved-resume data and the playlist cache.
+function splashClassFor({ resume, cached = true, throws = false }) {
   const classes = new Set();
   const sp = { classList: { toggle: (c, on) => { on ? classes.add(c) : classes.delete(c); } } };
-  new Function('$', 'hasEverPlayed', slice('splash-entry') + '; syncSplashEntry();')(() => sp, () => played);
-  return { hasPlayed: classes.has('has-played') };
+  new Function('$', 'lsGet', 'LS_RESUME', 'getCachedPlaylist', slice('splash-entry') + '; syncSplashEntry();')(
+    () => sp, () => { if (throws) throw new Error('storage'); return resume; }, 'ebbless:resume',
+    (id) => (cached ? { id, tracks: [{ title: 'a' }] } : (cached === null ? { id, tracks: [] } : null)));
+  return { canResume: classes.has('can-resume') };
 }
-const shows = (played) => { const h = cssHides(splashClassFor(played)); return { play: !h.has('splashPlayNow'), enter: !h.has('splashSkipTutorial') }; };
-check('never played: the shipped CSS hides Enter and keeps Play (both stay in the markup for code clicks)', () => {
-  assert.deepStrictEqual(shows(false), { play: true, enter: false });
+const shows = (o) => { const h = cssHides(splashClassFor(o)); return { resume: !h.has('splashPlayNow'), enter: !h.has('splashSkipTutorial') }; };
+check('no music history (nothing saved): the shipped CSS shows Enter only, no Resume; Import and Tutorial are untouched', () => {
+  assert.deepStrictEqual(shows({ resume: null }), { resume: false, enter: true });
+  assert.ok(!ruleM[1].includes('splashBringMusic') && !ruleM[1].includes('splashPlayTutorial'));
   assert.ok(html.includes('id="splashSkipTutorial"') && html.includes('id="splashPlayNow"'));
 });
-check('has really played: the shipped CSS hides Play and keeps Enter, so a returning tester always has a way in', () => {
-  assert.deepStrictEqual(shows(true), { play: false, enter: true });
+check('a saved queue or last song: the shipped CSS shows Resume only, no Enter', () => {
+  assert.deepStrictEqual(shows({ resume: { playlistId: 'p1', trackIndex: 2, position: 40 } }), { resume: true, enter: false });
 });
-check('with no sync at all (no has-played class) the default is Play only, which is why every is-choice site must sync', () => {
-  const h = cssHides({ hasPlayed: false });
-  assert.ok(h.has('splashSkipTutorial') && !h.has('splashPlayNow'));
+check('history but nothing resumable (saved song deleted, empty playlist, bad data, storage error): Enter only, never neither', () => {
+  assert.deepStrictEqual(shows({ resume: { playlistId: 'gone' }, cached: false }), { resume: false, enter: true });
+  assert.deepStrictEqual(shows({ resume: { playlistId: 'empty' }, cached: null }), { resume: false, enter: true });
+  assert.deepStrictEqual(shows({ resume: {} }), { resume: false, enter: true });
+  assert.deepStrictEqual(shows({ resume: { playlistId: 'p1' }, throws: true }), { resume: false, enter: true });
 });
-check('every place that adds is-choice syncs Play/Enter first: showSplashChoice, returnToSplash and the Android web splash in startApp', () => {
+check('exactly one of Resume / Enter shows in every class state (never both, never neither)', () => {
+  [true, false].forEach(canResume => {
+    const h = cssHides({ canResume });
+    assert.strictEqual(h.size, 1, 'exactly one button hidden when canResume=' + canResume);
+    assert.ok(h.has(canResume ? 'splashSkipTutorial' : 'splashPlayNow'));
+  });
+});
+check('with no sync at all (no can-resume class) the default is Enter only, so a missed sync still leaves a way in', () => {
+  const h = cssHides({ canResume: false });
+  assert.ok(h.has('splashPlayNow') && !h.has('splashSkipTutorial'));
+});
+check('the CSS hides Resume by default and the first-load splash code is wired: syncSplashEntry reads the same data tryResume does', () => {
+  assert.ok(/function splashResumable\(\)\{[\s\S]*?lsGet\(LS_RESUME, null\)[\s\S]*?getCachedPlaylist\(r\.playlistId\)/.test(html));
+});
+check('every place that adds is-choice syncs Resume/Enter first: showSplashChoice, returnToSplash and the Android web splash in startApp', () => {
   const re = /classList\.add\([^)]*'is-choice'[^)]*\)/g;
   let m, sites = 0;
   while ((m = re.exec(html))) {
@@ -329,11 +324,26 @@ check('Dashboard: the old rows are untouched and the new FIRST PLAY block sits a
   assert.ok(gs.includes('=IFERROR(TEXT(B29/B28,"0%"),"-")'), 'B29/B28 references must not move');
   assert.ok(gs.includes('[1, 8, 14, 17, 20, 32].forEach'));
 });
-Promise.all([queued, fresh, ahead, order]).then(() => {
-  pass += 4;
-  console.log('ok  Play with a saved queue replaces the queue, starts once, and the force is used up (async)');
-  console.log('ok  Play on a fresh install starts the starter (async)');
-  console.log('ok  a signup or ?import= import ahead of Play keeps the queue and leaves the starter force intact (async)');
-  console.log('ok  real click order: Enter first, then tap and import; the starter is not resolved twice (async)');
+// ---- splash video first-load glitch (T-0010): stalls must not cut back to the poster ----
+check('the splash video latches is-playing: a stall (waiting) or pause no longer removes it, only an emptied source does', () => {
+  const i = html.indexOf("const sync = () => {\n      if (!v.paused && v.readyState >= 3) v.classList.add('is-playing');");
+  assert.ok(i > 0, 'latching sync() not found');
+  assert.ok(!/v\.classList\.toggle\('is-playing'/.test(html), 'the toggling version must be gone');
+  const classes = new Set();
+  const mk = (o) => new Function('v', `const sync = () => {
+      if (!v.paused && v.readyState >= 3) v.classList.add('is-playing');
+      else if (!v.currentSrc) v.classList.remove('is-playing');
+    }; return sync;`)(Object.assign({ classList: { add: (c) => classes.add(c), remove: (c) => classes.delete(c) } }, o));
+  mk({ paused: false, readyState: 4, currentSrc: 'x.mp4' })();
+  assert.ok(classes.has('is-playing'));
+  mk({ paused: false, readyState: 2, currentSrc: 'x.mp4' })();   // buffering stall
+  assert.ok(classes.has('is-playing'), 'a stall keeps the last frame instead of cutting to the poster');
+  mk({ paused: true, readyState: 4, currentSrc: 'x.mp4' })();
+  assert.ok(classes.has('is-playing'));
+  mk({ paused: true, readyState: 0, currentSrc: '' })();         // source unloaded
+  assert.ok(!classes.has('is-playing'));
+  assert.ok(/#splash \.splash-video\.is-playing\{opacity:1;transition:opacity 400ms/.test(html), 'it fades in once instead of popping');
+});
+Promise.resolve().then(() => {
   console.log(pass + ' passed');
 }).catch((e) => { console.error(e); process.exit(1); });

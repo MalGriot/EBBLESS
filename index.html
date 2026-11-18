@@ -4212,7 +4212,7 @@ body.split-desktop .install-banner{padding-left:24px;padding-right:12px}
    blocked, leaving just the tint - so the still lives on its own layer and
    the video only covers it once it's actually playing. */
 #splash .splash-poster{position:absolute;inset:0;z-index:-2;background:url(brand/assets/splash-cymatics-poster.jpg) center/cover no-repeat;filter:grayscale(1) contrast(1.15) brightness(.9)}
-#splash .splash-video.is-playing{opacity:1}
+#splash .splash-video.is-playing{opacity:1;transition:opacity 400ms var(--ease-out)}
 #splash .splash-tint{position:absolute;inset:0;z-index:-1;background:var(--clock-accent,#1db954);mix-blend-mode:color;transition:background 4s linear}
 #splash .splash-black{position:absolute;inset:0;z-index:0;background:#000;pointer-events:none;opacity:1}
 #splash.is-active .splash-black{animation:splash-reveal 2600ms var(--ease-out) forwards}
@@ -4252,10 +4252,10 @@ body.split-desktop .install-banner{padding-left:24px;padding-right:12px}
   transition:background var(--dur-ui) var(--ease-out),border-color var(--dur-ui) var(--ease-out),transform var(--dur-ui) var(--ease-out)}
 .splash-choice-btn:hover,.splash-choice-btn:focus-visible{background:rgba(32,32,32,.92);border-color:rgba(255,255,255,.5)}
 .splash-choice-btn:active{transform:scale(.96)}
-/* One way in (T-0007): Play while the tester has never really played, Enter once they have. Both stay in the page
+/* One way in (T-0010): Resume when there is a saved queue or last song, otherwise Enter. Both stay in the page
    (the tutorial Skip path, returnToSplash and the Android native splash click Enter from code); the class is set by
-   syncSplashEntry() from hasEverPlayed(). */
-#splash.has-played #splashPlayNow,#splash:not(.has-played) #splashSkipTutorial{display:none}
+   syncSplashEntry(). */
+#splash.can-resume #splashSkipTutorial,#splash:not(.can-resume) #splashPlayNow{display:none}
 .splash-choice-btn-primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent,#151107);font-weight:600}
 .splash-choice{flex-wrap:wrap;justify-content:center;max-width:320px}.splash-bring{flex:1 0 100%;height:48px;font-size:15px}
 .splash-choice-btn-primary:hover,.splash-choice-btn-primary:focus-visible{background:var(--accent);filter:brightness(1.08)}
@@ -5087,7 +5087,7 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
     <span class="splash-install-label">Add to Home Screen</span>
   </button>
   <div id="splashChoice" class="splash-choice">
-    <button id="splashPlayNow" type="button" class="splash-choice-btn splash-choice-btn-primary splash-bring">Play</button>
+    <button id="splashPlayNow" type="button" class="splash-choice-btn splash-choice-btn-primary splash-bring">Resume</button>
     <button id="splashBringMusic" type="button" class="splash-choice-btn splash-bring">Import your music</button>
     <button id="splashPlayTutorial" type="button" class="splash-choice-btn">Tutorial</button>
     <button id="splashSkipTutorial" type="button" class="splash-choice-btn">Enter</button>
@@ -6783,8 +6783,15 @@ setTimeout(() => {
   // Splash/library videos stay invisible over their poster layers until
   // frames are really playing, so a blocked autoplay keeps the still up.
   document.querySelectorAll('video.splash-video, video.lib-bg-video').forEach(v => {
-    const sync = () => v.classList.toggle('is-playing', !v.paused && v.readyState >= 3);
-    ['playing', 'pause', 'waiting', 'emptied', 'ended'].forEach(t => v.addEventListener(t, sync));
+    // T-0010: latch. Once real frames have played the video stays visible: on a slow connection it stalls
+    // ('waiting') every few seconds, and dropping back to the poster on each stall cut the picture to a different
+    // still and back (the first-load glitch). A stalled video just holds its last frame. Only a reload of the
+    // source ('emptied') or an error brings the poster back.
+    const sync = () => {
+      if (!v.paused && v.readyState >= 3) v.classList.add('is-playing');
+      else if (!v.currentSrc) v.classList.remove('is-playing');
+    };
+    ['playing', 'pause', 'waiting', 'emptied', 'ended', 'error'].forEach(t => v.addEventListener(t, sync));
     sync();
   });
   // Android app: the browser's own loop freezes the frame ~0.4s at the wrap on budget phones.
@@ -9025,10 +9032,20 @@ function noteRealPlay(){
 }
 /* played-flag:end */
 /* splash-entry:start */
-// Exactly one of Play / Enter shows on the splash: Play until a song has really played, then Enter (see the CSS above).
+// Exactly one of Resume / Enter shows on the splash (T-0010): Resume only when there is a saved queue or last song to
+// continue, otherwise Enter. Music history = hasEverPlayed() or a saved queue / last song; Resume needs the last part,
+// so history without anything resumable shows Enter (see the CSS above).
+function splashResumable(){
+  try{
+    const r = lsGet(LS_RESUME, null);
+    if (!r || !r.playlistId) return false;
+    const pl = getCachedPlaylist(r.playlistId);
+    return !!(pl && pl.tracks && pl.tracks.length);
+  }catch(e){ return false; }
+}
 function syncSplashEntry(){
   const sp = $('splash');
-  if (sp) sp.classList.toggle('has-played', hasEverPlayed());
+  if (sp) sp.classList.toggle('can-resume', splashResumable());
 }
 /* splash-entry:end */
 let signInNudgeWaiting = false;
@@ -10388,32 +10405,25 @@ document.addEventListener('click', (e) => {
   if (enter) enter.click();
   setTimeout(openBring, 900);
 }, true);
-// Splash "Play" (T-0007): one tap from the first screen to a playing song, no sign-in before it.
-// Enter the app exactly like Enter, then start the first starter (the owner's own SoundCloud
-// album: no ads, no Spotify or Google needed). beginImport plays at once if it is cached, else
-// resolves it and jumps into the player on the first playable track. Runs in the same tap, so
-// the browser's autoplay gesture is still valid.
+// Splash "Resume" (T-0010): shown only to someone with a saved queue or last song (see syncSplashEntry). Enter the app
+// exactly like Enter (startApp restores the saved queue through tryResume), then carry on that queue: it never loads the
+// starter album and never replaces what was saved. Runs in the same tap so the browser's autoplay gesture is still valid.
 /* splash-play:start */
-let firstSongStarting = '';
-function firstSongEntry(){ return STARTER_LIBRARY_URLS.map(starterLibraryEntry).find(Boolean) || null; }
-function playFirstSong(){
-  const entry = firstSongEntry();
-  if (!entry) return false;
-  firstSongStarting = entry.id;   // seedStarterLibrary skips it so it is not resolved twice
-  firstSongForce = true;          // replace a resumed queue instead of only filing the starter
+function splashResume(){
   statsPlayTapped();
-  beginImport(entry.id, false, entry.type);
-  return true;
+  let tries = 0;
+  const go = () => {
+    if (currentTrack()){ try{ resumePlayback(); }catch(e){} return; }
+    if (++tries < 20) setTimeout(go, 250);   // Enter may reach startApp a beat later (invite or tutorial paths)
+  };
+  go();
 }
 document.addEventListener('click', (e) => {
   if (!e.target.closest || !e.target.closest('#splashPlayNow')) return;
   e.stopPropagation(); e.preventDefault();
-  // Mark the starter before entering: Enter runs startApp(), which starts seedStarterLibrary() right away.
-  const entry = firstSongEntry();
-  if (entry) firstSongStarting = entry.id;
   const enter = $('splashSkipTutorial');
   if (enter) enter.click();
-  playFirstSong();
+  splashResume();
 }, true);
 /* splash-play:end */
 // #619: desktop library width toggle, remembered across visits (CSS only acts on the 3-pane desktop layout)
@@ -22263,26 +22273,13 @@ function beginImport(id, force, type, targetIndex){
   return run;
 }
 
-/* first-song:start */
-// The splash Play must always start a song. A saved queue (tryResume ran in startApp) would otherwise make a
-// pasted or searched link just file itself and leave the old queue alone (Geethub #386), so Play asks this one
-// import to replace the queue. Read once, then cleared.
-let firstSongForce = false;
-// The force belongs to the starter's id, so an import that queued ahead of it (a signup playlist, a ?import= link)
-// neither uses it up nor replaces the queue; only the starter's own import does.
-function importKeepsQueue(type, targetIndex, id){
-  const force = firstSongForce && id === firstSongStarting;
-  if (force) firstSongForce = false;
-  return !force && !targetIndex && state.queue.length > 0 && state.queuePos >= 0 && !isSingleTrackType(type);
-}
-/* first-song:end */
 async function beginImportNow(id, force, type, targetIndex, waited){
   importErr.textContent = '';
   const wasSaved = isSaved(id);
   // Searching/pasting a link files its songs in the library (an album as an
   // album) but never wipes a queue that is already going (Geethub #386). A
   // single song still plays now, and an empty queue still starts the link.
-  const keepQueue = importKeepsQueue(type, targetIndex, id);
+  const keepQueue = !targetIndex && state.queue.length > 0 && state.queuePos >= 0 && !isSingleTrackType(type);
   if (!force){
     const cached = getCachedPlaylist(id);
     if (cached){
@@ -25483,7 +25480,6 @@ async function seedStarterLibrary(){
     const entry = starterLibraryEntry(url);
     if (!entry) continue;
     const { id, type } = entry;
-    if (id === firstSongStarting) continue;   // the splash Play button is already loading and saving it
     // Reuse an existing cache only if it isn't stale (see isResolveStale) -
     // a listener whose starter items were seeded before a source-parsing
     // fix landed (e.g. the SoundCloud album resolving/track-list fixes this
@@ -26643,6 +26639,10 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
+  { version: 578, date: '2026-11-18', items: [
+    'First screen: new here, you see Enter. Once you have music in progress, it says Resume and picks up where you left off.',
+    'The moving background on the first screen no longer flickers on a slow connection.',
+  ] },
   { version: 577, date: '2026-11-18', items: [
     'First screen: a Play button. One tap opens the app and starts a song, with no sign-in first. If you have not played anything yet, it is waiting for you each time you open EBBLESS.',
     'The Google sign-in prompt now waits until after your first song.',
@@ -27474,7 +27474,7 @@ function statsFeature(name){
   statsSave();
 }
 // A playlist newly added to the library (not a refresh of one already there).
-function statsImport(id){ if (id === firstSongStarting) return;   // the splash Play starter is not a playlist the tester added
+function statsImport(id){
   if (!getLibrary().includes(id) && !document.body.classList.contains('onb-active')) awardMilestone('load'); if (statsEnabled() && !getLibrary().includes(id)){ statsTouch(); stats.pend.imports++; statsSave(); } }
 let statsLastTick = 0;
 function statsTick(){
@@ -45817,7 +45817,7 @@ function startApp(){
       }, INSTALL_INVITE_DELAY_MS);
     } else if (document.documentElement.classList.contains('ebb-android')) {
       // Android app: stay on the splash until Enter (or Tutorial) while the app loads behind it
-      syncSplashEntry();   // this Android web splash can show without showSplashChoice(): sync Play/Enter first
+      syncSplashEntry();   // this Android web splash can show without showSplashChoice(): sync Resume/Enter first
       splashEl.classList.add('is-choice');
       if (window.__ebbNativeChose) { splashEl.classList.remove('is-choice'); hideSplash(); }   // the native splash already took the visitor's choice
       else {
@@ -47629,7 +47629,7 @@ else if (onboardingComplete && !tutorialWatched && inviteDueToday(TUTORIAL_INVIT
   showSplashChoice();
 }
 else if (onboardingComplete && !hasEverPlayed()){
-  // Returning but never played a song (T-0006): put Play in front again every visit until they do.
+  // Returning but never played a song (T-0006): the splash shows Enter (Resume only with a saved song), every visit until they do.
   showSplashChoice();
 }
 else if (onboardingComplete || !introEligibleNow){ discardIntroChrome(); startApp(); }

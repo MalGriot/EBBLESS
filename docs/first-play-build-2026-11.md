@@ -7,6 +7,13 @@ Branch `claude/vigorous-morse-0bbe88`. Nothing is pushed, deployed or re-run on 
 
 ### Cause 1: one Play on the first screen
 
+> **Superseded by T-0010 (release 578, `docs/splash-fixes-2026-11.md`).** The CEO reversed this logic after trying
+> release 577: no music history now shows only **Enter**; a saved queue or last song shows **Resume** (same button,
+> `#splashPlayNow`, no Enter). Resume continues the saved queue and never loads the starter or replaces the queue, so
+> the "Play replaces a saved queue" behavior from rounds 2 and 3 is removed. The class is now `can-resume` (set by
+> `syncSplashEntry()` from `splashResumable()`). The text below is the 577 design, kept as history; the splash-state
+> table further down is updated.
+
 - Splash choice (`index.html`, `#splashPlayNow`): **Play** is the primary button, above Import your music,
   Tutorial. **Enter is hidden while Play shows (round 4):** Play already enters the app and starts a song, so showing
   both was redundant. One condition decides both: `syncSplashEntry()` sets `has-played` on `#splash` from
@@ -97,12 +104,12 @@ The same flow also played on a 375 by 812 Android Chrome emulation in round 1. E
 
 | State | Shows | Way in |
 |---|---|---|
-| First visit, never played (web) | Play, Import, Tutorial | Play (Enter hidden) |
-| Daily tutorial invite, never played | same | Play |
-| Returning, has really played, tutorial invite or `returnToSplash()` | Enter, Import, Tutorial (no Play) | Enter |
-| `returnToSplash()`, never played | Play, Import, Tutorial | Play (its capture handler runs Enter from code, which closes the splash and replaces the queue, as the CEO accepted) |
-| Android native app cold start (`ebb-nsplash`, `NativeSplash.java`) | the native splash: Tutorial and Enter only; the web splash is cloaked | native Enter (it clicks the hidden `#splashSkipTutorial` in the page, which still works) |
-| Android app web splash with no native splash (process-recovered launch, or after `nsplashDone`; `startApp()` Android branch) | Enter (if has played) or Play (if not), plus Import, Tutorial | Enter or Play. Round 5: this branch now calls `syncSplashEntry()` before adding `is-choice`; before, it never synced, so a listener who had played saw only Play |
+| First visit, no saved song (web) | Enter, Import, Tutorial (Resume hidden) | Enter |
+| Daily tutorial invite, no saved song | same | Enter |
+| Daily tutorial invite or `returnToSplash()`, saved queue or last song | Resume, Import, Tutorial (Enter hidden) | Resume (enters like Enter, then continues the saved queue; counts `plays_tapped`) |
+| History but nothing resumable (saved song deleted, empty, bad data) | Enter, Import, Tutorial | Enter |
+| Android native app cold start (`ebb-nsplash`, `NativeSplash.java`) | the native splash: Tutorial and Enter only; the web splash is cloaked | native Enter (it clicks the hidden `#splashSkipTutorial` in the page, which still works). Unchanged by T-0010 |
+| Android app web splash with no native splash (process-recovered launch, or after `nsplashDone`; `startApp()` Android branch) | Enter or Resume by the same rule, plus Import, Tutorial | Enter or Resume (`syncSplashEntry()` runs before `is-choice`) |
 | Non-choice splash (plain 3.4 s splash, install invite) | no choice buttons | none needed |
 
 **Gap found, not changed:** the Android app's native splash (`android-webview/.../NativeSplash.java`) has its own
