@@ -45797,6 +45797,7 @@ function startApp(){
       }, INSTALL_INVITE_DELAY_MS);
     } else if (document.documentElement.classList.contains('ebb-android')) {
       // Android app: stay on the splash until Enter (or Tutorial) while the app loads behind it
+      syncSplashEntry();   // this Android web splash can show without showSplashChoice(): sync Play/Enter first
       splashEl.classList.add('is-choice');
       if (window.__ebbNativeChose) { splashEl.classList.remove('is-choice'); hideSplash(); }   // the native splash already took the visitor's choice
       else {

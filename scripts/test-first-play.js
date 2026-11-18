@@ -254,35 +254,56 @@ check('Google One Tap and the sign-in card both wait on hasEverPlayed', () => {
 });
 
 // ---- behavior: exactly one way in on the splash (Play or Enter) ----
-function splashEntry(played) {
-  const classes = new Set();
-  const sp = { classList: { toggle: (c, on) => { on ? classes.add(c) : classes.delete(c); }, contains: (c) => classes.has(c) } };
-  new Function('$', 'hasEverPlayed', slice('splash-entry') + '; syncSplashEntry();')(() => sp, () => played);
-  // the same rule the page ships: Play hidden when has-played, Enter hidden when not has-played
-  const rule = /#splash\.has-played #splashPlayNow,#splash:not\(\.has-played\) #splashSkipTutorial\{display:none\}/.test(html);
-  const hasPlayed = classes.has('has-played');
-  return { rule, playShows: !hasPlayed, enterShows: hasPlayed };
+// Reads the page's own CSS rule and decides, per class state, which of the two buttons it hides.
+const ruleM = /(#splash[^{}]*#splashPlayNow[^{}]*)\{display:none\}/.exec(html);
+function cssHides(state) {   // state: { hasPlayed }; returns the ids hidden by the shipped rule
+  assert.ok(ruleM, 'the Play/Enter display:none rule must exist in index.html');
+  const hidden = new Set();
+  ruleM[1].split(',').map(x => x.trim()).forEach(sel => {
+    const m = /^#splash(\.has-played|:not\(\.has-played\)) #(\w+)$/.exec(sel);
+    assert.ok(m, 'unexpected selector in the splash rule: ' + sel);
+    const needsPlayed = m[1] === '.has-played';
+    if (needsPlayed === state.hasPlayed) hidden.add(m[2]);
+  });
+  return hidden;
 }
-check('never played: Play shows and Enter is hidden (but still in the page for code clicks)', () => {
-  const s = splashEntry(false);
-  assert.ok(s.rule);
-  assert.deepStrictEqual([s.playShows, s.enterShows], [true, false]);
-  assert.ok(html.includes('id="splashSkipTutorial"') && html.includes('id="splashPlayNow"'), 'both elements stay in the markup');
+function splashClassFor(played) {   // what the real syncSplashEntry() leaves on #splash
+  const classes = new Set();
+  const sp = { classList: { toggle: (c, on) => { on ? classes.add(c) : classes.delete(c); } } };
+  new Function('$', 'hasEverPlayed', slice('splash-entry') + '; syncSplashEntry();')(() => sp, () => played);
+  return { hasPlayed: classes.has('has-played') };
+}
+const shows = (played) => { const h = cssHides(splashClassFor(played)); return { play: !h.has('splashPlayNow'), enter: !h.has('splashSkipTutorial') }; };
+check('never played: the shipped CSS hides Enter and keeps Play (both stay in the markup for code clicks)', () => {
+  assert.deepStrictEqual(shows(false), { play: true, enter: false });
+  assert.ok(html.includes('id="splashSkipTutorial"') && html.includes('id="splashPlayNow"'));
 });
-check('has really played: Enter shows and Play is hidden, so a returning tester always has a way in', () => {
-  const s = splashEntry(true);
-  assert.deepStrictEqual([s.playShows, s.enterShows], [false, true]);
+check('has really played: the shipped CSS hides Play and keeps Enter, so a returning tester always has a way in', () => {
+  assert.deepStrictEqual(shows(true), { play: false, enter: true });
 });
-check('in both states exactly one of Play and Enter shows', () => {
-  [false, true].forEach(p => { const s = splashEntry(p); assert.strictEqual((s.playShows ? 1 : 0) + (s.enterShows ? 1 : 0), 1); });
+check('with no sync at all (no has-played class) the default is Play only, which is why every is-choice site must sync', () => {
+  const h = cssHides({ hasPlayed: false });
+  assert.ok(h.has('splashSkipTutorial') && !h.has('splashPlayNow'));
 });
-check('every splash that offers a choice syncs it first: first visit and daily invite (showSplashChoice) and returnToSplash', () => {
-  const sc = html.slice(html.indexOf('function showSplashChoice(){'), html.indexOf('function showSplashChoice(){') + 120);
-  const rs = html.slice(html.indexOf('function returnToSplash(){'), html.indexOf('function returnToSplash(){') + 330);
-  assert.ok(sc.includes('syncSplashEntry();'));
-  assert.ok(rs.includes('syncSplashEntry();'));
-  // the native Android splash and the Skip paths click Enter from code, so it must never be removed from the page
-  assert.ok(html.includes("$('splashSkipTutorial')") && !/splashSkipTutorial'\)\.remove\(|getElementById\('splashSkipTutorial'\)\.remove/.test(html));
+check('every place that adds is-choice syncs Play/Enter first: showSplashChoice, returnToSplash and the Android web splash in startApp', () => {
+  const re = /classList\.add\([^)]*'is-choice'[^)]*\)/g;
+  let m, sites = 0;
+  while ((m = re.exec(html))) {
+    sites++;
+    const before = html.slice(0, m.index);
+    const lines = before.split('\n');
+    const near = lines.slice(-4).join('\n');                       // the 3 lines above the add
+    const fnStart = Math.max(before.lastIndexOf('\nfunction '), before.lastIndexOf('\nasync function '));
+    const fn = before.slice(fnStart + 1);
+    const inSmallFn = /^function (showSplashChoice|returnToSplash)\(/.test(fn) && fn.includes('syncSplashEntry();');
+    assert.ok(near.includes('syncSplashEntry();') || inSmallFn, 'is-choice added without syncSplashEntry(): ' + m[0] + ' near line ' + lines.length);
+  }
+  assert.ok(sites >= 3, 'expected the three is-choice sites, found ' + sites);
+  // the Android web splash branch specifically
+  const i = html.indexOf("Android app: stay on the splash until Enter");
+  assert.ok(html.slice(i, i + 400).indexOf('syncSplashEntry();') > 0 && html.slice(i, i + 400).indexOf('syncSplashEntry();') < html.slice(i, i + 400).indexOf("add('is-choice')"));
+  // Enter must never be removed from the page: native splash, Skip paths and returnToSplash click it from code
+  assert.ok(!/getElementById\('splashSkipTutorial'\)\.remove|\$\('splashSkipTutorial'\)\.remove/.test(html));
 });
 
 // ---- Sheet: new columns and rows only, nothing moved ----

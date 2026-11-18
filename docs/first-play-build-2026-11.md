@@ -102,6 +102,7 @@ The same flow also played on a 375 by 812 Android Chrome emulation in round 1. E
 | Returning, has really played, tutorial invite or `returnToSplash()` | Enter, Import, Tutorial (no Play) | Enter |
 | `returnToSplash()`, never played | Play, Import, Tutorial | Play (its capture handler runs Enter from code, which closes the splash and replaces the queue, as the CEO accepted) |
 | Android native app cold start (`ebb-nsplash`, `NativeSplash.java`) | the native splash: Tutorial and Enter only; the web splash is cloaked | native Enter (it clicks the hidden `#splashSkipTutorial` in the page, which still works) |
+| Android app web splash with no native splash (process-recovered launch, or after `nsplashDone`; `startApp()` Android branch) | Enter (if has played) or Play (if not), plus Import, Tutorial | Enter or Play. Round 5: this branch now calls `syncSplashEntry()` before adding `is-choice`; before, it never synced, so a listener who had played saw only Play |
 | Non-choice splash (plain 3.4 s splash, install invite) | no choice buttons | none needed |
 
 **Gap found, not changed:** the Android app's native splash (`android-webview/.../NativeSplash.java`) has its own
@@ -132,10 +133,11 @@ branch ships **only T-0007 commits** and nothing else: the three below plus the 
 Verify right before pushing: `git fetch && git log --oneline origin/main..HEAD` must list only T-0007 commits (those three and doc-only follow-ups). If `main`
 moved again, merge it, take the next free release number in `sw.js` and `WHATS_NEW`, and re-run the checks below.
 
-### Worker: what Cloudflare runs now (read-only checks, 2026-11-17)
+### Worker: what Cloudflare runs now (read-only checks, 2026-11-17 and re-checked 2026-11-18)
 
-`npx wrangler deployments list` (no writes) shows the latest deployment **2026-11-17T06:30:11Z (12:00 IST), version
-`b38b74b6-e5d9-454f-a6e9-abde7effffc8`**, source "Unknown". Earlier ones: 2026-11-16T18:05:15Z (`acb8b5d5-...`) and
+`npx wrangler deployments list` (no writes) shows the latest deployment **2026-11-18T02:33:21Z (08:03 IST), version
+`a49e3cec-ba42-4e31-962c-bb7f0edcec9a`**, source "Unknown". The one before it was 2026-11-17T06:30:11Z (version
+`b38b74b6-e5d9-454f-a6e9-abde7effffc8`). Earlier ones: 2026-11-16T18:05:15Z (`acb8b5d5-...`) and
 2026-11-16T20:35:46Z (`ec1570bb-...`). Cloudflare does not store a git commit for them, so the commit is inferred:
 
 - The worker commits in order: `2f8edeb` (11-16 15:58Z), `3742a14` (paywall, 11-16 18:04Z), `a898e04` (`GET /s`, 11-17
@@ -148,9 +150,25 @@ moved again, merge it, take the next free release number in `sw.js` and `WHATS_N
   from a worktree with uncommitted edits, and I cannot read the deployed source. The 404 route list of the live worker
   and the `GET /s` check match `a898e04`; I did not byte-compare the bundle.
 
-What would ship: `git diff --stat a898e04 HEAD -- worker` is exactly `worker/src/beta.js` (4 lines) and
-`worker/test/beta-activity.test.mjs` (new). So `2f8edeb`, `a898e04` and `3742a14` (paywall switch) do **not** ship in the
-steps below; they are already live.
+**`db414e3` (QA round 4 point 2).** Main's `db414e3` ("Profile sync no longer loops", release 572) changed
+`worker/src/index.js` (2 lines) and added `worker/test/profile-merge-parity.test.mjs`. It was committed 2026-11-18
+02:33:00Z and the newest deployment, `a49e3cec`, was made **21 seconds later** (02:33:21Z), with its client half already
+live. So `db414e3` is very probably deployed (inference from the timestamps, same limits as above: no commit is stored
+with a deployment). This differs from the QA guess that it is probably not deployed; the Cloudflare deployments list is the
+evidence, and the CEO or owner can confirm it in the dashboard.
+
+What would ship, precisely:
+
+- `git diff --stat a898e04 HEAD -- worker` lists four files: `worker/src/beta.js`, `worker/test/beta-activity.test.mjs`
+  (both T-0007) and `worker/src/index.js`, `worker/test/profile-merge-parity.test.mjs` (both `db414e3`).
+- `git diff --stat db414e3 HEAD -- worker` is exactly `worker/src/beta.js` (4 lines) and
+  `worker/test/beta-activity.test.mjs` (new): T-0007 only.
+- A normal `npx wrangler deploy` from this branch or from `main` would ship `db414e3`'s worker change too if Cloudflare
+  does not have it. If the timestamp inference is right it is already live and a normal deploy ships T-0007 only. If it is
+  wrong, a normal deploy ships the profile-sync worker fix with T-0007. The isolated deploy below is built on `db414e3`
+  and leaves nothing out that is already live; to leave `db414e3` out as well, build it on `a898e04` instead (the
+  commands say how). **Whether `db414e3`'s worker change should ship now is a separate decision for the CEO**, not part of T-0007.
+- `2f8edeb`, `a898e04` and `3742a14` (paywall switch) are already live and do not change in either case.
 
 ### Release steps (none have been run)
 
@@ -165,20 +183,21 @@ Approve first: QA and the CEO. Then, in this order:
 
    ```bash
    git fetch
-   git worktree add --detach ../w-t0007 a898e04
+   git worktree add --detach ../w-t0007 db414e3     # base = the commit the running worker matches
+   #                                                  # (use a898e04 instead to leave db414e3's worker change out)
    cd ../w-t0007
    git checkout claude/vigorous-morse-0bbe88 -- worker/src/beta.js worker/test/beta-activity.test.mjs
-   git diff --cached --stat a898e04 -- worker     # must list exactly those two files
-   cd worker && npm ci && npm test                # 263 pass
-   npx wrangler deployments list                  # confirm latest is still b38b74b6 (06:30Z 11-17)
+   git diff --cached --stat db414e3 -- worker     # must list exactly those two files
+   cd worker && npm ci && npm test                # all pass
+   npx wrangler deployments list                  # confirm latest is still a49e3cec (02:33Z 11-18)
    npx wrangler deploy
    ```
 
-   If `deployments list` shows a newer deployment than `b38b74b6`, stop: someone deployed in between; re-map it before
-   continuing. Dry run already done on this exact tree (`wrangler deploy --dry-run --outdir`, bundles locally, no
-   upload): it builds clean. Check after deploy: `curl -s -X POST <worker>/beta/activity -d '{}'` answers 403 `not a
+   If `deployments list` shows a newer deployment than `a49e3cec`, stop: someone deployed in between; re-map it before
+   continuing. Dry run already done on this exact tree, `db414e3` plus the two T-0007 files (`wrangler deploy --dry-run
+   --outdir`, bundles locally, no upload): it builds clean and the worker tests pass (267). Check after deploy: `curl -s -X POST <worker>/beta/activity -d '{}'` answers 403 `not a
    tester`, `curl -sI <worker>/s` still answers 302.
-   Worker rollback, right here: `npx wrangler rollback b38b74b6-e5d9-454f-a6e9-abde7effffc8` returns to the version
+   Worker rollback, right here: `npx wrangler rollback a49e3cec-ba42-4e31-962c-bb7f0edcec9a` returns to the version
    running before (the old app then simply ignores the three counters).
 3. **App.** Merge `claude/vigorous-morse-0bbe88` into `main`, run `scripts/check.sh`, push `main` (GitHub Pages serves
    it). `git fetch && git log --oneline origin/main..HEAD` must list only T-0007 commits (the three feature commits
@@ -192,7 +211,7 @@ Approve first: QA and the CEO. Then, in this order:
    CEO's Android phone" list above. If Play does nothing, taps twice, or no song starts within about 10 s, roll back
    now: app by reverting the merge (step 3 rollback); the worker needs no rollback for a UI problem. If only the
    counters misbehave (Analytics cells wrong or blank), roll back the worker with `npx wrangler rollback
-   b38b74b6-e5d9-454f-a6e9-abde7effffc8` and re-paste the old `beta-sheet.gs` (extra Analytics columns can stay).
+   a49e3cec-ba42-4e31-962c-bb7f0edcec9a` and re-paste the old `beta-sheet.gs` (extra Analytics columns can stay).
 
 ## How to read it on the Dashboard
 
