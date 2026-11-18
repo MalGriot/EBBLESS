@@ -7809,6 +7809,18 @@ function advSet(key, val){
     if (!p.cursor) advSet('cursor', 'native');
   } catch(e){}
 })();
+/* Light mode: a 2 GB phone (TECNO POP 9) ran its main thread so busy that YouTube's clock arrived late and in jumps, the ad check
+   read that as an ad and muted the song ~27% of the time. Such a device gets Motion: Reduced switched on once (stops every CSS
+   animation and, with it, the marquee sweep), shown in Settings like #816; picking Full later stays. navigator.deviceMemory is
+   Chromium's rounded RAM bucket (0.25 ... 8); other browsers leave it undefined and are untouched. */
+(function(){
+  try {
+    if (!(navigator.deviceMemory > 0 && navigator.deviceMemory <= 2)) return;
+    if (lsGet('ebbless:liteAuto', false)) return;
+    lsSet('ebbless:liteAuto', true);
+    if (!advPrefs().motion) advSet('motion', 'reduced');
+  } catch(e){}
+})();
 /* ---------- volume leveling (volume-equalizer) ----------
    Evens out loudness between tracks. YouTube measures every video's
    loudness (playerConfig.audioConfig.loudnessDb, surfaced by the worker's
@@ -26535,6 +26547,9 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
+  { version: 574, date: '2026-11-18', items: [
+    'Phones with 2 GB of memory or less now start with Motion set to Reduced, so songs play without short silences. You can switch it back to Full in Settings > Advanced.',
+  ]},
   { version: 573, date: '2026-11-18', items: [
     'On slower phones, the next song no longer keeps playing silently in the background after it is reloaded, which saves memory and battery while you listen.',
   ]},
@@ -38392,7 +38407,8 @@ function marqueeObserve(el){
   el._marqueeObserved = true;
 }
 function marqueeReducedMotion(){
-  return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  // Settings > Motion: Reduced too (light mode turns it on for 2 GB phones), not only the phone's own setting
+  return document.documentElement.classList.contains('reduce-motion') || !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 }
 function setMarqueeText(el, text){
   // el's own document/window, not the globals: the PiP mini player's title
@@ -38581,6 +38597,8 @@ function mqVisible(el){
 }
 function mqSweep(){
   if (document.hidden) return; // #635: backgrounded, nothing to measure; the visibilitychange/next tick catches up
+  // reduced motion: no line scrolls, so stop any that still do and skip the whole-page scan (it cost ~12% of a 2 GB phone's main thread)
+  if (marqueeReducedMotion()){ if (mqRunning.size) Array.from(mqRunning).forEach(mqStop); return; }
   mqRunning.forEach(el => {
     if (!el.isConnected || !el._mqInner || el._mqInner.parentNode !== el || !mqVisible(el)){ mqStop(el); return; }
     if (el._mqKey !== mqKey(el)){ mqStop(el); mqStart(el); }
