@@ -8,11 +8,10 @@ const path = require('path');
 const assert = require('assert');
 
 const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
-const marker = '/* Light mode: a 2 GB phone';
-const start = html.indexOf(marker);
-const end = html.indexOf('})();', start);
-if (start < 0 || end < 0) { console.error('light mode block not found in index.html'); process.exit(1); }
-const src = html.slice(start, end + '})();'.length);
+const start = html.indexOf('function autoLightMode(){');
+const end = html.indexOf('\n}\n', start);
+if (start < 0 || end < 0) { console.error('autoLightMode not found in index.html'); process.exit(1); }
+const src = html.slice(start, end + 2) + '\nautoLightMode();';
 
 function run({ mem, motion, flag = false }) {
   const store = { 'ebbless:liteAuto': flag };
@@ -25,7 +24,8 @@ function run({ mem, motion, flag = false }) {
     advPrefs: () => prefs,
     advSet: (k, v) => sets.push(k + '=' + v),
   };
-  new Function(...Object.keys(env), src)(...Object.values(env));
+  const console = { warn: (...a) => { throw new Error('light mode threw: ' + a.join(' ')); } };
+  new Function(...Object.keys(env), 'console', src)(...Object.values(env), console);
   return { sets, flag: store['ebbless:liteAuto'] };
 }
 
@@ -53,6 +53,15 @@ check('an existing Motion choice is never overwritten', () => {
   const r = run({ mem: 2, motion: 'full' });
   assert.deepStrictEqual(r.sets, []);
   assert.strictEqual(r.flag, true);
+});
+
+check('runs at boot after PROFILE_SETTING_KEYS exists (lsSet needs it; before it, it threw silently)', () => {
+  const keys = html.indexOf('const PROFILE_SETTING_KEYS');
+  for (const call of ['\nautoReducedMotion();', '\nautoLightMode();']) {
+    const at = html.indexOf(call);
+    assert.ok(at > 0, call.trim() + ' is called');
+    assert.ok(at > keys, call.trim() + ' runs after PROFILE_SETTING_KEYS');
+  }
 });
 
 console.log(pass + ' passed');

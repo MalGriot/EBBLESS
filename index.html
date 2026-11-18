@@ -7798,8 +7798,10 @@ function advSet(key, val){
   lsSet(LS_ADV, p);
 }
 /* #816: a device that asks for reduced motion gets the saving settings switched on once (Motion: Reduced, Cursor: Native),
-   so Settings shows what is really in effect. Done once only: if the listener later picks Full or a cursor, that stays. */
-(function(){
+   so Settings shows what is really in effect. Done once only: if the listener later picks Full or a cursor, that stays.
+   Called at boot just before advApplyMotion: run here, lsSet hit PROFILE_SETTING_KEYS before its const line, threw, and the catch
+   hid it, so this never ran. */
+function autoReducedMotion(){
   try {
     if (!window.matchMedia || !matchMedia('(prefers-reduced-motion:reduce)').matches) return;
     if (lsGet('ebbless:rmAuto', false)) return;
@@ -7807,20 +7809,20 @@ function advSet(key, val){
     const p = advPrefs();
     if (!p.motion) advSet('motion', 'reduced');
     if (!p.cursor) advSet('cursor', 'native');
-  } catch(e){}
-})();
+  } catch(e){ console.warn('[ebbless] reduced-motion defaults failed', e); }
+}
 /* Light mode: a 2 GB phone (TECNO POP 9) ran its main thread so busy that YouTube's clock arrived late and in jumps, the ad check
    read that as an ad and muted the song ~27% of the time. Such a device gets Motion: Reduced switched on once (stops every CSS
    animation and, with it, the marquee sweep), shown in Settings like #816; picking Full later stays. navigator.deviceMemory is
-   Chromium's rounded RAM bucket (0.25 ... 8); other browsers leave it undefined and are untouched. */
-(function(){
+   Chromium's rounded RAM bucket (0.25 ... 8); other browsers leave it undefined and are untouched. Called at boot, see above. */
+function autoLightMode(){
   try {
     if (!(navigator.deviceMemory > 0 && navigator.deviceMemory <= 2)) return;
     if (lsGet('ebbless:liteAuto', false)) return;
     lsSet('ebbless:liteAuto', true);
     if (!advPrefs().motion) advSet('motion', 'reduced');
-  } catch(e){}
-})();
+  } catch(e){ console.warn('[ebbless] light mode failed', e); }
+}
 /* ---------- volume leveling (volume-equalizer) ----------
    Evens out loudness between tracks. YouTube measures every video's
    loudness (playerConfig.audioConfig.loudnessDb, surfaced by the worker's
@@ -26547,6 +26549,9 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
+  { version: 575, date: '2026-11-18', items: [
+    'Light mode now really switches on for phones with 2 GB of memory or less, and phones set to reduce motion get the matching saving settings again.',
+  ]},
   { version: 574, date: '2026-11-18', items: [
     'Phones with 2 GB of memory or less now start with Motion set to Reduced, so songs play without short silences. You can switch it back to Full in Settings > Advanced.',
   ]},
@@ -36654,6 +36659,8 @@ $('advResetBtn').addEventListener('click', () => {
   advRender();
 });
 advBlock.addEventListener('toggle', advRender);
+autoReducedMotion();
+autoLightMode();
 advApplyMotion();
 advApplyPlayer();
 advApplyLook();
