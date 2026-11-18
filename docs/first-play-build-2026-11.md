@@ -8,7 +8,11 @@ Branch `claude/vigorous-morse-0bbe88`. Nothing is pushed, deployed or re-run on 
 ### Cause 1: one Play on the first screen
 
 - Splash choice (`index.html`, `#splashPlayNow`): **Play** is the primary button, above Import your music,
-  Tutorial and Enter. Tutorial and Enter work as before.
+  Tutorial. **Enter is hidden while Play shows (round 4):** Play already enters the app and starts a song, so showing
+  both was redundant. One condition decides both: `syncSplashEntry()` sets `has-played` on `#splash` from
+  `hasEverPlayed()`; CSS hides Play when it is set and hides Enter when it is not. Enter stays in the page (hidden,
+  not removed) because the tutorial Skip path, `returnToSplash()` and the Android native splash click it from code.
+  Once a song has really played, Play is gone and Enter shows as before. Tutorial works as before.
 - One tap on Play enters the app exactly like Enter, then starts the first starter in the same tap
   (`playFirstSong()`). The first song is the owner's own SoundCloud album (Breathe Love Deep): no ads, no
   Spotify, no Google. This is the builder's call (T-0007 assumption): fewest moving parts.
@@ -66,7 +70,7 @@ Branch `claude/vigorous-morse-0bbe88`. Nothing is pushed, deployed or re-run on 
 Built-in browser (Chromium) against a local server on this branch, storage, service worker and caches cleared.
 Screenshots in `docs/first-play-evidence/`:
 
-1. `1-cold-start-splash-play.jpg`: first screen, Play is the primary button.
+1. `1-cold-start-splash-play.jpg`: first screen (re-shot in round 4): Play, Import your music and Tutorial; Enter is hidden.
 2. `2-after-one-tap-playing.jpg`: about 7 s after one click on Play: song playing (0:02 into "...gasp"), pause
    icon shown, `is-playing` set, play history written, `ebbless:firstPlayed` = 1. No sign-in or Google prompt at
    any point.
@@ -89,6 +93,22 @@ The same flow also played on a 375 by 812 Android Chrome emulation in round 1. E
 7. About 10 minutes later (or after closing the tab), check the beta Sheet Analytics tab for that tester:
    `plays_tapped` 1, `plays_started` 1 (needs the Sheet and worker release below).
 
+## Splash states: exactly one way in (round 4)
+
+| State | Shows | Way in |
+|---|---|---|
+| First visit, never played (web) | Play, Import, Tutorial | Play (Enter hidden) |
+| Daily tutorial invite, never played | same | Play |
+| Returning, has really played, tutorial invite or `returnToSplash()` | Enter, Import, Tutorial (no Play) | Enter |
+| `returnToSplash()`, never played | Play, Import, Tutorial | Play (its capture handler runs Enter from code, which closes the splash and replaces the queue, as the CEO accepted) |
+| Android native app cold start (`ebb-nsplash`, `NativeSplash.java`) | the native splash: Tutorial and Enter only; the web splash is cloaked | native Enter (it clicks the hidden `#splashSkipTutorial` in the page, which still works) |
+| Non-choice splash (plain 3.4 s splash, install invite) | no choice buttons | none needed |
+
+**Gap found, not changed:** the Android app's native splash (`android-webview/.../NativeSplash.java`) has its own
+Tutorial and Enter buttons and no Play, so on the Android app the first screen is not Play. After Enter the tester
+lands in the app, where the existing first-run play nudge (#264) glows on the starter. A native Play needs an APK
+change, which is outside this task. Android Chrome (the web splash) does get Play.
+
 ## Security checklist (workspace CLAUDE.md), worker route `/beta/activity`
 
 Result: **pass, nothing outstanding.** Allowlist-only keys, each counter `Math.round(Number(v))` clamped 0 to 500,
@@ -100,13 +120,13 @@ dependency change, no public route renamed or reshaped, counts only (no track na
 ## What approving a release ships (exact, checked against `origin/main` on 2026-11-17)
 
 While round 2 was in progress `origin/main` moved: the radio and station-page lane (including Release 570) was pushed
-(`git fetch` shows `origin/main` = `d421418`, which also adds a Library Videos section as release 571). This branch already contains it. So a merge and `git push` of this
+(`git fetch` shows `origin/main` = `c0a1779`; main's releases 571 to 575 came from other lanes). This branch already contains it. So a merge and `git push` of this
 branch ships **only T-0007 commits** and nothing else: the three below plus the doc-only commit that last touched this file (`git log origin/main..HEAD` is the authority):
 
 | Commit | What |
 |---|---|
 | `004450b` | one-tap Play, the three counters, worker route, Sheet columns and Dashboard rows, findings and build docs |
-| `9da1c70` and the later merge of `main` (`d421418`) | merges; release number taken: **572** (`sw.js` `ebbless-shell-v572`, `WHATS_NEW` 572, above main's 571) |
+| `9da1c70` and the later merges of `main` (latest `c0a1779`) | merges; release number taken: **576** (`sw.js` `ebbless-shell-v576`, `WHATS_NEW` 576, above main's 571) |
 | `b77ab1f` | round 2 fixes, behavior tests, evidence screenshots, this document |
 
 Verify right before pushing: `git fetch && git log --oneline origin/main..HEAD` must list only T-0007 commits (those three and doc-only follow-ups). If `main`
@@ -162,8 +182,8 @@ Approve first: QA and the CEO. Then, in this order:
    running before (the old app then simply ignores the three counters).
 3. **App.** Merge `claude/vigorous-morse-0bbe88` into `main`, run `scripts/check.sh`, push `main` (GitHub Pages serves
    it). `git fetch && git log --oneline origin/main..HEAD` must list only T-0007 commits (the three feature commits
-   and doc-only follow-ups; today `origin/main` is `d421418`). If `main` moved, merge it, take the next free release
-   number in `sw.js` and `WHATS_NEW` (572 now), and re-run the checks. Testers get v572 on next load; the Android app
+   and doc-only follow-ups; today `origin/main` is `c0a1779`). If `main` moved, merge it, take the next free release
+   number in `sw.js` and `WHATS_NEW` (576 now), and re-run the checks. Testers get v576 on next load; the Android app
    refreshes its local copy in the background, so allow one launch.
    App rollback: revert the merge commit and push (testers get the revert on next load).
 4. **Verify the Sheet path.** Open the beta link in a fresh browser profile, tap Play, wait up to 10 minutes (or close

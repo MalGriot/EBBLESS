@@ -253,6 +253,38 @@ check('Google One Tap and the sign-in card both wait on hasEverPlayed', () => {
   assert.ok(html.includes('if (!hasEverPlayed()){ signInNudgeWaiting = true; return; }'));
 });
 
+// ---- behavior: exactly one way in on the splash (Play or Enter) ----
+function splashEntry(played) {
+  const classes = new Set();
+  const sp = { classList: { toggle: (c, on) => { on ? classes.add(c) : classes.delete(c); }, contains: (c) => classes.has(c) } };
+  new Function('$', 'hasEverPlayed', slice('splash-entry') + '; syncSplashEntry();')(() => sp, () => played);
+  // the same rule the page ships: Play hidden when has-played, Enter hidden when not has-played
+  const rule = /#splash\.has-played #splashPlayNow,#splash:not\(\.has-played\) #splashSkipTutorial\{display:none\}/.test(html);
+  const hasPlayed = classes.has('has-played');
+  return { rule, playShows: !hasPlayed, enterShows: hasPlayed };
+}
+check('never played: Play shows and Enter is hidden (but still in the page for code clicks)', () => {
+  const s = splashEntry(false);
+  assert.ok(s.rule);
+  assert.deepStrictEqual([s.playShows, s.enterShows], [true, false]);
+  assert.ok(html.includes('id="splashSkipTutorial"') && html.includes('id="splashPlayNow"'), 'both elements stay in the markup');
+});
+check('has really played: Enter shows and Play is hidden, so a returning tester always has a way in', () => {
+  const s = splashEntry(true);
+  assert.deepStrictEqual([s.playShows, s.enterShows], [false, true]);
+});
+check('in both states exactly one of Play and Enter shows', () => {
+  [false, true].forEach(p => { const s = splashEntry(p); assert.strictEqual((s.playShows ? 1 : 0) + (s.enterShows ? 1 : 0), 1); });
+});
+check('every splash that offers a choice syncs it first: first visit and daily invite (showSplashChoice) and returnToSplash', () => {
+  const sc = html.slice(html.indexOf('function showSplashChoice(){'), html.indexOf('function showSplashChoice(){') + 120);
+  const rs = html.slice(html.indexOf('function returnToSplash(){'), html.indexOf('function returnToSplash(){') + 330);
+  assert.ok(sc.includes('syncSplashEntry();'));
+  assert.ok(rs.includes('syncSplashEntry();'));
+  // the native Android splash and the Skip paths click Enter from code, so it must never be removed from the page
+  assert.ok(html.includes("$('splashSkipTutorial')") && !/splashSkipTutorial'\)\.remove\(|getElementById\('splashSkipTutorial'\)\.remove/.test(html));
+});
+
 // ---- Sheet: new columns and rows only, nothing moved ----
 check('Analytics: the original headers keep their order and the three new ones come last', () => {
   const m = /HEADERS\[ANALYTICS\] = \[([\s\S]*?)\]\.concat\(FEATURES\.map\(function \(f\) \{ return 'uses_' \+ f; \}\), \[([^\]]*)\]\);/.exec(gs);

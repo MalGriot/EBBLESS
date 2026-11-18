@@ -4252,6 +4252,10 @@ body.split-desktop .install-banner{padding-left:24px;padding-right:12px}
   transition:background var(--dur-ui) var(--ease-out),border-color var(--dur-ui) var(--ease-out),transform var(--dur-ui) var(--ease-out)}
 .splash-choice-btn:hover,.splash-choice-btn:focus-visible{background:rgba(32,32,32,.92);border-color:rgba(255,255,255,.5)}
 .splash-choice-btn:active{transform:scale(.96)}
+/* One way in (T-0007): Play while the tester has never really played, Enter once they have. Both stay in the page
+   (the tutorial Skip path, returnToSplash and the Android native splash click Enter from code); the class is set by
+   syncSplashEntry() from hasEverPlayed(). */
+#splash.has-played #splashPlayNow,#splash:not(.has-played) #splashSkipTutorial{display:none}
 .splash-choice-btn-primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent,#151107);font-weight:600}
 .splash-choice{flex-wrap:wrap;justify-content:center;max-width:320px}.splash-bring{flex:1 0 100%;height:48px;font-size:15px}
 .splash-choice-btn-primary:hover,.splash-choice-btn-primary:focus-visible{background:var(--accent);filter:brightness(1.08)}
@@ -9018,6 +9022,13 @@ function noteRealPlay(){
   if (oneTapWaiting){ oneTapWaiting = false; setTimeout(() => initGoogleOneTap(), 6000); }
 }
 /* played-flag:end */
+/* splash-entry:start */
+// Exactly one of Play / Enter shows on the splash: Play until a song has really played, then Enter (see the CSS above).
+function syncSplashEntry(){
+  const sp = $('splash');
+  if (sp) sp.classList.toggle('has-played', hasEverPlayed());
+}
+/* splash-entry:end */
 let signInNudgeWaiting = false;
 function showSignInNudge(){
   if (!hasEverPlayed()){ signInNudgeWaiting = true; return; }
@@ -14641,6 +14652,7 @@ function ebbWakeWebSplash(){
 function returnToSplash(){
   const splashEl = $('splash');
   if (!splashEl || !splashEl.classList.contains('is-hidden')) return;
+  syncSplashEntry();
   ebbWakeWebSplash();
   splashEl.classList.remove('is-install');
   splashEl.classList.add('is-active', 'is-choice', 'is-return');
@@ -47213,6 +47225,7 @@ function carryTesterTokenForInstall(){
 // same as if the tutorial had already been seen, and falls straight into
 // startApp() - the same path a returning visitor takes.
 function showSplashChoice(){
+  syncSplashEntry();
   const splashEl = $('splash');
   if (!splashEl){ runIntro(false); return; }
   // #onbBackdrop/#onbMark are static markup, present and opaque (onbMark
