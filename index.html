@@ -7799,8 +7799,10 @@ function advSet(key, val){
   lsSet(LS_ADV, p);
 }
 /* #816: a device that asks for reduced motion gets the saving settings switched on once (Motion: Reduced, Cursor: Native),
-   so Settings shows what is really in effect. Done once only: if the listener later picks Full or a cursor, that stays. */
-(function(){
+   so Settings shows what is really in effect. Done once only: if the listener later picks Full or a cursor, that stays.
+   Called at boot just before advApplyMotion: run here, lsSet hit PROFILE_SETTING_KEYS before its const line, threw, and the catch
+   hid it, so this never ran. */
+function autoReducedMotion(){
   try {
     if (!window.matchMedia || !matchMedia('(prefers-reduced-motion:reduce)').matches) return;
     if (lsGet('ebbless:rmAuto', false)) return;
@@ -7808,8 +7810,20 @@ function advSet(key, val){
     const p = advPrefs();
     if (!p.motion) advSet('motion', 'reduced');
     if (!p.cursor) advSet('cursor', 'native');
-  } catch(e){}
-})();
+  } catch(e){ console.warn('[ebbless] reduced-motion defaults failed', e); }
+}
+/* Light mode: a 2 GB phone (TECNO POP 9) ran its main thread so busy that YouTube's clock arrived late and in jumps, the ad check
+   read that as an ad and muted the song ~27% of the time. Such a device gets Motion: Reduced switched on once (stops every CSS
+   animation and, with it, the marquee sweep), shown in Settings like #816; picking Full later stays. navigator.deviceMemory is
+   Chromium's rounded RAM bucket (0.25 ... 8); other browsers leave it undefined and are untouched. Called at boot, see above. */
+function autoLightMode(){
+  try {
+    if (!(navigator.deviceMemory > 0 && navigator.deviceMemory <= 2)) return;
+    if (lsGet('ebbless:liteAuto', false)) return;
+    lsSet('ebbless:liteAuto', true);
+    if (!advPrefs().motion) advSet('motion', 'reduced');
+  } catch(e){ console.warn('[ebbless] light mode failed', e); }
+}
 /* ---------- volume leveling (volume-equalizer) ----------
    Evens out loudness between tracks. YouTube measures every video's
    loudness (playerConfig.audioConfig.loudnessDb, surfaced by the worker's
@@ -8575,7 +8589,9 @@ async function syncProfileNow(opts){
       // Fold in anything changed locally while the request was out, so it
       // isn't overwritten - and gets pushed on the next beat.
       const server = normalizeProfile(data.profile);
-      const merged = mergeProfiles(localProfileForSync(), server);
+      const localNow = localProfileForSync();
+      const editedInFlight = profileHash(localNow) !== profileHash(local);
+      const merged = mergeProfiles(localNow, server);
       const changedHere = applyMergedProfile(merged);
       lsSet(LS_PROFILE_SYNCED_AT, Date.now());
       profileSyncStatus = '';
@@ -8584,7 +8600,12 @@ async function syncProfileNow(opts){
       const serverKeepsNow = !!(data.profile && typeof data.profile === 'object' && 'now' in data.profile);
       if (!serverKeepsNow) merged.now = server.now;
       nowRemote = merged.now;
-      if (profStable(merged) !== profStable(server)) scheduleProfileSync();
+      // Push again only when something changed here while the request was
+      // out. If the Worker merges differently from this client (ON AIR was
+      // per-track on the Worker, whole on the client), resending the same
+      // profile gets the same answer, and it looped every ~40s with a 3.7 MB
+      // body, starving playback on a low-RAM phone.
+      if (profStable(merged) !== profStable(server) && editedInFlight) scheduleProfileSync();
       // What this device looks like now = what the Worker has; a later
       // push only goes out once that stops being true.
       else lsSet(LS_PROFILE_SYNCED_HASH, profileHash(localProfileForSync()));
@@ -26594,10 +26615,22 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
-  { version: 572, date: '2026-11-17', items: [
+  { version: 576, date: '2026-11-18', items: [
     'First screen: a Play button. One tap opens the app and starts a song, with no sign-in first. If you have not played anything yet, it is waiting for you each time you open EBBLESS.',
     'The Google sign-in prompt now waits until after your first song.',
   ] },
+  { version: 575, date: '2026-11-18', items: [
+    'Light mode now really switches on for phones with 2 GB of memory or less, and phones set to reduce motion get the matching saving settings again.',
+  ]},
+  { version: 574, date: '2026-11-18', items: [
+    'Phones with 2 GB of memory or less now start with Motion set to Reduced, so songs play without short silences. You can switch it back to Full in Settings > Advanced.',
+  ]},
+  { version: 573, date: '2026-11-18', items: [
+    'On slower phones, the next song no longer keeps playing silently in the background after it is reloaded, which saves memory and battery while you listen.',
+  ]},
+  { version: 572, date: '2026-11-18', items: [
+    'Fixed songs stuck loading on some Android phones when you are signed in: syncing your library no longer repeats in the background and slows playback down.',
+  ]},
   { version: 571, date: '2026-11-17', items: [
     'The Library has a Videos section next to Podcasts. Paste a YouTube video link and it is saved there at once, ready to play and watch.',
   ]},
@@ -32822,7 +32855,9 @@ function checkDeckReady(deck){
     // play a 90%+ match right now while the original clears its ad off-screen, then fade back to it
     adStandIn(state.queue[state.queuePos], deck);
   }
+  let reloading = false;
   if (reason && !deck.adDodge && adLike && !deck.adReloaded && elapsed >= STANDBY_AD_RELOAD_MS && deck.player.loadVideoById && deck.videoId){
+    reloading = true;
     deck.adReloaded = true; deck.adReloadedAt = Date.now();
     adLog(deck, 'standby-reload', reason);
     deck.adClock = null;
@@ -32838,11 +32873,18 @@ function checkDeckReady(deck){
   // (seen on a phone), so they get the longer STANDBY_AD_ALT_SLOW_MS: a link
   // still frozen that long after a reload is moved too, not left frozen
   if (reason && !deck.adDodge && deck.adReloaded && !deck.adAltTried && Date.now() - deck.adReloadedAt >= (/^(duration|short|video-id)$/.test(reason) ? STANDBY_AD_ALT_MS : STANDBY_AD_ALT_SLOW_MS)){
+    reloading = true;
     deck.adAltTried = true;
     adLog(deck, 'standby-alt', reason);
     adTryAlternate(state.queue[deck.pos], deck);
   }
-  if (reason && elapsed < (deck.adDodge ? AD_MUTE_MAX_MS : standby ? STANDBY_AD_WAIT_MS : UNMUTE_MAX_WAIT_MS)){
+  // A load issued just now starts playing once it arrives, after any pause
+  // sent in this same pass, so confirming here (onDeckConfirmed parks a
+  // standby deck with pauseVideo) left the next song decoding muted in the
+  // background for good. On a slow phone the first ad signal can come after
+  // the wait cap, so the reload and the cap land together: check again
+  // once the new load is under way.
+  if (reason && (reloading || elapsed < (deck.adDodge ? AD_MUTE_MAX_MS : standby ? STANDBY_AD_WAIT_MS : UNMUTE_MAX_WAIT_MS))){
     deck.unmuteTimer = setTimeout(() => checkDeckReady(deck), UNMUTE_RECHECK_MS);
     return;
   }
@@ -36734,6 +36776,8 @@ $('advResetBtn').addEventListener('click', () => {
   advRender();
 });
 advBlock.addEventListener('toggle', advRender);
+autoReducedMotion();
+autoLightMode();
 advApplyMotion();
 advApplyPlayer();
 advApplyLook();
@@ -38487,7 +38531,8 @@ function marqueeObserve(el){
   el._marqueeObserved = true;
 }
 function marqueeReducedMotion(){
-  return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  // Settings > Motion: Reduced too (light mode turns it on for 2 GB phones), not only the phone's own setting
+  return document.documentElement.classList.contains('reduce-motion') || !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 }
 function setMarqueeText(el, text){
   // el's own document/window, not the globals: the PiP mini player's title
@@ -38676,6 +38721,8 @@ function mqVisible(el){
 }
 function mqSweep(){
   if (document.hidden) return; // #635: backgrounded, nothing to measure; the visibilitychange/next tick catches up
+  // reduced motion: no line scrolls, so stop any that still do and skip the whole-page scan (it cost ~12% of a 2 GB phone's main thread)
+  if (marqueeReducedMotion()){ if (mqRunning.size) Array.from(mqRunning).forEach(mqStop); return; }
   mqRunning.forEach(el => {
     if (!el.isConnected || !el._mqInner || el._mqInner.parentNode !== el || !mqVisible(el)){ mqStop(el); return; }
     if (el._mqKey !== mqKey(el)){ mqStop(el); mqStart(el); }

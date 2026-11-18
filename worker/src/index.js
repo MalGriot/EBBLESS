@@ -4867,7 +4867,7 @@ async function verifyGoogleIdToken(idToken, clientId, env, ctx) {
 // and never send it, so it rides along in the same v2 record.
 const PROFILE_SCHEMA = 2;
 const PROFILE_TOMBSTONE_TTL_MS = 180 * 24 * 60 * 60 * 1000; // a device offline longer than this may resurrect a removal
-const PROFILE_REGENERATED_IDS = ['swell', 'blend']; // rebuilt wholesale on every device - whole-blob LWW, no per-track merge
+const PROFILE_REGENERATED_IDS = ['swell', 'blend', 'nowplaying']; // rebuilt wholesale on every device - whole-blob LWW, no per-track merge; must match index.html (test/profile-merge-parity)
 const PROFILE_NOW_TTL_MS = 24 * 60 * 60 * 1000; // a session this much older than the newest one is dropped
 const PROFILE_NOW_MAX_DEVICES = 8;              // newest sessions kept; older devices age out
 const PROFILE_NOW_MAX_QUEUE = 100;              // queue entries per session
