@@ -14,3 +14,5 @@ node scripts/test-official-video.js >/dev/null
 node scripts/test-first-play.js >/dev/null
 node scripts/test-house-vibes.js >/dev/null
 node scripts/test-move.js >/dev/null
+node scripts/test-vibe-window.js >/dev/null
+node scripts/test-vibe-window-chrome.js >/dev/null

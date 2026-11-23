@@ -1751,6 +1751,36 @@ body:has(#musicMap:not([hidden])):has(#mini-bar:not([hidden])) .mm-foot{padding-
 .vibe-share svg{width:17px;height:17px}
 .import-stage .step{font-size:15px;color:var(--faint);margin:0 0 20px;transition:color var(--dur-ui) var(--ease-out)}
 .import-stage .flow-line{margin-bottom:14px}
+/* vibe result (T-0012): a page like Library and the region page, not a window in a window.
+   The overlay and stage lose their padding and frame; ONE scroller (the stage) carries name, line,
+   actions and every song. Colors, radii, type and buttons are the app's own tokens and .btn-ghost. */
+#import-overlay:has(.vibe-result){padding:0;justify-content:flex-start;align-items:stretch;background:var(--bg)}   /* solid, so the sticky bar matches the page exactly */
+.import-stage:has(.vibe-result){flex:1 1 auto;min-height:0;max-width:640px;margin:0 auto;align-items:stretch;text-align:left;background:none;border:0;border-radius:0;padding:0;
+  overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+.import-stage:has(.vibe-result) .search-results{flex:none;overflow:visible;max-height:none;margin:0}
+.vibe-result{padding:0 16px calc(24px + var(--safe-b))}
+/* the one thing that stays in view while the list scrolls: name (one line), Share, X. Solid page color,
+   no blur, no animation; the stage is the scroller, so sticky works against it. */
+.vibe-bar{position:sticky;top:0;z-index:3;display:flex;align-items:center;gap:8px;height:44px;margin:0 -16px;padding:0 8px 0 16px;background:var(--bg)}
+.vibe-titles{padding-top:0}
+.vibe-title{flex:1;min-width:0;margin:0;font-size:24px;font-weight:800;line-height:44px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vibe-result .vibe-heard{font-size:15px;font-style:normal;color:var(--faint);line-height:1.4;margin:0;max-width:none}
+.vibe-result .vibe-chips{display:block;margin:4px 0 0;font-size:12.5px;line-height:1.5;color:var(--faint)}
+.vibe-result .vibe-chip{display:inline;white-space:nowrap;border:0;padding:0;border-radius:0;font-size:inherit;color:inherit}
+.vibe-result .vibe-chip:not(:last-child)::after{content:'\00b7';margin-left:4px}   /* the dot stays with the chip before it, so a wrapped line never starts with one */
+.vibe-tools{display:flex;flex:none}
+.vibe-result .pick-x,.vibe-result .vibe-share{position:static;width:44px;height:44px;flex:none}
+.vibe-result .pick-x:focus-visible,.vibe-result .vibe-share:focus-visible,.vibe-link:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.vibe-result .vibe-actions{flex-direction:column;gap:8px;margin:16px 0 8px}
+.vibe-result .vibe-actions .btn-ghost{flex:none;width:100%;min-height:44px}
+.vibe-result .vibe-actions .btn-ghost.is-active{min-height:52px;font-size:16px;font-weight:700}
+.vibe-result .search-pick{border:0;border-bottom:1px solid var(--border);border-radius:0;background:transparent;margin:0;padding:10px 2px}
+.vibe-result .search-pick:hover{background:var(--panel-2)}
+.vibe-foot{display:flex;flex-direction:column;align-items:center;gap:2px;margin-top:12px}
+.vibe-link{min-height:44px;padding:0 14px;border:0;background:none;color:var(--faint);font:inherit;font-size:13.5px;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.vibe-link:hover{color:var(--text)}
+/* the wait before it: same page feel, no frame */
+.import-stage:has(#vibeCounter){background:none;border:0}
 /* #753: one song's actions (playSingleSongLink): the song on top, four tiles. Hover changes colour only, the press is transform only */
 .ss-head{display:flex;align-items:center;gap:12px;width:100%;margin:0 0 16px;text-align:left}
 .ss-art{position:relative;flex:none;width:56px;height:56px;border-radius:var(--r-md);overflow:hidden;background:var(--panel-2);color:var(--faint);display:flex;align-items:center;justify-content:center}
@@ -24528,22 +24558,36 @@ function stageVibeResults(text, interp, tracks){
   const mood = vibeMoodWords(interp);
   if (interp.arc && VIBE_ARC_SHAPES[interp.arc]) mood.push(VIBE_ARC_SHAPES[interp.arc].label);
   if (heardN) mood.push(uiF('{a} you know · {b} new', { a: heardN, b: tracks.length - heardN }));
-  const chips = mood.map(w => '<span class="vibe-chip">' + escapeHtml(w) + '</span>').join('');
+  const chips = mood.map(w => '<span class="vibe-chip">' + escapeHtml(w) + '</span>').join(' ');   // a space between chips = a place for the line to wrap
+  // One page, not a window in a window (T-0012): name, one short line, the action, then the list.
+  // The ids and the click wiring below are unchanged; only the layout and classes moved.
+  const sayHtml = interp.picture && interp.picture.description
+    ? escapeHtml(uiT('Looks like:')) + ' ' + escapeHtml(interp.picture.description)
+    : '&ldquo;' + escapeHtml(text) + '&rdquo;';
   importStage.innerHTML =
-    '<button type="button" class="pick-x" aria-label="Close"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.4 5L5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6z"/></svg></button>' +
-    '<button type="button" class="vibe-share" id="vibeShareBtn" aria-label="Share this vibe" title="Share this vibe">' + SWIPE_ICON_SHARE + '</button>' +
-    '<div class="step">' + escapeHtml(interp.title || 'Your vibe') + '</div>' +
-    (interp.picture && interp.picture.description
-      ? '<div class="vibe-heard">' + escapeHtml(uiT('Looks like:')) + ' ' + escapeHtml(interp.picture.description) + '</div>'
-      : '<div class="vibe-heard">&ldquo;' + escapeHtml(text) + '&rdquo;</div>') +
-    '<div class="vibe-chips">' + chips + '</div>' +
-    '<div class="vibe-actions">' +
-      '<button class="btn-ghost is-active" id="vibeSaveBtn">Save &amp; play</button>' +
-      '<button class="btn-ghost" id="vibePlayBtn">' + escapeHtml(uiF('Just play {n} songs', { n: tracks.length })) + '</button>' +
-    '</div>' +
-    '<div class="search-results">' + rows + '</div>' +
-    '<button class="btn-ghost" id="vibePlaylistsBtn" style="width:100%;margin-bottom:8px">Browse playlists for this vibe instead</button>' +
-    '<button class="btn-ghost" id="searchBackBtn" style="width:100%">Cancel</button>';
+    '<div class="vibe-result">' +
+      '<div class="vibe-bar">' +
+        '<h2 class="vibe-title" title="' + escapeHtml(interp.title || 'Your vibe') + '">' + escapeHtml(interp.title || 'Your vibe') + '</h2>' +
+        '<div class="vibe-tools">' +
+          '<button type="button" class="vibe-share" id="vibeShareBtn" aria-label="Share this vibe" title="Share this vibe">' + SWIPE_ICON_SHARE + '</button>' +
+          '<button type="button" class="pick-x" aria-label="Close"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.4 5L5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6z"/></svg></button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="vibe-titles">' +
+        '<div class="vibe-heard">' + sayHtml + '</div>' +
+        (chips ? '<div class="vibe-chips">' + chips + '</div>' : '') +
+      '</div>' +
+      '<div class="vibe-actions">' +
+        '<button class="btn-ghost is-active" id="vibeSaveBtn">Save &amp; play</button>' +
+        '<button class="btn-ghost" id="vibePlayBtn">' + escapeHtml(uiF('Just play {n} songs', { n: tracks.length })) + '</button>' +
+      '</div>' +
+      '<div class="search-results">' + rows + '</div>' +
+      '<div class="vibe-foot">' +
+        '<button class="vibe-link" id="vibePlaylistsBtn">Browse playlists for this vibe instead</button>' +
+        '<button class="vibe-link" id="searchBackBtn">Cancel</button>' +
+      '</div>' +
+    '</div>';
+  importStage.scrollTop = 0;   // the stage is the one scroller now: a new vibe starts at its name, not where the last list ended
   // Art the worker didn't have (most Last.fm entries) fills in as it lands,
   // a few at a time so 25 rows don't trip the art sources' rate limits.
   const artJobs = [], token = vibeResultsToken;
@@ -26639,6 +26683,9 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
+  { version: 580, date: '2026-11-23', items: [
+    'Your vibe results are now a full page: the name, one line, Save & play, then the whole song list with room to scroll. No more window inside a window.',
+  ] },
   { version: 579, date: '2026-11-23', items: [
     'EBBLESS has a new home: ebbless.space. If you use the old address, a prompt offers to move your saved music and settings across in one tap. Nothing is lost if you wait.',
   ] },
