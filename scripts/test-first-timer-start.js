@@ -220,6 +220,10 @@ const block = (name) => {
       await n.click('#libraryListWrap .lib-card[data-pl-id^="sc:"]');
       assert.ok(await n.waitFor(`!!document.querySelector('#libplBody .track-row:not(.is-missing)')`, 20000), 'album panel never opened with tracks');
       assert.strictEqual(await n.eval(`localStorage.getItem('ebbless:firstPlayed')`), null);
+      // the panel slides open: click only once the row has stopped moving (a click at a moving row misses, which looked like "never played")
+      await n.eval(`window.__rowPos = ''`);
+      assert.ok(await n.waitFor(`(() => { const r = document.querySelector('#libplBody .track-row:not(.is-missing)'); if (!r) return false; const b = r.getBoundingClientRect(), k = [b.x, b.y, b.width].join(); const same = window.__rowPos === k; window.__rowPos = k; return same && b.y > 0 && b.y < innerHeight; })()`, 10000), 'the track row never settled');
+      await n.sleep(300);
       await n.click('#libplBody .track-row:not(.is-missing)');
       assert.ok(await n.waitFor(`localStorage.getItem('ebbless:firstPlayed') === '1'`, 60000), 'never reached PLAYING');
       await n.sleep(1500);

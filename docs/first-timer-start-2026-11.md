@@ -66,7 +66,7 @@ back under the old rules once they are no longer new and still have no playlists
   25 s), returning person lands on the Library with no tile and the Search step, SoundCloud blocked (one failure, honest
   state, not stuck, counted once at the 20 s rule), a start after the 15 s message (message cleared, counts started, not
   failed), offline at tap (honest state, nothing counted), desktop 1280 px (paste bubble hidden, tile title not covered),
-  and a first-timer starting a song from the seeded album in the Library, not the tile (tapped 1, started 1, failed 0). `--slow` adds Slow 4G timing,
+  and a first-timer starting a song from the seeded album in the Library, not the tile (tapped 1, started 1, failed 0; it clicks the track row only once the sliding panel has settled). Full suite: 21 checks. `--slow` adds Slow 4G timing,
   `--shots` rewrites the screenshots. It uses real SoundCloud audio over the network and blocks the worker's `/beta/*`
   routes so the fake tester token it uses is never sent anywhere. `scripts/check.sh` runs only the source part
   (`--no-browser`).
