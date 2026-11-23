@@ -7,7 +7,7 @@ Branch `claude/vigorous-morse-0bbe88`. Nothing is pushed, deployed or re-run on 
 
 ### Cause 1: one Play on the first screen
 
-> **Also see T-0011 (release 579, `docs/first-timer-start-2026-11.md`).** First-timers now land on Home with a Start here tile that
+> **Also see T-0011 (release 580, `docs/first-timer-start-2026-11.md`).** First-timers now land on Home with a Start here tile that
 > plays the starter song on a tap (never automatically), the first checklist step is "Play this song", and a first-timer's
 > song started from any path counts one `plays_tapped` (the funnel table there lists every path).
 

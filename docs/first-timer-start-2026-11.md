@@ -1,7 +1,7 @@
-# First-timer start (HQ T-0011), release 579
+# First-timer start (HQ T-0011), release 580
 
 App only. No worker deploy, no Sheet step, no `house-vibes.json` change. Nothing is pushed until the CEO says yes.
-Built on `origin/main` 5ce8f77 (release 578). Release number 579 was the next free one on 2026-11-23; if another lane
+Built on `origin/main` 5ce8f77 (release 578). Release 580: 579 is taken by T-0012 (vibe window, branch claude/vibe-window-2a4457), 578 is the last on main. If another lane
 takes it first, renumber `sw.js` and the WHATS_NEW entry.
 
 ## What a new person sees, in order
