@@ -99,7 +99,14 @@ async function launch() {
     };
     return api;
   }
-  async function close() { try { ws.close(); } catch (e) {} proc.kill(); srv.close(); try { fs.rmSync(dir, { recursive: true, force: true }); } catch (e) {} }
+  async function close() {
+    try { ws.close(); } catch (e) {}
+    const gone = new Promise(r => { if (proc.exitCode !== null || proc.signalCode) r(); else proc.once('exit', r); });
+    proc.kill();
+    await Promise.race([gone, new Promise(r => setTimeout(r, 8000))]);   // Chrome writes to the profile while it shuts down: remove it only after it has exited
+    srv.close();
+    try { fs.rmSync(dir, { recursive: true, force: true }); } catch (e) {}
+  }
   return { page, close, port };
 }
 

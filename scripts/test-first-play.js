@@ -361,9 +361,9 @@ check('a first-timer who starts a song from a search result is no longer invisib
   f.api.statsPlayStarted();   // someone who already played: auto-advance, no pending tap
   assert.strictEqual(f.stats.pend.playStarted, 0);
 });
-check('the Start here tile never starts by itself and never counts a tap when music is already playing', () => {
+check('the Start here tile never starts by itself and its tap is counted by playPlaylistNow, once', () => {
   assert.strictEqual([...html.matchAll(/startHereTap/g)].length, 2);
-  assert.ok(/if \(!live\) statsPlayTapped\(\);/.test(html));
+  assert.ok(/playPlaylistNow\(pl\.id\);/.test(html));
 });
 Promise.resolve().then(() => {
   console.log(pass + ' passed');

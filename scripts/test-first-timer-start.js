@@ -43,9 +43,9 @@ const block = (name) => {
   await check('the tile is only built for a new person and sits first on Home', () => {
     assert.ok(/\(isNewPerson\(\) \? \['start'\] : \[\]\)\.concat\(homeSectionOrder\(returning\)\)/.test(html));
   });
-  await check('counters: the tile counts one tap (unless something already plays), PLAYING marks started, failure counts failed once', () => {
-    assert.ok(/if \(!live\) statsPlayTapped\(\);/.test(tile));
-    assert.ok(/statsPlayError\(\)/.test(tile));
+  await check('counters: the tile\'s tap is counted once by playPlaylistNow, PLAYING marks started, failure is the existing 20 s rule only', () => {
+    assert.ok(/playPlaylistNow\(pl\.id\);/.test(tile) && !/statsPlayTapped\(\)/.test(tile.replace(/\/\/.*\n/g, '')));
+    assert.ok(!/statsPlayError\(\)/.test(tile.replace(/\/\/.*\n/g, '')));
     assert.ok(/noteRealPlay\(\); statsPlayStarted\(\); startHerePlaying\(\);/.test(html));
   });
   await check('a first-timer starting a song by any path (search result, tile, link) is counted as one tap', () => {
@@ -60,6 +60,9 @@ const block = (name) => {
     assert.ok(/function msTasks\(page, done\)/.test(html));
     assert.ok(/if \(!hasEverPlayed\(\)\) try \{ awardMilestone\('firstplay'\); \} catch\(e\)\{\}/.test(html));
     assert.ok(!/MILESTONES\.filter\(m => m\[3\] === page\)/.test(html), 'every library-page list goes through msTasks');
+  });
+  await check('a new person never gets the paste bubble (also called Start here) on top of the tile', () => {
+    assert.ok(/if \(isNewPerson\(\)\) return false;/.test(html));
   });
   await check('the vibe result window code is untouched by this change', () => {
     assert.ok(html.includes('function renderHomeVibe(body, mk){'));
@@ -144,6 +147,12 @@ const block = (name) => {
       assert.ok((await views(d)).includes('view-home'));
       assert.ok(await d.eval(`!!document.querySelector('#hmBody .hm-start')`));
     });
+    await check('desktop 1280 px: the first-run "Start here" paste bubble never covers the tile title (checked after it would have appeared)', async () => {
+      await d.sleep(6000);
+      assert.ok(await d.eval(`document.getElementById('pasteGuide') ? document.getElementById('pasteGuide').hidden : true`), 'paste bubble must stay hidden for a new person');
+      const hit = await d.eval(`(() => { const t = document.querySelector('.hm-start-t b'); const r = t.getBoundingClientRect(); const e = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2); return !!e && !!e.closest('.hm-start'); })()`);
+      assert.ok(hit, 'the tile title is covered by something else');
+    });
     await d.close();
 
     // returning person: has played before, goes straight in, lands where they did before
@@ -167,22 +176,60 @@ const block = (name) => {
     // the starter cannot load: SoundCloud blocked
     const f = await b.page({ blockHosts: ['*/beta/*', '*soundcloud.com*', '*sndcdn.com*'], init: TOKEN });
     await enter(f, 'ebb.test');
-    await check('starter cannot load (SoundCloud blocked): honest state after 15 s, one failure, not stuck', async () => {
+    await check('starter cannot load (SoundCloud blocked): honest state after 15 s, one failure at the existing 20 s rule, not stuck', async () => {
       await f.click('.hm-start');
       await f.sleep(500);
       assert.ok(/Starting/.test(await f.eval(`document.querySelector('.hm-start')?.innerText || ''`)) || (await views(f)) === 'view-player');
       assert.ok(await f.waitFor(`window.__ebbStartHere && !window.__ebbStartHere.playingAt && document.body.innerText.includes("Couldn't start the song")`, 30000), 'no failure message');
       const s = await stats(f);
-      assert.deepStrictEqual([s.playTapped, s.playStarted, s.playFailed], [1, 0, 1]);
+      assert.deepStrictEqual([s.playTapped, s.playStarted, s.playFailed], [1, 0, 0], 'the 15 s message does not count a failure by itself');
       // not stuck: the nav still works and the tile says try again
       await f.eval(`document.querySelector('#bottom-nav button[data-view="search"]').click()`);
       await f.sleep(500);
       assert.strictEqual(await views(f), 'view-home');
       assert.ok(/Couldn't start\. Tap to try again\./.test(await f.eval(`document.querySelector('.hm-start').innerText`)));
-      await f.sleep(21000);
-      assert.strictEqual((await stats(f)).playFailed, 1, 'the 20 s timer must not count it twice');
+      assert.ok(await f.waitFor(`localStorage.getItem('ebbless:stats') && JSON.parse(localStorage.getItem('ebbless:stats')).pend.playFailed === 1`, 15000), 'the existing 20 s rule never counted the failure');
+      await f.sleep(8000);
+      assert.strictEqual((await stats(f)).playFailed, 1, 'counted once');
     });
     await f.close();
+
+    // a start after the "couldn't start" message (the message is forced to 0.5 s; real audio arrives seconds later)
+    const l = await b.page({ blockHosts: ['*/beta/*'], init: TOKEN + 'window.__ebbStartHereFailMs = 500;' });
+    await enter(l, 'ebb.test');
+    await check('a start after the failure message clears it and counts as started, never failed (inside the 20 s rule)', async () => {
+      await l.click('.hm-start');
+      assert.ok(await l.waitFor(`document.body.innerText.includes("Couldn't start the song")`, 10000), 'message never showed');
+      assert.ok(await l.waitFor(`window.__ebbStartHere.playingAt > 0`, 60000), 'never reached PLAYING');
+      await l.eval(`document.querySelector('#bottom-nav button[data-view="search"]').click()`);
+      await l.sleep(500);
+      // a person who has played is no longer new, so the tile is gone; the state itself was cleared by PLAYING
+      const s = await stats(l);
+      assert.deepStrictEqual([s.playTapped, s.playStarted, s.playFailed], [1, 1, 0]);
+    });
+    await l.close();
+
+    // a first-timer starts a song from a NON-tile path: the starter album the app seeds into the Library (worker lookup, real network)
+    const n = await b.page({ blockHosts: ['*/beta/*'], init: TOKEN });
+    await enter(n, 'ebb.test');
+    await check('first-timer starts a song from the Library album panel (not the tile): tapped 1, started 1, failed 0', async () => {
+      await n.eval(`document.querySelector('#bottom-nav button[data-view="library"]').click()`);
+      assert.ok(await n.waitFor(`!!document.querySelector('#libraryListWrap .lib-card[data-pl-id^="sc:"]')`, 120000), 'starter album never seeded into the Library');
+      await n.eval(`document.querySelector('#libFilterAlbums').click()`);
+      await n.sleep(800);
+      await n.click('#libraryListWrap .lib-card[data-pl-id^="sc:"]');
+      assert.ok(await n.waitFor(`!!document.querySelector('#libplBody .track-row:not(.is-missing)')`, 20000), 'album panel never opened with tracks');
+      assert.strictEqual(await n.eval(`localStorage.getItem('ebbless:firstPlayed')`), null);
+      await n.click('#libplBody .track-row:not(.is-missing)');
+      assert.ok(await n.waitFor(`localStorage.getItem('ebbless:firstPlayed') === '1'`, 60000), 'never reached PLAYING');
+      await n.sleep(1500);
+      assert.strictEqual(await n.eval(`!!window.__ebbStartHere`), false, 'the tile was not used');
+      const s = await stats(n);
+      assert.deepStrictEqual([s.playTapped, s.playStarted, s.playFailed], [1, 1, 0]);
+      await n.sleep(21000);
+      assert.strictEqual((await stats(n)).playFailed, 0);
+    });
+    await n.close();
 
     // offline at tap time
     const o = await b.page({ blockHosts: ['*/beta/*'], init: TOKEN });

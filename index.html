@@ -25517,7 +25517,7 @@ async function seedStarterLibrary(){
 /* seed-starter:end */
 /* start-here:start */
 // "Start here" tile (T-0011): a new person (no music history, nothing to resume) lands on Home with one tile that plays the
-// first song of the artist's own SoundCloud album in a second or two. The track list below was read once from the real
+// first song of the artist's own SoundCloud album (measured 2 to 5 s from tap to sound, mostly SoundCloud's own player). The track list below was read once from the real
 // album through the worker's /soundcloud route (2026-11-23), so a tap never waits on that ~20 s lookup; the audio itself
 // still loads through the normal SoundCloud player. Rows: [soundcloud id, title, artist, art, duration ms].
 // Nothing here plays by itself: only a tap on the tile starts it.
@@ -25557,7 +25557,7 @@ function startHereSync(){
 }
 // called from the deck's real PLAYING event
 function startHerePlaying(){
-  if (startHereState !== 'starting') return;
+  if (startHereState !== 'starting' && startHereState !== 'failed') return;   // a start after the 15 s message clears it
   clearTimeout(startHereTimer); startHereState = '';
   if (window.__ebbStartHere) window.__ebbStartHere.playingAt = performance.now();
   startHereSync();
@@ -25565,7 +25565,7 @@ function startHerePlaying(){
 function startHereFailed(){
   if (startHereState !== 'starting') return;
   startHereState = 'failed';
-  try{ statsPlayError(); }catch(e){}
+  // not counted here: plays_failed is the existing 20 s rule (statsAttemptExpire), so a start at 15 to 20 s still counts as started
   startHereSync();
   showToast("Couldn't start the song. Open Home and tap Start here to try again.");
 }
@@ -25579,12 +25579,9 @@ function startHereTap(){
   if (!getLibrary().includes(pl.id)){ saveToLibrary(pl.id); try{ renderLibrary(); }catch(e){} }
   startHereState = 'starting';
   window.__ebbStartHere = { tapAt: performance.now(), playingAt: 0 };
-  clearTimeout(startHereTimer); startHereTimer = setTimeout(startHereFailed, START_HERE_FAIL_MS);
+  clearTimeout(startHereTimer); startHereTimer = setTimeout(startHereFailed, Number(window.__ebbStartHereFailMs) || START_HERE_FAIL_MS);   // the window knob is for the browser test only
   startHereSync();
-  // already playing something: no new tap to wait on, so no false failure
-  let live = false;
-  try{ const ad = activeDeck(); live = !!(ad && ad.player && ad.player.getPlayerState && ad.player.getPlayerState() === 1); }catch(e){}
-  if (!live) statsPlayTapped();
+  // playPlaylistNow counts the tap (once, whatever else asks); a new person has nothing playing, so no false failure
   playPlaylistNow(pl.id);
 }
 /* start-here:end */
@@ -25665,6 +25662,7 @@ function shouldShowPasteGuide(){
   if (splashEl && !splashEl.classList.contains('is-hidden')) return false;
   if (document.body.classList.contains('onb-active')) return false;
   if (hasOwnPlaylists()) return false;
+  if (isNewPerson()) return false;   // Home shows its own Start here tile; two "Start here" in one view is confusing (T-0011)
   return pasteBarVisible();
 }
 function refreshPasteGuide(){
@@ -26734,7 +26732,7 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
   { version: 580, date: '2026-11-23', items: [
-    'New here? After Enter you land on Home with a Start here tile. Tap it and a song starts in a second or two. Nothing plays until you tap.',
+    'New here? After Enter you land on Home with a Start here tile. Tap it and a song starts. Nothing plays until you tap.',
     'The first checklist step now says Play this song.',
   ] },
   { version: 578, date: '2026-11-18', items: [
