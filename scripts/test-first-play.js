@@ -344,6 +344,27 @@ check('the splash video latches is-playing: a stall (waiting) or pause no longer
   assert.ok(!classes.has('is-playing'));
   assert.ok(/#splash \.splash-video\.is-playing\{opacity:1;transition:opacity 400ms/.test(html), 'it fades in once instead of popping');
 });
+
+// ---- First-timer start (T-0011): the tile and first-timer paths feed the same counters ----
+check('one tap is counted once when the tile, the loader and the play-button path all ask for it', () => {
+  const f = funnel();
+  f.api.statsPlayTapped();   // the Start here tile
+  f.api.statsPlayTapped();   // playPlaylistNow
+  f.api.statsPlayTapped();   // loadIndex for a person with no real play yet
+  f.advance(2000);
+  f.api.statsPlayStarted();
+  assert.deepStrictEqual(f.stats.pend, { playTapped: 1, playStarted: 1, playFailed: 0 });
+});
+check('a first-timer who starts a song from a search result is no longer invisible: the loader counts the tap, no tap counts nothing after the first play', () => {
+  assert.ok(/if \(autoplay && !hasEverPlayed\(\)\) try\{ statsPlayTapped\(\); \} catch\(e\)\{\}/.test(html));
+  const f = funnel();
+  f.api.statsPlayStarted();   // someone who already played: auto-advance, no pending tap
+  assert.strictEqual(f.stats.pend.playStarted, 0);
+});
+check('the Start here tile never starts by itself and its tap is counted by playPlaylistNow, once', () => {
+  assert.strictEqual([...html.matchAll(/startHereTap/g)].length, 2);
+  assert.ok(/playPlaylistNow\(pl\.id\);/.test(html));
+});
 Promise.resolve().then(() => {
   console.log(pass + ' passed');
 }).catch((e) => { console.error(e); process.exit(1); });

@@ -1,5 +1,8 @@
 # Splash fixes (T-0010), release 578
 
+> Release 581 (T-0011, `docs/first-timer-start-2026-11.md`) leaves the splash, Resume and Enter exactly as below. It only changes where a new
+> person lands after the splash: Home with a Start here tile instead of the empty Library.
+
 App only. No worker deploy, no Sheet step, no `house-vibes.json` change. Nothing is pushed until the CEO says yes.
 
 ## What changed

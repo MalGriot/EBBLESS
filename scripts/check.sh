@@ -16,3 +16,4 @@ node scripts/test-house-vibes.js >/dev/null
 node scripts/test-move.js >/dev/null
 node scripts/test-vibe-window.js >/dev/null
 node scripts/test-vibe-window-chrome.js >/dev/null
+node scripts/test-first-timer-start.js --no-browser >/dev/null

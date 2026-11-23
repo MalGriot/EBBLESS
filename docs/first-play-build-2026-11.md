@@ -7,6 +7,10 @@ Branch `claude/vigorous-morse-0bbe88`. Nothing is pushed, deployed or re-run on 
 
 ### Cause 1: one Play on the first screen
 
+> **Also see T-0011 (release 581, `docs/first-timer-start-2026-11.md`).** First-timers now land on Home with a Start here tile that
+> plays the starter song on a tap (never automatically), the first checklist step is "Play this song", and a first-timer's
+> song started from any path counts one `plays_tapped` (the funnel table there lists every path).
+
 > **Superseded by T-0010 (release 578, `docs/splash-fixes-2026-11.md`).** The CEO reversed this logic after trying
 > release 577: no music history now shows only **Enter**; a saved queue or last song shows **Resume** (same button,
 > `#splashPlayNow`, no Enter). Resume continues the saved queue and never loads the starter or replaces the queue, so

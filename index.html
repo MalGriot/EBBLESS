@@ -544,6 +544,13 @@ video.lib-bg-video.is-playing{opacity:1}
 #view-home .hm-sec h2{font-size:18px;font-weight:700;margin:0 0 12px;color:var(--text)}
 #view-home .hm-row{display:flex;gap:14px;overflow-x:auto;margin:-8px calc(-1 * var(--vs-pad,24px)) -6px;padding:8px var(--vs-pad,24px) 12px;scrollbar-width:none}   /* #840: room for the hover grow and shadow */
 #view-home .hm-row::-webkit-scrollbar{display:none}
+#view-home .hm-start{display:flex;align-items:center;gap:14px;width:100%;padding:12px;border-radius:16px;background:var(--panel-3);color:var(--text);text-align:left;cursor:pointer;border:1px solid var(--accent,#fff)}
+#view-home .hm-start img{width:96px;height:96px;border-radius:12px;object-fit:cover;flex:none;background:var(--panel-2)}
+#view-home .hm-start-t{display:flex;flex-direction:column;gap:4px;flex:1;min-width:0}
+#view-home .hm-start-t b{font-size:17px}
+#view-home .hm-start-s{font-size:13px;opacity:.8}
+#view-home .hm-start-go{flex:none;width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--accent,#fff);color:#000;font-size:16px}
+#view-home .hm-start.is-busy{opacity:.7}
 #view-home .hm-card{flex:none;width:128px;display:flex;flex-direction:column;gap:7px;text-align:left;color:var(--text);cursor:pointer}
 #view-home .hm-card img,#view-home .hm-card .hm-ph{width:128px;height:128px;border-radius:14px;object-fit:cover;background:var(--panel-3);box-shadow:0 8px 18px -8px rgba(0,0,0,.6);transition:transform var(--dur-ui) var(--ease-out)}
 #view-home .hm-card:hover img,#view-home .hm-card:hover .hm-ph{transform:scale(1.03)}
@@ -9055,7 +9062,10 @@ function hasEverPlayed(){
   return false;
 }
 function noteRealPlay(){
-  try { if (localStorage.getItem(LS_FIRST_PLAYED) === '1') return; localStorage.setItem(LS_FIRST_PLAYED, '1'); } catch(e){}
+  try { if (localStorage.getItem(LS_FIRST_PLAYED) === '1') return;
+    // first real play ever on this device: ticks "Play this song" for a new person (T-0011; no-op unless it is in their list)
+    if (!hasEverPlayed()) try { awardMilestone('firstplay'); } catch(e){}
+    localStorage.setItem(LS_FIRST_PLAYED, '1'); } catch(e){}
   // first song really playing: now the sign-in card and Google One Tap may come
   if (signInNudgeWaiting){ signInNudgeWaiting = false; setTimeout(showSignInNudge, 6000); }
   if (oneTapWaiting){ oneTapWaiting = false; setTimeout(() => initGoogleOneTap(), 6000); }
@@ -23463,6 +23473,16 @@ function renderHome(){
       const mine = [[SWELL_ID, 'New songs for you'], [BLEND_ID, 'Your songs, blended']].map(([id, sub]) => ({ id, sub, pl: getCachedPlaylist(id) })).filter(x => x.pl && Array.isArray(x.pl.tracks) && x.pl.tracks.length);
       if (mine.length) row(section('Made for you'), mine.map(x => card(x.pl.name, x.sub, coverOf(x.pl), () => playPlaylistNow(x.id))));
     },
+    // T-0011: new people only, always first: one tap plays the starter song (list stored in the app)
+    start(){
+      const sec = mk('section', 'hm-sec hm-start-sec'); sec.appendChild(mk('h2', '', 'Start here'));
+      const b = mk('button', 'hm-start'); b.type = 'button';
+      const im = document.createElement('img'); im.alt = ''; im.width = 96; im.height = 96; attachCardArt(im, { art: STARTER_ALBUM.image }); b.appendChild(im);
+      const tx = mk('span', 'hm-start-t'); tx.appendChild(mk('b', '', STARTER_ALBUM.name)); tx.appendChild(mk('span', 'hm-start-s', '')); b.appendChild(tx);
+      b.appendChild(mk('span', 'hm-start-go', '\u25B6'));
+      b.addEventListener('click', startHereTap);
+      sec.appendChild(b); cur.appendChild(sec);
+    },
     vibe(){ renderHomeVibe(cur, mk); },
     // #761: every way to get songs in lives here (Add songs block; its own page is one tap away)
     add(){ renderAddSongsBlock(cur, mk, returning); },
@@ -23477,7 +23497,8 @@ function renderHome(){
       sec.appendChild(b);
     },
   };
-  homeSectionOrder(returning).forEach(k => { cur = document.createDocumentFragment(); parts[k](); if (cur.childNodes.length) body.appendChild(cur); });
+  (isNewPerson() ? ['start'] : []).concat(homeSectionOrder(returning)).forEach(k => { cur = document.createDocumentFragment(); parts[k](); if (cur.childNodes.length) body.appendChild(cur); });
+  startHereSync();
   applyUiLang($('view-home'));
 }
 /* home-vibe: the vibe box on Home, so building a playlist from a feeling
@@ -25538,6 +25559,76 @@ async function seedStarterLibrary(){
   renderLibrary();
 }
 /* seed-starter:end */
+/* start-here:start */
+// "Start here" tile (T-0011): a new person (no music history, nothing to resume) lands on Home with one tile that plays the
+// first song of the artist's own SoundCloud album (measured 2 to 5 s from tap to sound, mostly SoundCloud's own player). The track list below was read once from the real
+// album through the worker's /soundcloud route (2026-11-23), so a tap never waits on that ~20 s lookup; the audio itself
+// still loads through the normal SoundCloud player. Rows: [soundcloud id, title, artist, art, duration ms].
+// Nothing here plays by itself: only a tap on the tile starts it.
+const STARTER_ALBUM = {
+  url: 'https://soundcloud.com/mal-griot/sets/breathelovedeep',
+  name: "breathe love d e e p",
+  image: "https://i1.sndcdn.com/artworks-mEcCNljczmBzEHUG-ret4uw-t500x500.jpg",
+  rows: [
+    [2324098502, ". . . g a s p", "MAL GRIOT MUSIC", "https://i1.sndcdn.com/artworks-nDV3JVJO5swbJFbf-FPlpoA-t500x500.png", 72046],
+    [2316077423, ". d e e p", "MAL GRIOT MUSIC", "https://i1.sndcdn.com/artworks-nDV3JVJO5swbJFbf-FPlpoA-t500x500.png", 290481],
+    [2312228204, "h i g h", "MAL GRIOT MUSIC", "https://i1.sndcdn.com/artworks-mEcCNljczmBzEHUG-ret4uw-t500x500.jpg", 188344],
+    [2330373596, "v a s t", "G R II O T", "https://i1.sndcdn.com/artworks-nDV3JVJO5swbJFbf-FPlpoA-t500x500.png", 325379],
+    [2325592244, "b u r n", "MAL GRIOT MUSIC", "https://i1.sndcdn.com/artworks-nDV3JVJO5swbJFbf-FPlpoA-t500x500.png", 271157],
+    [2326230755, "f u m e", "MAL GRIOT MUSIC", "https://i1.sndcdn.com/artworks-nDV3JVJO5swbJFbf-FPlpoA-t500x500.png", 271811],
+    [2317166951, "m u t e", "MAL GRIOT MUSIC", "https://i1.sndcdn.com/artworks-nDV3JVJO5swbJFbf-FPlpoA-t500x500.png", 114507],
+    [2318394188, "m m m", "MAL GRIOT MUSIC", "https://i1.sndcdn.com/artworks-nDV3JVJO5swbJFbf-FPlpoA-t500x500.png", 185785],
+    [2326230065, "d o z e .", "MAL GRIOT MUSIC", "https://i1.sndcdn.com/artworks-nDV3JVJO5swbJFbf-FPlpoA-t500x500.png", 339821],
+    [2312201429, "v o i d . . .", "MAL GRIOT MUSIC", "https://i1.sndcdn.com/artworks-mEcCNljczmBzEHUG-ret4uw-t500x500.jpg", 336598]
+  ]
+};
+const START_HERE_FAIL_MS = 15000;
+let startHereState = '';   // '' | 'starting' | 'failed'
+let startHereTimer = 0;
+function isNewPerson(){ return !hasEverPlayed() && !splashResumable(); }
+function starterAlbumPlaylist(){
+  const entry = starterLibraryEntry(STARTER_ALBUM.url);
+  if (!entry) return null;
+  const tracks = STARTER_ALBUM.rows.map(r => ({ title: r[1], artist: r[2], videoId: soundCloudVideoId(r[0]), matchedTitle: r[1], channel: r[2], plays: 0, art: r[3], duration: Math.round(r[4] / 1000), srcDuration: Math.round(r[4] / 1000) }));
+  return { id: entry.id, type: 'sc_album', name: STARTER_ALBUM.name, image: STARTER_ALBUM.image, originalImage: STARTER_ALBUM.image, tracks, ts: Date.now(), resolveVersion: RESOLVE_LOGIC_VERSION };
+}
+function startHereSync(){
+  document.querySelectorAll('.hm-start').forEach(b => {
+    b.classList.toggle('is-busy', startHereState === 'starting');
+    const s = b.querySelector('.hm-start-s');
+    if (s) s.textContent = startHereState === 'starting' ? 'Starting...' : startHereState === 'failed' ? (navigator.onLine === false ? "You're offline. Connect and tap to try again." : "Couldn't start. Tap to try again.") : 'Play this song: ' + STARTER_ALBUM.rows[0][1];
+  });
+}
+// called from the deck's real PLAYING event
+function startHerePlaying(){
+  if (startHereState !== 'starting' && startHereState !== 'failed') return;   // a start after the 15 s message clears it
+  clearTimeout(startHereTimer); startHereState = '';
+  if (window.__ebbStartHere) window.__ebbStartHere.playingAt = performance.now();
+  startHereSync();
+}
+function startHereFailed(){
+  if (startHereState !== 'starting') return;
+  startHereState = 'failed';
+  // not counted here: plays_failed is the existing 20 s rule (statsAttemptExpire), so a start at 15 to 20 s still counts as started
+  startHereSync();
+  showToast("Couldn't start the song. Open Home and tap Start here to try again.");
+}
+function startHereTap(){
+  if (startHereState === 'starting') return;
+  if (navigator.onLine === false){ startHereState = 'failed'; startHereSync(); return; }
+  const pl = starterAlbumPlaylist();
+  if (!pl){ startHereState = 'failed'; startHereSync(); return; }
+  const have = getCachedPlaylist(pl.id);
+  if (!have || !(have.tracks || []).some(t => t && t.videoId)) persistPlaylistObj(pl);
+  if (!getLibrary().includes(pl.id)){ saveToLibrary(pl.id); try{ renderLibrary(); }catch(e){} }
+  startHereState = 'starting';
+  window.__ebbStartHere = { tapAt: performance.now(), playingAt: 0 };
+  clearTimeout(startHereTimer); startHereTimer = setTimeout(startHereFailed, Number(window.__ebbStartHereFailMs) || START_HERE_FAIL_MS);   // the window knob is for the browser test only
+  startHereSync();
+  // playPlaylistNow counts the tap (once, whatever else asks); a new person has nothing playing, so no false failure
+  playPlaylistNow(pl.id);
+}
+/* start-here:end */
 
 async function seedDefaultSpotifyContent(){
   let added = false;
@@ -25615,6 +25706,7 @@ function shouldShowPasteGuide(){
   if (splashEl && !splashEl.classList.contains('is-hidden')) return false;
   if (document.body.classList.contains('onb-active')) return false;
   if (hasOwnPlaylists()) return false;
+  if (isNewPerson()) return false;   // Home shows its own Start here tile; two "Start here" in one view is confusing (T-0011)
   return pasteBarVisible();
 }
 function refreshPasteGuide(){
@@ -26683,6 +26775,10 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
+  { version: 581, date: '2026-11-23', items: [
+    'New here? After Enter you land on Home with a Start here tile. Tap it and a song starts. Nothing plays until you tap.',
+    'The first checklist step now says Play this song.',
+  ] },
   { version: 580, date: '2026-11-23', items: [
     'Your vibe results are now a full page: the name, one line, Save & play, then the whole song list with room to scroll. No more window inside a window.',
   ] },
@@ -33033,7 +33129,7 @@ function onDeckStateChange(deck, e){
   if (deck.kind === 'yt') guardActiveDeckAd();
   // mid pause-fade the deck is still audibly playing, but the UI already
   // shows paused (see runPlayFade) - don't let a PLAYING event flip it back
-  if (e.data === YT.PlayerState.PLAYING){ if (!isFadingOut(deck)){ setPlayingUI(true); announceTabPlaying(); noteRealPlay(); statsPlayStarted(); } }
+  if (e.data === YT.PlayerState.PLAYING){ if (!isFadingOut(deck)){ setPlayingUI(true); announceTabPlaying(); noteRealPlay(); statsPlayStarted(); startHerePlaying(); } }
   else if (e.data === YT.PlayerState.PAUSED){ if (!(deck.unstickAt && Date.now() - deck.unstickAt < 1500)) setPlayingUI(false); }
   else if (e.data === YT.PlayerState.ENDED){
     if (swapInProgress) return;
@@ -36358,6 +36454,7 @@ function advRunGesture(k){
 const MILESTONES = [
   // [id, label, points, page, how-to hint]. 5 essential tasks per page; the phone shows
   // each page's own set as a small card at the top of that page.
+  ['firstplay', 'Play this song', 5, 'library', 'Tap Start here on Home, or tap any song.'],
   ['search', 'Search for a song, artist or album', 5, 'library', 'Type in the search bar at the top, or tap the magnifier to search your own library.'],
   ['openpage', 'Open an artist or album', 5, 'library', 'Tap an artist or album in your library, or a name on the artist page.'],
   ['load', 'Add a song to your library or a playlist', 5, 'library', 'Paste a link (song, playlist, album, artist or podcast) in the search bar and tap Load | Open an artist and tap a song, or add an album | Tap the + beside a song to add it to a playlist'],
@@ -36380,6 +36477,14 @@ const MILESTONES = [
   ['restore', 'Restore a setting to its original value', 5, 'settings', 'In Advanced (bottom of Settings), tap Reset at the end, or pick the Default choice again.']
 ];
 const MS_PAGES = ['library', 'player', 'queue', 'settings'];
+// T-0011: a new person's first Library step is "Play this song" instead of "Search for a song, artist or album". The mode
+// sticks once the song has played (firstplay done), so the count stays n of 5 and the card ends cleanly. Everyone else
+// keeps the Search step. Only one of the two is ever in a person's list.
+function msTasks(page, done){
+  done = done || milestonesDone();
+  const fp = page === 'library' && (!!done.firstplay || !hasEverPlayed());
+  return MILESTONES.filter(m => m[3] === page && (fp ? m[0] !== 'search' : m[0] !== 'firstplay'));
+}
 const MS_PAGE_NAMES = { library: 'Library', player: 'Player', queue: 'Queue', settings: 'Settings' };
 // two-part tasks (next AND previous): each half is saved, the task ticks when both are
 function msPart(task, part, need){
@@ -36637,6 +36742,7 @@ function msTarget(id){
   const first = (sel) => [...document.querySelectorAll(sel)].find(e => e.offsetParent !== null);
   const adv = (sel) => { const d = q('#settingsAdvancedBlock'); if (d && !d.open) d.open = true; return q(sel); };
   switch (id){
+    case 'firstplay': return first('#view-home .hm-start') || q('#playBtn');
     case 'search': case 'load': return importForm.offsetParent ? q('#urlInput') : nav('search');
     case 'openpage': return q('#libFilterArtists:not(.hidden)') || first('#libraryListWrap .lib-card');
     case 'playlist': return q('#newPlaylistBtn');
@@ -36690,7 +36796,7 @@ function renderMilestones(justDone){
   MS_PAGES.forEach(page => {
     const card = document.getElementById('msCard-' + page);
     if (!card) return;
-    const tasks = MILESTONES.filter(m => m[3] === page);
+    const tasks = msTasks(page, done);
     const left = tasks.filter(m => !done[m[0]]);
     if (card.dataset.gone === '1') return;
     if (!left.length && !justDone){ card.hidden = true; return; }
@@ -36710,7 +36816,7 @@ function renderMilestones(justDone){
     if (cel){ clearTimeout(msCelebrateTimer); msCelebrateTimer = setTimeout(() => renderMilestones(), left.length ? 1800 : 9e9); }
     if (!left.length){
       // everything on this page is done: let the last check land, then tuck the card away
-      setTimeout(() => { if (!MILESTONES.some(m => m[3] === page && !milestonesDone()[m[0]])){ card.dataset.gone = '1'; card.hidden = true; } }, 6500);
+      setTimeout(() => { if (!msTasks(page).some(m => !milestonesDone()[m[0]])){ card.dataset.gone = '1'; card.hidden = true; } }, 6500);
     }
   });
 }
@@ -36724,7 +36830,7 @@ function awardMilestone(id){
   const pts = msRoll();
   done._pts = Object.assign({}, done._pts, { [id]: pts });
   // last step on its page: a huge bonus
-  const pageDone = MILESTONES.filter(x => x[3] === m[3]).every(x => done[x[0]]);
+  const pageDone = msTasks(m[3], done).every(x => done[x[0]]);
   let bonus = 0;
   if (pageDone){ bonus = msRoll(true); done._pts['bonus:' + m[3]] = bonus; msComplete[m[3]] = bonus; }
   try { localStorage.setItem(LS_MILESTONES, JSON.stringify(done)); } catch(e){ return; }
@@ -39378,6 +39484,9 @@ function loadIndex(pos, autoplay, opts){
   if (standIn && !standIn.loading) endStandIn(standIn);   // a different song was picked: drop the stand-in
   recordLastPlayed(state.queue[pos].plId);
   if (autoplay) try{ endPlayNudge(); } catch(e){}
+  // T-0011: a person with no real play yet who starts a song by any path (search result, tile, link) counts as one tap, so a
+  // first-timer who fails to hear anything is not invisible. Same tap as an explicit one (statsPlayTapped keeps one pending).
+  if (autoplay && !hasEverPlayed()) try{ statsPlayTapped(); } catch(e){}
   trackStartAuto = pendingAutoStart;
   pendingAutoStart = false;
 
@@ -45725,7 +45834,8 @@ function startApp(){
     }
     // First-time visitors (or anyone with nothing resumed) have no track to
     // show on the player view, so land them on the library instead.
-    setView(currentTrack() ? 'player' : 'library');
+    // A new person (no music history, nothing to resume) lands on Home, where the Start here tile is; everyone else as before.
+    setView(currentTrack() ? 'player' : isNewPerson() ? 'home' : 'library');
     if (!currentTrack()) updateMiniBarVisibility();
     resumeBootDone = true;
     try{ if (!resumingFromBackground && !autoResumeTried) welcomeBackLine(); } catch(e){}
@@ -45789,7 +45899,7 @@ function startApp(){
     // leaving the DOM in whatever half-rendered state the throw above left
     // it in. Still swallowed - the splash-dismiss code right below this is
     // what actually gets the visitor unstuck, and it must run regardless.
-    try{ setView(currentTrack() ? 'player' : 'library'); } catch(e2){}
+    try{ setView(currentTrack() ? 'player' : isNewPerson() ? 'home' : 'library'); } catch(e2){}
   }
 
   try{ schedulePasteGuide(); } catch(e){}
