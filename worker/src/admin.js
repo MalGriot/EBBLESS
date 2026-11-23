@@ -31,7 +31,7 @@ export const ADMIN_EDITABLE = {
   Feedback: { key: 'feedback_id', cols: { publish: { bool: true }, public_quote: { max: 400 } } },
 };
 
-const ORIGINS = ['https://malgriot.github.io'];
+const ORIGINS = ['https://malgriot.github.io', 'https://ebbless.space'];
 const LOCAL_ORIGIN = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
 export function allowedOrigin(origin) { return !!origin && (ORIGINS.includes(origin) || LOCAL_ORIGIN.test(origin)); }
 

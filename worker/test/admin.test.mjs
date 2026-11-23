@@ -58,6 +58,9 @@ test('tokenMatches is exact', async () => {
 
 test('origins: app + localhost only', () => {
   assert.equal(allowedOrigin('https://malgriot.github.io'), true);
+  assert.equal(allowedOrigin('https://ebbless.space'), true);
+  assert.equal(allowedOrigin('https://ebbless.space.evil.example'), false);
+  assert.equal(allowedOrigin('https://www.ebbless.space'), false);
   assert.equal(allowedOrigin('http://localhost:8000'), true);
   assert.equal(allowedOrigin('http://127.0.0.1'), true);
   assert.equal(allowedOrigin('https://evil.example'), false);
