@@ -1754,19 +1754,21 @@ body:has(#musicMap:not([hidden])):has(#mini-bar:not([hidden])) .mm-foot{padding-
 /* vibe result (T-0012): a page like Library and the region page, not a window in a window.
    The overlay and stage lose their padding and frame; ONE scroller (the stage) carries name, line,
    actions and every song. Colors, radii, type and buttons are the app's own tokens and .btn-ghost. */
-#import-overlay:has(.vibe-result){padding:0;justify-content:flex-start;align-items:stretch}
+#import-overlay:has(.vibe-result){padding:0;justify-content:flex-start;align-items:stretch;background:var(--bg)}   /* solid, so the sticky bar matches the page exactly */
 .import-stage:has(.vibe-result){flex:1 1 auto;min-height:0;max-width:640px;margin:0 auto;align-items:stretch;text-align:left;background:none;border:0;border-radius:0;padding:0;
   overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
 .import-stage:has(.vibe-result) .search-results{flex:none;overflow:visible;max-height:none;margin:0}
-.vibe-result{padding:6px 16px calc(24px + var(--safe-b))}
-.vibe-top{display:flex;align-items:flex-start;gap:8px}
-.vibe-titles{flex:1;min-width:0;padding-top:8px}
-.vibe-title{margin:0;font-size:28px;font-weight:800;line-height:1.1;color:var(--text);overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
-.vibe-result .vibe-heard{font-size:15px;font-style:normal;color:var(--faint);line-height:1.4;margin:6px 0 0;max-width:none}
+.vibe-result{padding:0 16px calc(24px + var(--safe-b))}
+/* the one thing that stays in view while the list scrolls: name (one line), Share, X. Solid page color,
+   no blur, no animation; the stage is the scroller, so sticky works against it. */
+.vibe-bar{position:sticky;top:0;z-index:3;display:flex;align-items:center;gap:8px;height:44px;margin:0 -16px;padding:0 8px 0 16px;background:var(--bg)}
+.vibe-titles{padding-top:0}
+.vibe-title{flex:1;min-width:0;margin:0;font-size:24px;font-weight:800;line-height:44px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vibe-result .vibe-heard{font-size:15px;font-style:normal;color:var(--faint);line-height:1.4;margin:0;max-width:none}
 .vibe-result .vibe-chips{display:block;margin:4px 0 0;font-size:12.5px;line-height:1.5;color:var(--faint)}
 .vibe-result .vibe-chip{display:inline;white-space:nowrap;border:0;padding:0;border-radius:0;font-size:inherit;color:inherit}
 .vibe-result .vibe-chip:not(:last-child)::after{content:'\00b7';margin-left:4px}   /* the dot stays with the chip before it, so a wrapped line never starts with one */
-.vibe-tools{display:flex;flex:none;margin:0 -8px 0 0}
+.vibe-tools{display:flex;flex:none}
 .vibe-result .pick-x,.vibe-result .vibe-share{position:static;width:44px;height:44px;flex:none}
 .vibe-result .pick-x:focus-visible,.vibe-result .vibe-share:focus-visible,.vibe-link:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .vibe-result .vibe-actions{flex-direction:column;gap:8px;margin:16px 0 8px}
@@ -24564,16 +24566,16 @@ function stageVibeResults(text, interp, tracks){
     : '&ldquo;' + escapeHtml(text) + '&rdquo;';
   importStage.innerHTML =
     '<div class="vibe-result">' +
-      '<div class="vibe-top">' +
-        '<div class="vibe-titles">' +
-          '<h2 class="vibe-title">' + escapeHtml(interp.title || 'Your vibe') + '</h2>' +
-          '<div class="vibe-heard">' + sayHtml + '</div>' +
-          (chips ? '<div class="vibe-chips">' + chips + '</div>' : '') +
-        '</div>' +
+      '<div class="vibe-bar">' +
+        '<h2 class="vibe-title" title="' + escapeHtml(interp.title || 'Your vibe') + '">' + escapeHtml(interp.title || 'Your vibe') + '</h2>' +
         '<div class="vibe-tools">' +
           '<button type="button" class="vibe-share" id="vibeShareBtn" aria-label="Share this vibe" title="Share this vibe">' + SWIPE_ICON_SHARE + '</button>' +
           '<button type="button" class="pick-x" aria-label="Close"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.4 5L5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6z"/></svg></button>' +
         '</div>' +
+      '</div>' +
+      '<div class="vibe-titles">' +
+        '<div class="vibe-heard">' + sayHtml + '</div>' +
+        (chips ? '<div class="vibe-chips">' + chips + '</div>' : '') +
       '</div>' +
       '<div class="vibe-actions">' +
         '<button class="btn-ghost is-active" id="vibeSaveBtn">Save &amp; play</button>' +

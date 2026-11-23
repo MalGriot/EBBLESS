@@ -32,22 +32,33 @@ loses its panel frame too, so there is no frame appearing and vanishing between 
 `.vibe-heard`, `#import-overlay` / `#importStage`, tokens `--text --faint --faint-2 --border --panel-2 --accent
 --on-accent --safe-b --r-md`, the region page's title size and focus outline (2 px accent).
 
-## Known trade-off for the CEO to decide: the header is not sticky
-After scrolling a 25-song list the name, X, Share and Save & play have scrolled away, so the only close is the Cancel link at the very end, the bottom nav or the Back gesture (release 578 kept Cancel and X fixed). The smallest fix is a sticky top row with the name and the X (about 56 px of the 844 px screen, roughly 7%, taken from the list all the time), and optionally Save & play in it; not done, awaiting the CEO's call.
+## The header stays in view (CEO decision, round 2)
+Name, Share and X live in one sticky row (`.vibe-bar`) that pins to the top of the stage while the 25 songs scroll
+under it. It is **44 px tall at 390 px** (5% of an 844 px screen). It replaces the old title row, so at rest it costs
+about nothing: the name now sits at 24 px on one line, with an ellipsis if it is long (full name in the tooltip), and
+the typed words and tags sit right under it, scrolling away with the page. Share and X keep 44 px touch targets.
+Save & play scrolls away with the list; the list scrolls normally.
+
+How it is built: `position:sticky; top:0` inside the stage, which is the one scroller, so it needs no JS. The row
+background is `var(--bg)`, solid, so list rows never show through; for it to match exactly the vibe page sets its
+overlay background to plain `--bg` (the faint tint the overlay has on other pages is dropped here only, scoped with
+`:has(.vibe-result)`). No blur, backdrop-filter, animation or will-change. It sits below the overlay's own top edge,
+which is already below the app header and the phone's status bar (`--topbar-h` includes the safe area), so nothing
+collides with the logo, help and dollar icons.
 
 ## GPU budget
 No animation, filter, blur or backdrop-filter added. No `will-change`.
 
 ## Tests
-`node scripts/test-vibe-window.js` (also in `scripts/check.sh`) runs the real `stageVibeResults` and checks the
+`node scripts/test-vibe-window-chrome.js` runs the real stylesheet and markup in headless Chrome at 390x844 and scrolls the 25-song list top, middle, bottom: name, Share and X stay in view, are clickable (hit-tested) and 44 px, the first song is not under the sticky row, the tag line does not overflow, a long name ellipsizes. It skips if Chrome is not installed. `node scripts/test-vibe-window.js` (both in `scripts/check.sh`) runs the real `stageVibeResults` and checks the
 order, one primary action, no inner scroller, and that Save & play, Just play, a song row, Browse playlists,
 Cancel, Share and the Close X still do what they did, plus labels, escaping and the scroll reset.
 
 ## Screenshots (`docs/vibe-window-2026-11/`)
 Before (578, 390 px): `before-sexy-time-390.jpg`, `before-just-chilling-390.jpg`.
-After (579): `after-sexy-time-390.jpg` (25 songs), `after-sexy-time-390-bottom-of-list.jpg`,
+After (579): `after-sexy-time-390.jpg` (25 songs), `after-sexy-time-390-middle-of-list.jpg` (scrolled halfway: the row stays), `after-sexy-time-390-bottom-of-list.jpg`,
 `after-just-chilling-390.jpg`, `after-short-list-390.jpg` (3 songs), `after-slow-load-390.jpg`,
-`after-sexy-time-desktop.jpg` (1280x800), `after-tags-worst-case-390.jpg` (all tags plus four long exclusions, five wrapped lines, nothing clipped). "Just chilling" is shot with "no country, no metal" so the exclusion tags show. All retaken in round 2 on the final CSS, tag line measured in a real browser at 390 px (`scrollWidth == clientWidth`, no horizontal overflow). Real worker answers; different songs per run because recently played
+`after-sexy-time-desktop.jpg` (1280x800), `after-tags-worst-case-long-name-390.jpg` (long name ellipsized, all tags plus four long exclusions wrapped, nothing clipped), `after-sexy-time-desktop-scrolled.jpg`. "Just chilling" is shot with "no country, no metal" so the exclusion tags show. All retaken in round 2 on the final CSS, tag line measured in a real browser at 390 px (`scrollWidth == clientWidth`, no horizontal overflow). Real worker answers; different songs per run because recently played
 songs are avoided.
 
 ## Release steps (app only)

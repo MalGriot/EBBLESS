@@ -56,7 +56,7 @@ check('order: name, short line, action, list, then the quiet links', () => {
   const at = (s) => { const i = out.indexOf(s); assert(i >= 0, s + ' missing'); return i; };
   const order = [at('vibe-title'), at('vibe-heard'), at('id="vibeSaveBtn"'), at('id="vibePlayBtn"'), at('class="search-results"'), at('id="vibePlaylistsBtn"'), at('id="searchBackBtn"')];
   assert.deepStrictEqual(order, order.slice().sort((x, y) => x - y));
-  assert(/<h2 class="vibe-title">Midnight Sway<\/h2>/.test(out));
+  assert(/<h2 class="vibe-title" title="Midnight Sway">Midnight Sway<\/h2>/.test(out));
   assert(out.includes('&ldquo;sexy time&rdquo;'));
 });
 check('one primary action: only Save & play is filled, Just play is the quiet one', () => {
