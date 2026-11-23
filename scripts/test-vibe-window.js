@@ -113,6 +113,30 @@ check('close X and screen reader labels are kept; the X still closes through the
   assert(/importStage\.addEventListener\('click', \(e\) => \{ if \(e\.target\.closest\('\.pick-x'\)\) closeImportOverlay\(\); \}\)/.test(html));
   assert(/\.vibe-result \.pick-x:focus-visible[^{]*\{outline:2px solid var\(--accent\)/.test(html));
 });
+check('tag line wraps between chips: a space between every chip, nothing is one unbreakable run (QA r1, 390 px clip)', () => {
+  const sexy = ['rnb', 'slow jams', 'sensual', 'mid energy', '~95 bpm', 'builds, then eases out', '4 you know · 21 new'];
+  const { out } = run('sexy time', Object.assign({}, interp, { mood: sexy }), tracks);
+  const line = out.match(/<div class="vibe-chips">(.*?)<\/div>/)[1];
+  const chips = line.match(/<span class="vibe-chip">[^<]*<\/span>/g);
+  assert.strictEqual(chips.length, sexy.length);
+  assert.strictEqual(line, chips.join(' '), 'chips must be joined by one space so the line can wrap between them');
+  // the longest chip alone must fit 390 px minus the 16 px gutters at 12.5 px (about 6.5 px per character)
+  sexy.concat(['no country', 'no metal', 'no country music at all']).forEach((c) => assert(c.length * 6.5 < 358, c));
+  // the dot rides with the chip before it (never starts a line) and each chip stays whole
+  assert(/\.vibe-result \.vibe-chip\{[^}]*white-space:nowrap/.test(html));
+  assert(/\.vibe-result \.vibe-chip:not\(:last-child\)::after\{content:'\\00b7'/.test(html));
+  assert(!/\.vibe-chip\+\.vibe-chip::before/.test(html));
+  assert(/\.vibe-result \.vibe-chips\{[^}]*color:var\(--faint\)\}/.test(html), 'tags use --faint (6.66:1), not --faint-2');
+});
+check('the X is a real click: the stage handler from index.html closes the window', () => {
+  const m = html.match(/importStage\.addEventListener\('click', \(e\) => \{ if \(e\.target\.closest\('\.pick-x'\)\) closeImportOverlay\(\); \}\);/);
+  assert(m, 'stage close handler not found');
+  let closed = 0, handler;
+  new Function('importStage', 'closeImportOverlay', m[0])({ addEventListener: (ev, fn) => { handler = fn; } }, () => closed++);
+  handler({ target: { closest: (s) => (s === '.pick-x' ? {} : null) } });   // tap on the X (or its svg)
+  handler({ target: { closest: () => null } });                            // tap elsewhere in the page
+  assert.strictEqual(closed, 1);
+});
 check('a new vibe opens at its name, not where the last list was scrolled', () => {
   assert.strictEqual(run('x', interp, tracks).stage.scrollTop, 0);
 });

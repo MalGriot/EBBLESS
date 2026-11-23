@@ -16,7 +16,7 @@ the stage (max 640 px, centered on desktop) is the one scroller and the whole li
 Order, top to bottom:
 1. Vibe name, 28 px / 800 (the region page's title size), with share and close at 44 px on the right.
 2. One short line: what the person typed in quotes (or "Looks like: ..." for a picture vibe).
-3. The tags as one small quiet line under it (dot separated, no pills).
+3. The tags as one small quiet line under it, in `--faint` (6.66:1 on the page), dot separated, no pills. The line wraps between tags: chips are joined with a space and each tag stays whole (`nowrap`). The dot belongs to the tag before it, so at a wrap it ends the line and no line ever starts with a dot.
 4. **Save & play**: full width, accent fill, 52 px, 16 px / 700. It was already the filled action, and it keeps the
    playlist the person just got. Under it **Just play 25 songs**: the app's outline pill, 44 px.
 5. The songs, as flat rows with hairlines (same `.search-pick` row as Search, no box each).
@@ -32,6 +32,9 @@ loses its panel frame too, so there is no frame appearing and vanishing between 
 `.vibe-heard`, `#import-overlay` / `#importStage`, tokens `--text --faint --faint-2 --border --panel-2 --accent
 --on-accent --safe-b --r-md`, the region page's title size and focus outline (2 px accent).
 
+## Known trade-off for the CEO to decide: the header is not sticky
+After scrolling a 25-song list the name, X, Share and Save & play have scrolled away, so the only close is the Cancel link at the very end, the bottom nav or the Back gesture (release 578 kept Cancel and X fixed). The smallest fix is a sticky top row with the name and the X (about 56 px of the 844 px screen, roughly 7%, taken from the list all the time), and optionally Save & play in it; not done, awaiting the CEO's call.
+
 ## GPU budget
 No animation, filter, blur or backdrop-filter added. No `will-change`.
 
@@ -44,7 +47,7 @@ Cancel, Share and the Close X still do what they did, plus labels, escaping and 
 Before (578, 390 px): `before-sexy-time-390.jpg`, `before-just-chilling-390.jpg`.
 After (579): `after-sexy-time-390.jpg` (25 songs), `after-sexy-time-390-bottom-of-list.jpg`,
 `after-just-chilling-390.jpg`, `after-short-list-390.jpg` (3 songs), `after-slow-load-390.jpg`,
-`after-sexy-time-desktop.jpg` (1280x800). Real worker answers; different songs per run because recently played
+`after-sexy-time-desktop.jpg` (1280x800), `after-tags-worst-case-390.jpg` (all tags plus four long exclusions, five wrapped lines, nothing clipped). "Just chilling" is shot with "no country, no metal" so the exclusion tags show. All retaken in round 2 on the final CSS, tag line measured in a real browser at 390 px (`scrollWidth == clientWidth`, no horizontal overflow). Real worker answers; different songs per run because recently played
 songs are avoided.
 
 ## Release steps (app only)
