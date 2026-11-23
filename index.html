@@ -26639,6 +26639,9 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
+  { version: 579, date: '2026-11-23', items: [
+    'EBBLESS has a new home: ebbless.space. If you use the old address, a prompt offers to move your saved music and settings across in one tap. Nothing is lost if you wait.',
+  ] },
   { version: 578, date: '2026-11-18', items: [
     'First screen: new here, you see Enter. Once you have music in progress, it says Resume and picks up where you left off.',
     'The moving background on the first screen no longer flickers on a slow connection.',
@@ -45570,7 +45573,48 @@ miniBar.addEventListener('click', () => { closeMusicMap(); setView('player'); })
 /* =========================================================================
    INIT
    ========================================================================= */
+/* One-time move to ebbless.space. Only on the old address, in a plain browser, for someone who
+   has saved music. One tap opens /move/ on the new site, which asks for the data; the data goes
+   to that exact origin only. The receiver is move/move.js. */
+const MOVE_FROM = 'https://malgriot.github.io', MOVE_TO = 'https://ebbless.space';
+const MOVE_DONE_KEY = 'ebbless:movedTo', MOVE_OFFER_KEY = 'ebbless:moveOfferAt', MOVE_SNOOZE_MS = 3 * 86400000;
+function moveSnapshot(){
+  const items = {};
+  for (let i = 0; i < localStorage.length; i++){
+    const k = localStorage.key(i);
+    if (/^ebbless[:_]/.test(k)) items[k] = localStorage.getItem(k);
+  }
+  return items;
+}
+function startMove(){
+  let w = null;
+  const onMsg = (e) => {
+    if (e.origin !== MOVE_TO || e.source !== w) return;
+    if (e.data && e.data.type === 'ebbless-move-ready'){
+      try { w.postMessage({ type: 'ebbless-move-data', v: 1, items: moveSnapshot() }, MOVE_TO); } catch(err){}
+    } else if (e.data && e.data.type === 'ebbless-move-done'){
+      removeEventListener('message', onMsg);
+      try { localStorage.setItem(MOVE_DONE_KEY, String(Date.now())); } catch(err){}
+      showToast('Moved. Your music is now at ebbless.space');
+    }
+  };
+  addEventListener('message', onMsg);
+  w = window.open(MOVE_TO + '/move/', 'ebbless-move');
+  if (!w){ removeEventListener('message', onMsg); showToast('Allow pop-ups to move, or open ebbless.space'); }
+}
+function maybeOfferMove(){
+  try {
+    if (location.origin !== MOVE_FROM || isDesktopApp || /EBBLESS-Android|NativeSplash/.test(navigator.userAgent)) return;
+    if (localStorage.getItem(MOVE_DONE_KEY)) return;
+    if (!(lsGet(LS_LIB, []) || []).length) return;
+    const last = Number(localStorage.getItem(MOVE_OFFER_KEY)) || 0;
+    if (Date.now() - last < MOVE_SNOOZE_MS) return;
+    localStorage.setItem(MOVE_OFFER_KEY, String(Date.now()));
+    toastPush({ key: 'move', msg: 'EBBLESS has a new home: ebbless.space', ms: 20000, action: { label: 'Move my music', run: startMove } });
+  } catch(e){}
+}
 function startApp(){
+  setTimeout(maybeOfferMove, 25000);
   // Mobile browsers/PWAs routinely kill the whole page (and its JS state)
   // while backgrounded, then reload from scratch the moment the user
   // switches back - before the visibilitychange handler above ever gets a
